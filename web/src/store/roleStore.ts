@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 
 export interface AIRole {
   id: string;
@@ -50,11 +51,13 @@ const defaultRoles: AIRole[] = [
   },
 ];
 
-export const useRoleStore = create<RoleState>((set) => ({
-  roles: defaultRoles,
-  selectedRole: defaultRoles[0],
-  setSelectedRole: (role) => set({ selectedRole: role }),
-  addRole: (role) => set((state) => ({ roles: [...state.roles, role] })),
+export const useRoleStore = create<RoleState>()(
+  persist(
+    (set) => ({
+      roles: defaultRoles,
+      selectedRole: defaultRoles[0],
+      setSelectedRole: (role) => set({ selectedRole: role }),
+      addRole: (role) => set((state) => ({ roles: [...state.roles, role] })),
   deleteRole: (id) =>
     set((state) => ({
       roles: state.roles.filter((r) => r.id !== id),
@@ -69,6 +72,10 @@ export const useRoleStore = create<RoleState>((set) => ({
       selectedRole:
         state.selectedRole?.id === id
           ? { ...state.selectedRole, ...role }
-          : state.selectedRole,
-    })),
-}));
+          : state.selectedRole,    })),
+    }),
+    {
+      name: 'role-storage',
+    }
+  )
+);

@@ -3,7 +3,7 @@ import { Button, Empty, Modal, Form, Input } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import { usePluginStore } from '@/store/pluginStore';
 import type { Plugin } from '@/types/plugin';
-import { xmlRendererPlugin } from '@/plugins/xmlRenderer';
+
 import PluginCard from '@/components/PluginCard';
 import './styles.less';
 
@@ -23,9 +23,8 @@ interface PluginWithSchema extends Plugin {
 const Plugins = () => {
   const { plugins, addPlugin, removePlugin, enablePlugin, disablePlugin, configs, updatePluginConfig } = usePluginStore();
   const [isModalVisible, setIsModalVisible] = useState(false);
-  const [selectedPlugin, setSelectedPlugin] = useState<PluginWithSchema | null>(null);
-  const handleInstallDemo = () => {
-    const demoPlugins = [xmlRendererPlugin];
+  const [selectedPlugin, setSelectedPlugin] = useState<PluginWithSchema | null>(null);  const handleInstallDemo = () => {
+    const demoPlugins: PluginWithSchema[] = [];
     // 只添加不存在的插件
     demoPlugins.forEach(plugin => {
       if (!plugins.some(p => p.id === plugin.id)) {

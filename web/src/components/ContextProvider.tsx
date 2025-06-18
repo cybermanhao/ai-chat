@@ -1,11 +1,18 @@
-import { Outlet } from 'react-router-dom'
+import React from 'react';
+import { Outlet } from 'react-router-dom';
+import { ModalProvider } from '@/contexts/ModalContext';
+import { ListSelectionProvider } from '@/contexts/ListSelectionContext';
 
 interface ContextProviderProps {
-  context: {
-    setCurrentChatId: ((id: string) => void) | null;
-  }
+  children?: React.ReactNode;
 }
 
-export const ContextProvider = ({ context }: ContextProviderProps) => {
-  return <Outlet context={context} />
-}
+export const ContextProvider: React.FC<ContextProviderProps> = ({ children }) => {
+  return (
+    <ModalProvider>
+      <ListSelectionProvider>
+        {children || <Outlet />}
+      </ListSelectionProvider>
+    </ModalProvider>
+  );
+};

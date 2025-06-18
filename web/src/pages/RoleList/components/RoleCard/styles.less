@@ -1,0 +1,95 @@
+@import '../../../../styles/variables.less';
+
+.role-card {
+  display: block;
+  width: 100%;
+  max-width: 300px;
+  margin: 0 auto;
+  
+  .ant-card {
+    width: 100%;
+    transition: all 0.3s;
+    border-radius: 8px;
+    background: var(--background-color-light);
+    border: 1px solid var(--border-color-split);    &:hover {
+      background: @primary-color;
+      border-color: @primary-color;
+    }
+
+    &.selected {
+      background: @primary-color;
+      border-color: @primary-color;
+      box-shadow: 0 0 0 1px @primary-color;
+    }
+
+    .ant-card-meta-title {
+      color: var(--text-color);
+      font-size: 16px;
+      font-weight: 500;
+      margin-bottom: 8px;
+    }    .ant-card-meta-description {
+      .role-description {
+        margin: 0 0 12px;
+        color: var(--text-color-secondary);
+        line-height: 1.5;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        line-clamp: 2;
+        -webkit-box-orient: vertical;
+        box-orient: vertical;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .role-tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+          .ant-tag {
+          margin: 0;
+          padding: 0 8px;
+          font-size: 12px;
+          border-radius: 12px;
+          // 使用 LESS 变量，它会自动适应主题切换
+          background: @primary-color;
+          border-color: @primary-color;
+          color: @primary-color;
+        }
+      }
+    }
+    .ant-card-actions {
+      background: transparent;
+      border-top: 1px solid var(--border-color-split);
+      padding: 8px;
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      flex-wrap: wrap;
+
+      > li {
+        width: auto !important;
+        margin: 0 !important;
+        border: none !important;
+      }
+
+      .ant-btn {
+        padding: 4px 8px;
+        height: 28px;
+        min-width: fit-content;
+        color: var(--text-color-secondary);        &:hover {
+          color: @primary-color;
+          background: @primary-color;
+        }
+
+        &.ant-btn-dangerous {
+          color: @error-color;
+          
+          &:hover {
+            color: @error-color;
+            background: @error-color, 8%;
+          }
+        }
+      }
+    }
+  }
+}

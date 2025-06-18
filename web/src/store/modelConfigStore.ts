@@ -1,42 +1,53 @@
 import { create } from 'zustand';
-import type { ModelConfig, ModelConfigState, ModelConfigLoading } from '@/types/model';
+import { persist } from 'zustand/middleware';
+import type { ModelConfig } from '@/types/model';
+
+interface ModelConfigState {
+  config: ModelConfig;
+  loading: Record<string, boolean>;
+  setConfig: (config: Partial<ModelConfig> | ((prev: ModelConfig) => Partial<ModelConfig>)) => void;
+  setLoading: (key: string, loading: boolean) => void;
+}
 
 const defaultConfig: ModelConfig = {
   temperature: 0.7,
+  maxTokens: 2000,
   contextBalance: 1,
-  systemPrompt: '',
+  systemPrompt: 'You are a helpful assistant.',
   multiToolsEnabled: false,
   enabledTools: [],
 };
 
-const defaultLoading: ModelConfigLoading = {
-  temperature: false,
-  contextBalance: false,
-  systemPrompt: false,
-  multiTools: false,
-  tools: false,
-};
-
-export const useModelConfigStore = create<ModelConfigState>((set) => ({
-  config: defaultConfig,
-  loading: defaultLoading,
-
-  setConfig: (update) => 
-    set((state) => ({
-      config: {
-        ...state.config,
-        ...(typeof update === 'function' ? update(state.config) : update),
-      },
-    })),
-
-  setLoading: (key, value) =>
-    set((state) => ({
-      loading: { ...state.loading, [key]: value },
-    })),
-
-  reset: () =>
-    set({
+export const useModelConfigStore = create<ModelConfigState>()(
+  persist(
+    (set) => ({
       config: defaultConfig,
-      loading: defaultLoading,
+      loading: {},
+      
+      setConfig: (update) => 
+        set((state) => {
+          const newConfig = typeof update === 'function' 
+            ? update(state.config)
+            : update;
+            
+          return {
+            config: {
+              ...state.config,
+              ...newConfig,
+            },
+          };
+        }),
+
+      setLoading: (key, loading) =>
+        set((state) => ({
+          loading: {
+            ...state.loading,
+            [key]: loading,
+          },
+        })),
     }),
-}));
+    {
+      name: 'model-config-storage',
+    }
+  )
+);

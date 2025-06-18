@@ -1,0 +1,24 @@
+.message-card {
+  display: flex;
+  margin-bottom: 8px;
+  
+  &:last-child {
+    margin-bottom: 0;
+  }
+  
+  :global {
+    .ant-x-bubble {
+      max-width: 80%;
+      
+      &.ant-x-bubble-start .ant-x-bubble-content {
+        background: var(--background-color-light);
+        border: 1px solid var(--border-color-split);
+      }
+      
+      &.ant-x-bubble-end .ant-x-bubble-content {
+        background: var(--primary-color);
+        color: #fff;
+      }
+    }
+  }
+}

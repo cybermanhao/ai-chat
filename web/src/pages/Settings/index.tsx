@@ -1,16 +1,38 @@
 import { Form, Switch, Select, Button, Divider, Input, Tooltip } from 'antd';
 import { QuestionCircleOutlined } from '@ant-design/icons';
-import { useLLMStore } from '@/store/llmStore';
-import { useModelSelection } from '@/hooks/useModelSelection';
 import { useThemeStore } from '@/store/themeStore';
-import { llms } from '@/utils/llms/llms';
+import { useLLMConfig } from '@/hooks/useLLMConfig';
 import './styles.less';
 
 const Settings = () => {
-  const { selectedLLM, selectedModel, handleModelChange, handleLLMChange } = useModelSelection();
-  const { tokens, setToken } = useLLMStore();
+  const { 
+    activeLLM,
+    currentConfig,
+    availableLLMs,
+    selectLLM,
+    updateLLMConfig
+  } = useLLMConfig();
   const { isDarkMode, toggleTheme } = useThemeStore();
   const [form] = Form.useForm();
+
+  const handleLLMChange = (llmId: string) => {
+    selectLLM(llmId);
+  };
+
+  const handleModelChange = (model: string) => {
+    updateLLMConfig({ model });
+  };
+
+  const handleApiKeyChange = (value: string) => {
+    updateLLMConfig({ apiKey: value });
+  };
+
+  const handleSubmit = () => {
+    form.validateFields()      .then(() => {
+        // Theme settings are handled by toggleTheme directly
+        // LLM settings are handled by individual handlers
+      });
+  };
 
   return (
     <div className="settings-page">
@@ -22,11 +44,11 @@ const Settings = () => {
           layout="vertical" 
           form={form}
           initialValues={{
-            llm: selectedLLM?.id,
-            model: selectedModel,
-            token: tokens[selectedLLM?.id || ''] || '',
             darkMode: isDarkMode,
             autoSave: true,
+            llm: activeLLM?.id,
+            model: currentConfig?.model,
+            apiKey: currentConfig?.apiKey,
           }}
         >
           <Form.Item label="界面设置" className="section-title" />
@@ -43,10 +65,10 @@ const Settings = () => {
           <Form.Item 
             label="服务商" 
             name="llm"
-            extra={selectedLLM?.description}
+            extra={activeLLM?.description}
           >
             <Select
-              options={llms.map(llm => ({
+              options={availableLLMs.map(llm => ({
                 label: llm.name,
                 value: llm.id,
                 description: llm.description,
@@ -64,11 +86,11 @@ const Settings = () => {
                 </Tooltip>
               </span>
             }
-            name="token"
+            name="apiKey"
           >
             <Input.Password 
               placeholder="输入 API 密钥"
-              onChange={(e) => selectedLLM && setToken(selectedLLM.id, e.target.value)}
+              onChange={(e) => handleApiKeyChange(e.target.value)}
             />
           </Form.Item>
 
@@ -78,17 +100,17 @@ const Settings = () => {
             tooltip="选择要使用的具体模型"
           >
             <Select
-              options={selectedLLM?.models.map((model: string) => ({
+              options={activeLLM?.models.map((model: string) => ({
                 label: model,
                 value: model,
               }))}
               onChange={handleModelChange}
-              disabled={!selectedLLM}
+              disabled={!activeLLM}
             />
           </Form.Item>
 
           <Form.Item>
-            <Button type="primary">保存设置</Button>
+            <Button type="primary" onClick={handleSubmit}>保存设置</Button>
           </Form.Item>
         </Form>
       </div>

@@ -2,7 +2,14 @@
 
 .chat-list {
   height: 100%;
-  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  
+  .chat-list-header {
+    padding: 16px;
+    border-bottom: 1px solid var(--border-color-split);
+    background: var(--sider-header-bg);
+  }
 
   :global {
     .ant-x-conversations {
@@ -11,7 +18,7 @@
 
       .ant-x-conversations-item {
         margin-bottom: 4px;
-        padding: 8px 12px;
+        padding: 8px 16px;
         border-radius: 8px;
         transition: all 0.3s;
         cursor: pointer;

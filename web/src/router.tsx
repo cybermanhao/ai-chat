@@ -8,7 +8,7 @@ export const router = createBrowserRouter([
     element: <Layout />,
     children: [
       {
-        element: <ContextProvider context={{ setCurrentChatId: null }} />,
+        element: <ContextProvider />,
         children: [
           {
             path: 'chats',

@@ -1,7 +1,7 @@
-import { DeleteOutlined, EditOutlined, ExportOutlined } from '@ant-design/icons';
+import { DeleteOutlined, EditOutlined, ExportOutlined, PlusOutlined } from '@ant-design/icons';
 import { Conversations } from '@ant-design/x';
 import type { ConversationsProps } from '@ant-design/x';
-import { App, Modal, Input, theme } from 'antd';
+import { App, Modal, Input, theme, Button } from 'antd';
 import React, { useState } from 'react';
 import { useChatStore } from '@/store/chatStore';
 import { useNavigate } from 'react-router-dom';
@@ -16,11 +16,33 @@ const ChatList: React.FC = () => {
   const [newTitle, setNewTitle] = useState('');
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
 
-  const items = chats.map(chat => ({
-    key: chat.id,
-    label: chat.title || '新对话',
-    disabled: false,
-  }));
+  // 添加测试用的聊天列表项
+  const items = [
+    {
+      key: '1',
+      label: '与 ChatGPT 的对话',
+      li: true,
+      disabled: false,
+    },
+    {
+      key: '2',
+      label: '代码优化讨论',
+      li: true,
+      disabled: false,
+    },
+    {
+      key: '3',
+      label: '项目规划会议',
+      li: true,
+      disabled: false,
+    },
+    {
+      key: '4',
+      label: '写作助手对话',
+      li: true,
+      disabled: false,
+    },
+  ];
 
   const handleRename = () => {
     if (selectedChatId && newTitle) {
@@ -89,7 +111,18 @@ const ChatList: React.FC = () => {
   };
 
   return (
-    <div className="chat-list">      <Conversations
+    <div className="chat-list">
+      <div className="chat-list-header">
+        <Button 
+          type="primary" 
+          icon={<PlusOutlined />} 
+          onClick={() => navigate('/chat/new')}
+        >
+          新建对话
+        </Button>
+      </div>
+      
+      <Conversations
         style={style}
         defaultActiveKey={chats[0]?.id}
         items={items}

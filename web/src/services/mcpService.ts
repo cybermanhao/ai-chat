@@ -1,12 +1,10 @@
-import { config } from '@/config'
-
 export interface MCPResponse<T = unknown> {
   data: T
   error?: string
 }
 
 class MCPService {
-  private baseUrl: string = config.api.baseURL
+  private baseUrl: string = ''
 
   setBaseUrl(url: string) {
     this.baseUrl = url.endsWith('/') ? url.slice(0, -1) : url

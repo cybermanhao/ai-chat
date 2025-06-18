@@ -1,32 +1,21 @@
 import { create } from 'zustand';
-import { persist, devtools } from 'zustand/middleware'
-import type { UIMessageRole } from '@/types/openai'
-
-export interface ChatMessage {
-  id: string
-  content: string
-  role: UIMessageRole
-  timestamp: number
-}
+import { persist, devtools } from 'zustand/middleware';
+import type { ChatMessage } from '@/types';
 
 export interface Chat {
   id: string;
   title: string;
-  messages: {
-    id: string;
-    content: string;
-    role: UIMessageRole;
-  }[];
+  messages: ChatMessage[];
   createdAt: number;
   updatedAt: number;
 }
 
 interface ChatState {
-  messages: ChatMessage[]
-  currentId: string | null
-  addMessage: (message: Omit<ChatMessage, 'id' | 'timestamp'>) => void
-  clearMessages: () => void
-  setCurrentId: (id: string | null) => void
+  messages: ChatMessage[];
+  currentId: string | null;
+  addMessage: (message: Omit<ChatMessage, 'id' | 'timestamp'>) => void;
+  clearMessages: () => void;
+  setCurrentId: (id: string | null) => void;
   chats: Chat[];
   currentChat: Chat | null;
   deleteChat: (id: string) => Promise<void>;
@@ -41,19 +30,47 @@ export const useChatStore = create<ChatState>()(
       (set, get) => ({
         messages: [],
         currentId: null,
-        chats: [],
-        currentChat: null,
+        chats: [],        currentChat: null,
+        
+        addMessage: (message) => set((state) => {
+          const newMessage = {
+            ...message,
+            id: `${Date.now()}-${Math.random().toString(36).substring(2)}`,
+            timestamp: Date.now(),
+          };
 
-        addMessage: (message) => set((state) => ({
-          messages: [
-            ...state.messages,
-            {
-              ...message,
-              id: `${Date.now()}-${Math.random().toString(36).substring(2)}`,
-              timestamp: Date.now(),
-            },
-          ],
-        })),
+          if (!state.currentChat) {
+            // If no chat is selected, create a new one
+            const newChat: Chat = {
+              id: Date.now().toString(),
+              title: '新对话',
+              messages: [newMessage],
+              createdAt: Date.now(),
+              updatedAt: Date.now(),
+            };
+            
+            return {
+              messages: [...state.messages, newMessage],
+              currentChat: newChat,
+              chats: [newChat, ...state.chats],
+            };
+          }
+
+          // Update existing chat
+          const updatedChat = {
+            ...state.currentChat,
+            messages: [...state.currentChat.messages, newMessage],
+            updatedAt: Date.now(),
+          };
+
+          return {
+            messages: [...state.messages, newMessage],
+            currentChat: updatedChat,
+            chats: state.chats.map(chat => 
+              chat.id === updatedChat.id ? updatedChat : chat
+            ),
+          };
+        }),
 
         clearMessages: () => set({ messages: [] }),
 
@@ -120,4 +137,4 @@ export const useChatStore = create<ChatState>()(
       name: 'chat-store',
     }
   )
-)
+);
