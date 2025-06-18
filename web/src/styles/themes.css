@@ -1,0 +1,68 @@
+:root {
+  /* Light theme (default) */
+  --primary-color: #1890ff;
+  --primary-color-hover: #40a9ff;
+  --primary-rgb: 24, 144, 255;  /* primary-color 的 RGB 值 */
+  --success-color: #52c41a;
+  --warning-color: #faad14;
+  --error-color: #f5222d;
+  /* 文字颜色 */
+  --text-color: rgba(0, 0, 0, 0.85);
+  --text-color-secondary: rgba(0, 0, 0, 0.45);
+  /* 边框颜色 */
+  --border-color-base: #d9d9d9;
+  --border-color-split: #f0f0f0;
+  /* 背景颜色 */
+  --background-color-base: #f0f0f0;
+  --background-color-light: #f5f5f5;
+  /* 应用容器颜色 */
+  --app-container-bg: #f0f2f5;
+  --app-content-bg: #fff;
+  /* 侧边栏颜色 */
+  --sider-bg: #f8f9fa;
+  --sider-text: #4b5563;
+  --sider-active-bg: #e5e7eb;
+  --sider-active-text: #111827;
+  --sider-hover-bg: #f3f4f6;
+  --sider-border: #e5e7eb;
+  --sider-header-bg: #fff;
+  --sider-panel-bg: #fff;
+  /* 表格和代码颜色 */
+  --table-header-bg: #fafafa;
+  --table-row-hover-bg: #f5f5f5;
+  --code-bg: #f6f8fa;
+}
+
+[data-theme="dark"] {
+  /* 使用绿色作为深色主题的主色 */
+  --primary-color: #52c41a;
+  --primary-color-hover: #73d13d;
+  --primary-rgb: 82, 196, 26;  /* primary-color 的 RGB 值 */
+  --success-color: #52c41a;
+  --warning-color: #d89614;
+  --error-color: #a61d24;
+  /* 深色主题文字和背景颜色 */
+  --text-color: rgba(255, 255, 255, 0.85);
+  --text-color-secondary: rgba(255, 255, 255, 0.45);
+  --border-color-base: #434343;
+  --border-color-split: #303030;
+  /* 背景颜色 */
+  --background-color-base: #141414;
+  --background-color-light: #1f1f1f;
+  /* 应用容器颜色 */
+  --app-container-bg: #000000;
+  --app-content-bg: #141414;
+  /* 侧边栏颜色 */
+  --sider-bg: #1f1f1f;
+  --sider-text: #a3a3a3;
+  --sider-active-bg: #2d2d2d;
+  --sider-active-text: #52c41a;
+  --sider-hover-bg: #262626;
+  --sider-border: #303030;
+  --sider-header-bg: #141414;
+  --sider-panel-bg: #1f1f1f;
+  /* 表格和代码颜色 */
+  --table-header-bg: #1f1f1f;
+  --table-row-hover-bg: #262626;
+  --code-bg: #1f1f1f;
+}

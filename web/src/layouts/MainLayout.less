@@ -1,0 +1,29 @@
+.app-container {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+  background: var(--app-container-bg);
+
+  .app-tools {
+    flex: none;
+    display: flex;
+    height: 100%;
+  }
+
+  .app-workspace {
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+    background: var(--app-content-bg);
+    margin: 12px;
+    border-radius: 8px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  }
+
+  .app-chat {
+    flex: none;
+    width: 400px;
+    height: 100%;
+    margin: 12px 12px 12px 0;
+  }
+}

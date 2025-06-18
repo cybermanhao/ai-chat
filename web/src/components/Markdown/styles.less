@@ -1,0 +1,178 @@
+@import '../../styles/variables.less';
+
+.markdown-body {
+  // 基础样式
+  font-size: 14px;
+  line-height: 1.6;
+  word-wrap: break-word;
+  color: @text-color;
+
+  // XML 插件样式
+  .xml-highlight {
+    background-color: #fff3cd;
+    padding: 0.2em 0.4em;
+    border-radius: 0.2em;
+  }
+
+  .xml-note {
+    background-color: #e2e3e5;
+    padding: 0.2em 0.4em;
+    border-radius: 0.2em;
+  }
+
+  .xml-warning {
+    background-color: #f8d7da;
+    padding: 0.2em 0.4em;
+    border-radius: 0.2em;
+  }
+
+  .xml-button {
+    display: inline-block;
+    padding: 4px 15px;
+    font-size: 14px;
+    border-radius: 2px;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: all 0.3s;
+
+    &.default {
+      border-color: @border-color-base;
+      background: #fff;
+    }
+
+    &.primary {
+      color: #fff;
+      background: @primary-color;
+      border-color: @primary-color;
+    }
+
+    &.dashed {
+      border-style: dashed;
+      border-color: @border-color-base;
+      background: #fff;
+    }
+
+    &.text {
+      border-color: transparent;
+      background: transparent;
+    }
+
+    &.link {
+      color: @primary-color;
+      border-color: transparent;
+      background: transparent;
+    }
+
+    &.small { padding: 0 7px; height: 24px; font-size: 14px; }
+    &.large { padding: 0 15px; height: 40px; font-size: 16px; }
+  }
+
+  // 标题样式
+  h1, h2, h3, h4, h5, h6 {
+    margin-top: 24px;
+    margin-bottom: 16px;
+    font-weight: 600;
+    line-height: 1.25;
+  }
+
+  h1 { font-size: 2em; }
+  h2 { font-size: 1.5em; }
+  h3 { font-size: 1.25em; }
+  h4 { font-size: 1em; }
+  h5 { font-size: 0.875em; }
+  h6 { font-size: 0.85em; }
+
+  // 超链接样式
+  a {
+    color: @primary-color;
+    text-decoration: none;
+    transition: color 0.2s ease;
+
+    &:hover {
+      color: @primary-color-hover;
+      text-decoration: underline;
+    }
+
+    &:active {
+      opacity: 0.8;
+    }
+  }
+
+  // 段落和列表
+  p, ul, ol {
+    margin-top: 0;
+    margin-bottom: 16px;
+  }
+
+  ul, ol {
+    padding-left: 2em;
+  }
+
+  // 表格样式
+  table {
+    width: 100%;
+    margin: 16px 0;
+    border-collapse: collapse;
+
+    th, td {
+      padding: 6px 13px;
+      border: 1px solid @border-color-base;
+    }
+
+    th {
+      font-weight: 600;
+      background-color: @table-header-bg;
+    }
+
+    tr:nth-child(2n) {
+      background-color: @table-row-hover-bg;
+    }
+  }
+
+  // 代码块样式
+  pre {
+    margin: 16px 0;
+    padding: 16px;
+    overflow: auto;
+    font-size: 85%;
+    line-height: 1.45;
+    background-color: @code-bg;
+    border-radius: @border-radius-base;
+
+    code {
+      padding: 0;
+      margin: 0;
+      background-color: transparent;
+      border-radius: 0;
+    }
+  }
+
+  // 行内代码
+  code {
+    padding: 0.2em 0.4em;
+    margin: 0;
+    font-size: 85%;
+    background-color: @code-bg;
+    border-radius: @border-radius-base;
+  }
+
+  // 分割线
+  hr {
+    height: 1px;
+    padding: 0;
+    margin: 24px 0;
+    background-color: @border-color-base;
+    border: 0;
+  }
+
+  // 引用
+  blockquote {
+    margin: 16px 0;
+    padding: 0 1em;
+    color: @text-color-secondary;
+    border-left: 0.25em solid @border-color-base;
+
+    > :first-child { margin-top: 0; }
+    > :last-child { margin-bottom: 0; }
+  }
+}

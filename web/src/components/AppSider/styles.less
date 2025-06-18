@@ -1,0 +1,107 @@
+@import '../../styles/variables.less';
+
+.app-sider-container {
+  display: flex;
+  height: 100%;
+
+  .app-toolbar {
+    width: 48px;
+    height: 100%;
+    background: @sider-bg;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-right: 1px solid @sider-border;
+
+    .toolbar-top,
+    .toolbar-bottom {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .toolbar-item {
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: @sider-text;
+      font-size: 20px;
+      cursor: pointer;
+      position: relative;
+      transition: all 0.2s ease;
+
+      &:hover {
+        color: @sider-active-text;
+        background: @sider-hover-bg;
+      }
+
+      &.active {
+        color: @sider-active-text;
+        background: @sider-active-bg;
+
+        &::before {
+          content: '';
+          position: absolute;
+          left: 0;
+          top: 8px;
+          bottom: 8px;
+          width: 2px;
+          background: @primary-color;
+        }
+      }
+    }
+  }
+
+  .app-panel {
+    background: @sider-panel-bg;
+    height: 100%;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid @sider-border;
+
+    .panel-header {
+      height: 48px;
+      padding: 0 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: @sider-header-bg;
+      border-bottom: 1px solid @sider-border;      .panel-title {
+        color: var(--text-color);
+        font-size: 14px;
+        font-weight: 500;
+      }
+
+      .collapse-btn {
+        color: @text-color-secondary;
+
+        &:hover {
+          color: @text-color;
+          background: @sider-hover-bg;
+        }
+      }
+    }
+
+    .panel-content {
+      flex: 1;
+      overflow-y: auto;
+      background: @sider-panel-bg;
+
+      &::-webkit-scrollbar {
+        width: 6px;
+      }
+
+      &::-webkit-scrollbar-thumb {
+        background: rgba(0, 0, 0, 0.1);
+        border-radius: 3px;
+      }
+
+      &::-webkit-scrollbar-track {
+        background: @sider-bg;
+      }
+    }
+  }
+}

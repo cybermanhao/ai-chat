@@ -1,0 +1,82 @@
+@import '../../styles/variables.less';
+
+.plugin-card {
+  background: var(--background-color-light);
+  border: 1px solid var(--border-color-split);
+  border-radius: 8px;
+  transition: all 0.3s;
+  display: flex;
+  flex-direction: column;
+  width: 260px; // 固定宽度
+  max-width: 100%;
+
+  &:hover {
+    background: var(--background-color-base);
+  }
+
+  .plugin-header {
+    padding: 16px 16px 12px;
+    border-bottom: 1px solid var(--border-color-split);
+    min-width: 0;
+
+    .plugin-title-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;      .plugin-title {
+        margin: 0;
+        font-size: 16px;
+        font-weight: 500;
+        color: var(--text-color);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        flex: 1;
+        min-width: 0;
+      }
+    }
+
+    .plugin-description {
+      margin: 0 0 8px;
+      color: var(--text-color-secondary);
+      line-height: 1.5;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      line-clamp: 2;
+      -webkit-box-orient: vertical;
+      box-orient: vertical;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .plugin-meta {
+      display: flex;
+      gap: 16px;
+      font-size: 12px;
+      color: var(--text-color-secondary);
+      opacity: 0.8;
+    }
+  }
+
+  .plugin-actions {
+    display: flex;
+    padding: 8px;
+    justify-content: flex-end;
+    gap: 8px;
+    flex-wrap: wrap;
+
+    .ant-btn {
+      padding: 4px 8px;
+      height: 28px;
+      min-width: fit-content;
+
+      &:hover {
+        background: rgba(0, 0, 0, 0.06);
+      }
+
+      &.ant-btn-dangerous:hover {
+        background: rgb(255, 241, 240);
+      }
+    }
+  }
+}
