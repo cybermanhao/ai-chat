@@ -1,3 +1,4 @@
+// 暂时废弃
 export const nord = {
     background: '#2E3440',
     foreground: '#D8DEE9',

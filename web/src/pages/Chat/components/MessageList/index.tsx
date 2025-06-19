@@ -4,7 +4,8 @@ import type { ChatMessage } from '@/types';
 import './styles.less';
 
 interface MessageListProps {
-  messages: ChatMessage[];
+  messages: Array<ChatMessage & { streaming?: boolean }>;
+
 }
 
 const MessageList: React.FC<MessageListProps> = ({ messages = [] }) => {

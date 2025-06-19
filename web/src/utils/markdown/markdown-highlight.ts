@@ -1,3 +1,4 @@
+
 interface HighlightOptions {
     needTools?: boolean;
 }

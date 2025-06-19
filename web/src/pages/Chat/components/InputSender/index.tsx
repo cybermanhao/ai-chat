@@ -13,6 +13,7 @@ interface InputSenderProps {
   onChange: (value: string) => void;
   onSubmit: () => void;
   onCancel?: () => void;
+  onAbort?: () => void;
 }
 
 const InputSender: React.FC<InputSenderProps> = ({
@@ -23,10 +24,22 @@ const InputSender: React.FC<InputSenderProps> = ({
   onChange,
   onSubmit,
   onCancel,
+  onAbort,
 }) => {
   const isDisabled = loading || disabled;
 
-  return (    <div className="input-sender">
+  return (    
+    <div className="input-sender">
+      {onAbort && (
+        <Button 
+          type="link" 
+          danger 
+          onClick={onAbort}
+          className="abort-button"
+        >
+          停止生成
+        </Button>
+      )}
       <Sender
         loading={isDisabled}
         value={value}
