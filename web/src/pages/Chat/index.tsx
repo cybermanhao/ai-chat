@@ -3,37 +3,33 @@ import { useLLMConfig } from '@/hooks/useLLMConfig';
 import { useModelConfig } from '@/hooks/useModelConfig';
 import MessageList from './components/MessageList';
 import InputSender from './components/InputSender';
-import type { ChatMessage } from '@/types';
 import { llmService } from '@/services/llmService';
 import { createMessage } from '@/utils/messageFactory';
 import { handleResponseStream } from '@/utils/streamHandler';
 import { useChatMessages } from '@/hooks/useChatMessages';
+import { useChatList } from '@/hooks/useChatList';
 import './styles.less';
 
-interface ChatProps {
-  messages: ChatMessage[];
-  loading?: boolean;
-  onSend?: (value: string) => void;
-  disabled?: boolean;
-}
-
-const Chat: React.FC<ChatProps> = ({ messages = [], loading = false, onSend, disabled }) => {
+const Chat: React.FC = () => {
   const [value, setValue] = useState('');
   const { activeLLM, currentConfig } = useLLMConfig();
   const { config } = useModelConfig();
+  const { currentChatId } = useChatList();
   
   const {
-    localMessages,
+    messages,
     isGenerating,
     setIsGenerating,
     addMessage,
     updateLastMessage,
     removeLastMessage,
     handleAbort
-  } = useChatMessages(messages, onSend);
+  } = useChatMessages(currentChatId, []);
+
+  const isDisabled = !currentChatId || !activeLLM || !currentConfig?.model || !currentConfig?.apiKey;
 
   const handleSubmit = async () => {
-    if (!value.trim() || !currentConfig?.model || !currentConfig.apiKey) return;
+    if (!value.trim() || isDisabled) return;
     
     const userMessage = createMessage.user(value);
     const assistantMessage = createMessage.assistant(userMessage.id);
@@ -44,14 +40,10 @@ const Chat: React.FC<ChatProps> = ({ messages = [], loading = false, onSend, dis
     setIsGenerating(true);
     
     try {
-      if (!currentConfig.baseUrl || !currentConfig.apiKey || !currentConfig.model) {
-        throw new Error('Missing required configuration');
-      }
-
       const stream = await llmService.createChatCompletion({
-        baseURL: currentConfig.baseUrl,
-        apiKey: currentConfig.apiKey,
-        model: currentConfig.model,
+        baseURL: currentConfig.baseUrl!,
+        apiKey: currentConfig.apiKey!,
+        model: currentConfig.model!,
         messages: [...messages, userMessage],
         temperature: config.temperature || 1,
         tools: config.enabledTools?.length > 0 ? [] : undefined,
@@ -86,16 +78,25 @@ const Chat: React.FC<ChatProps> = ({ messages = [], loading = false, onSend, dis
   return (
     <div className="talking">
       <div className="talking-inner">
-        <MessageList messages={localMessages} />
+        <MessageList messages={messages} />
       </div>
       <div className="input-area">
         <InputSender 
-          loading={loading || disabled || !activeLLM || isGenerating}
+          loading={isGenerating}
+          disabled={isDisabled}
           value={value}
           onChange={setValue}
           onSubmit={handleSubmit}
           onAbort={isGenerating ? handleAbort : undefined}
-          placeholder={activeLLM ? "输入消息..." : "请先在设置中选择模型..."}
+          placeholder={
+            !currentChatId 
+              ? "请先创建或选择一个对话..." 
+              : !activeLLM 
+                ? "请先在设置中选择模型..." 
+                : !currentConfig?.apiKey 
+                  ? "请先在设置中配置 API Key..." 
+                  : "输入消息..."
+          }
         />
       </div>
     </div>

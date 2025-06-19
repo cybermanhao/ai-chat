@@ -81,10 +81,9 @@
   --background-secondary: #1f1f1f;       /* 次要内容区域，如侧边栏 */
   --background-tertiary: #262626;        /* 第三级背景，如卡片容器 */
   
-  /* 3. 交互元素背景 */
-  --background-hover: #262626;           /* 悬浮状态背景 */
-  --background-active: #2d2d2d;          /* 激活状态背景 */
-  --background-selected: #177ddc1a;      /* 选中状态背景 */
+  /* 3. 交互元素背景 */  --background-hover: rgba(255, 255, 255, 0.08);           /* 悬浮状态背景 */
+  --background-active: rgba(255, 255, 255, 0.12);          /* 激活状态背景 */
+  --background-selected: rgba(82, 196, 26, 0.15);          /* 选中状态背景 */
   --background-disabled: #262626;        /* 禁用状态背景 */
   
   /* 4. 输入区域背景 */
