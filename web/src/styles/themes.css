@@ -11,13 +11,39 @@
   --text-color-secondary: rgba(0, 0, 0, 0.45);
   /* 边框颜色 */
   --border-color-base: #d9d9d9;
-  --border-color-split: #f0f0f0;
-  /* 背景颜色 */
+  --border-color-split: #f0f0f0;  /* 背景颜色 - 从深到浅的层级 */
+  /* 1. 容器背景 - 最外层 */
+  --background-container: #f0f2f5;       /* 整个应用的容器背景 */
+  --background-content: #fff;            /* 主内容区域背景 */
+  --background-elevated: #fff;           /* 悬浮层背景，如对话框 */
+  
+  /* 2. 功能区背景 */
+  --background-secondary: #f8f9fa;       /* 次要内容区域，如侧边栏 */
+  --background-tertiary: #f5f5f5;        /* 第三级背景，如卡片容器 */
+  
+  /* 3. 交互元素背景 */
+  --background-hover: #f5f5f5;           /* 悬浮状态背景 */
+  --background-active: #e6f4ff;          /* 激活状态背景 */
+  --background-selected: #e6f7ff;        /* 选中状态背景 */
+  --background-disabled: #f5f5f5;        /* 禁用状态背景 */
+  
+  /* 4. 输入区域背景 */
+  --background-input: #fff;              /* 输入框背景 */
+  --background-input-hover: #fafafa;     /* 输入框悬浮背景 */
+  --background-input-active: #fff;       /* 输入框激活背景 */
+  
+  /* 5. 特殊功能背景 */
+  --background-code: #f6f8fa;            /* 代码块背景 */
+  --background-tooltip: #fff;            /* 工具提示背景 */
+  --background-mask: rgba(0,0,0,0.45);   /* 遮罩层背景 */
+
+  /* 保留原有的 base 和 light 用于兼容 */
   --background-color-base: #f0f0f0;
   --background-color-light: #f5f5f5;
-  /* 应用容器颜色 */
-  --app-container-bg: #f0f2f5;
-  --app-content-bg: #fff;
+
+  /* 应用容器颜色 - 后续可以逐步迁移到新的命名 */
+  --app-container-bg: var(--background-container);
+  --app-content-bg: var(--background-content);
   /* 侧边栏颜色 */
   --sider-bg: #f8f9fa;
   --sider-text: #4b5563;
@@ -45,13 +71,39 @@
   --text-color: rgba(255, 255, 255, 0.85);
   --text-color-secondary: rgba(255, 255, 255, 0.45);
   --border-color-base: #434343;
-  --border-color-split: #303030;
-  /* 背景颜色 */
+  --border-color-split: #303030;  /* 背景颜色 - 从深到浅的层级 */
+  /* 1. 容器背景 - 最外层 */
+  --background-container: #000000;       /* 整个应用的容器背景 */
+  --background-content: #141414;         /* 主内容区域背景 */
+  --background-elevated: #1f1f1f;        /* 悬浮层背景，如对话框 */
+  
+  /* 2. 功能区背景 */
+  --background-secondary: #1f1f1f;       /* 次要内容区域，如侧边栏 */
+  --background-tertiary: #262626;        /* 第三级背景，如卡片容器 */
+  
+  /* 3. 交互元素背景 */
+  --background-hover: #262626;           /* 悬浮状态背景 */
+  --background-active: #2d2d2d;          /* 激活状态背景 */
+  --background-selected: #177ddc1a;      /* 选中状态背景 */
+  --background-disabled: #262626;        /* 禁用状态背景 */
+  
+  /* 4. 输入区域背景 */
+  --background-input: #141414;           /* 输入框背景 */
+  --background-input-hover: #1f1f1f;     /* 输入框悬浮背景 */
+  --background-input-active: #141414;    /* 输入框激活背景 */
+  
+  /* 5. 特殊功能背景 */
+  --background-code: #1f1f1f;            /* 代码块背景 */
+  --background-tooltip: #1f1f1f;         /* 工具提示背景 */
+  --background-mask: rgba(0,0,0,0.65);   /* 遮罩层背景 */
+
+  /* 保留原有的 base 和 light 用于兼容 */
   --background-color-base: #141414;
   --background-color-light: #1f1f1f;
-  /* 应用容器颜色 */
-  --app-container-bg: #000000;
-  --app-content-bg: #141414;
+
+  /* 应用容器颜色 - 后续可以逐步迁移到新的命名 */
+  --app-container-bg: var(--background-container);
+  --app-content-bg: var(--background-content);
   /* 侧边栏颜色 */
   --sider-bg: #1f1f1f;
   --sider-text: #a3a3a3;

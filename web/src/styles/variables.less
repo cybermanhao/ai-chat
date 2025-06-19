@@ -34,7 +34,33 @@
 // Code colors
 @code-bg: var(--code-bg);
 
-// Background colors
+// Background colors - 从深到浅的层级
+// 1. 容器背景
+@background-container: var(--background-container);     // 整个应用的容器背景
+@background-content: var(--background-content);        // 主内容区域背景
+@background-elevated: var(--background-elevated);      // 悬浮层背景
+
+// 2. 功能区背景
+@background-secondary: var(--background-secondary);    // 次要内容区域背景
+@background-tertiary: var(--background-tertiary);     // 第三级背景
+
+// 3. 交互元素背景
+@background-hover: var(--background-hover);           // 悬浮状态背景
+@background-active: var(--background-active);         // 激活状态背景
+@background-selected: var(--background-selected);     // 选中状态背景
+@background-disabled: var(--background-disabled);     // 禁用状态背景
+
+// 4. 输入区域背景
+@background-input: var(--background-input);           // 输入框背景
+@background-input-hover: var(--background-input-hover); // 输入框悬浮背景
+@background-input-active: var(--background-input-active); // 输入框激活背景
+
+// 5. 特殊功能背景
+@background-code: var(--background-code);             // 代码块背景
+@background-tooltip: var(--background-tooltip);       // 工具提示背景
+@background-mask: var(--background-mask);            // 遮罩层背景
+
+// 兼容旧版变量 - 逐步迁移中
 @background-color-light: var(--background-color-light);
 @background-color-base: var(--background-color-base);
 

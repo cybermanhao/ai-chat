@@ -2,10 +2,14 @@
 
 .markdown-body {
   // 基础样式
-  font-size: 14px;
-  line-height: 1.6;
+  font-size: 15px;
+  line-height: 1.7;
   word-wrap: break-word;
   color: @text-color;
+  padding: 1rem;
+  background-color: @background-elevated;
+  border-radius: 8px;
+  border: 1px solid @border-color-split;
 
   // XML 插件样式
   .xml-highlight {
@@ -66,21 +70,39 @@
     &.small { padding: 0 7px; height: 24px; font-size: 14px; }
     &.large { padding: 0 15px; height: 40px; font-size: 16px; }
   }
-
   // 标题样式
   h1, h2, h3, h4, h5, h6 {
-    margin-top: 24px;
-    margin-bottom: 16px;
+    margin-top: 1.5em;
+    margin-bottom: 0.75em;
     font-weight: 600;
     line-height: 1.25;
+    color: @text-color;
+    border-bottom: none;
+    position: relative;
+    padding-left: 0.5em;
+
+    &::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 3px;
+      background-color: var(--primary-color);
+      border-radius: 3px;
+    }
   }
 
-  h1 { font-size: 2em; }
+  h1 { 
+    font-size: 1.75em;
+    padding-bottom: 0.5em;
+    border-bottom: 1px solid @border-color-split;
+  }
   h2 { font-size: 1.5em; }
   h3 { font-size: 1.25em; }
-  h4 { font-size: 1em; }
-  h5 { font-size: 0.875em; }
-  h6 { font-size: 0.85em; }
+  h4 { font-size: 1.1em; }
+  h5 { font-size: 1em; }
+  h6 { font-size: 0.95em; }
 
   // 超链接样式
   a {
@@ -95,6 +117,114 @@
 
     &:active {
       opacity: 0.8;
+    }
+  }
+
+  // 分割线
+  hr {
+    height: 1px;
+    padding: 0;
+    margin: 24px 0;
+    background-color: @border-color-split;
+    border: 0;
+  }
+
+  // 段落和列表
+  p {
+    margin: 1em 0;
+    line-height: 1.7;
+  }
+
+  ul, ol {
+    padding-left: 1.5em;
+    margin: 1em 0;
+  }
+
+  li {
+    margin: 0.5em 0;
+    
+    > p {
+      margin: 0.5em 0;
+    }
+  }
+
+  // 引用块
+  blockquote {
+    margin: 1em 0;
+    padding: 0.5em 1em;
+    color: @text-color-secondary;
+    background-color: @background-tertiary;
+    border-left: 4px solid @primary-color;
+    border-radius: 0 4px 4px 0;
+
+    p {
+      margin: 0.5em 0;
+      
+      &:first-child {
+        margin-top: 0;
+      }
+      
+      &:last-child {
+        margin-bottom: 0;
+      }
+    }
+  }
+
+  // 代码块
+  pre {
+    margin: 1em 0;
+    padding: 1em;
+    overflow: auto;
+    background-color: @background-code;
+    border-radius: 6px;
+    border: 1px solid @border-color-split;
+    font-family: 'JetBrains Mono', Consolas, Monaco, 'Andale Mono', monospace;
+    
+    code {
+      background-color: transparent;
+      padding: 0;
+      border-radius: 0;
+      margin: 0;
+      font-size: 13px;
+      color: @text-color;
+    }
+  }
+
+  // 行内代码
+  code {
+    padding: 0.2em 0.4em;
+    margin: 0 0.2em;
+    background-color: @background-code;
+    border-radius: 3px;
+    font-size: 0.9em;
+    font-family: 'JetBrains Mono', Consolas, Monaco, 'Andale Mono', monospace;
+  }
+
+  // 强调
+  strong {
+    font-weight: 600;
+    color: @text-color;
+  }
+
+  // 表格
+  table {
+    margin: 1em 0;
+    width: 100%;
+    border-collapse: collapse;
+    border: 1px solid @border-color-split;
+    
+    th, td {
+      padding: 0.75em;
+      border: 1px solid @border-color-split;
+    }
+    
+    th {
+      font-weight: 600;
+      background-color: @background-tertiary;
+    }
+    
+    tr:nth-child(even) {
+      background-color: @background-hover;
     }
   }
 

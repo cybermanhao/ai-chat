@@ -1,73 +1,405 @@
 .message-card {
   display: flex;
-  margin-bottom: 8px;
-  
-  &:last-child {
-    margin-bottom: 0;
+  margin-bottom: 1rem;
+  padding: 0 1rem;
+
+  &.message-user {
+    justify-content: flex-end;
+    
+    .message-inner {
+      flex-direction: row-reverse;
+    }
+    
+    .message-body {
+      margin-right: 1rem;
+      margin-left: 0;
+      max-width: 1000px;
+
+    }    .message-content {
+      background-color: var(--background-elevated);
+      color: var(--text-color);
+      border-radius: 12px 2px 12px 12px;
+      border: 1px solid var(--border-color-split);
+
+      a {
+        color: var(--primary-color);
+        text-decoration: none;
+        transition: all 0.3s ease;
+        
+        &:hover {
+          color: var(--primary-color-hover);
+          text-decoration: underline;
+        }
+      }
+
+      code {
+        color: var(--success-color);
+        background-color: var(--background-code);
+        padding: 2px 4px;
+        border-radius: 4px;
+      }
+    }
+
+    .message-avatar {
+      background-color: var(--primary-color);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    }
+  }
+  &.message-assistant {
+    justify-content: flex-start;      .message-content {
+        background-color: var(--background-elevated);
+        color: var(--text-color);
+        border-radius: 2px 12px 12px 12px;
+        border: 1px solid var(--border-color-split);
+
+        // 覆盖 markdown-body 的默认样式
+        .markdown-body {
+          padding: 0;
+          background: none;
+          border: none;
+          font-size: inherit;
+          min-width: 400px;
+          max-width: 1000px;
+
+          pre {
+            margin: 0.5rem 0;
+          }
+
+          a {
+            color: var(--primary-color);
+            text-decoration: none;
+            
+            &:hover {
+              text-decoration: underline;
+            }
+          }
+
+          code {
+            color: var(--success-color);
+            background-color: var(--background-code);
+            padding: 2px 4px;
+            border-radius: 4px;
+          }
+
+          // 调整标题大小
+          h1 { font-size: 1.4em; }
+          h2 { font-size: 1.3em; }
+          h3 { font-size: 1.2em; }
+          h4 { font-size: 1.1em; }
+          h5, h6 { font-size: 1em; }
+
+          // 移除标题的边框和padding
+          h1, h2, h3, h4, h5, h6 {
+            border: none;
+            padding-left: 0;
+            margin-top: 1em;
+            margin-bottom: 0.5em;
+
+            &::before {
+              display: none;
+            }
+          }
+
+          // 调整块引用样式
+          blockquote {
+            margin: 0.5em 0;
+            padding: 0.5em 1em;
+            border-left: 3px solid var(--success-color);
+            background-color: var(--background-tertiary);
+          }
+
+          // 调整列表样式
+          ul, ol {
+            padding-left: 1.5em;
+            margin: 0.5em 0;
+          }
+
+          // 调整表格样式
+          table {
+            margin: 0.5em 0;
+            display: block;
+            overflow-x: auto;
+
+            th {
+              background-color: var(--background-tertiary);
+              font-weight: 500;
+            }
+          }
+        }
+      }
+
+    .message-avatar {
+      background-color: var(--success-color);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    }
+
+    .message-status {
+      font-size: 12px;
+      color: var(--text-color-secondary);
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+
+      .anticon {
+        font-size: 14px;
+        color: var(--success-color); // 使用主色调来强调状态图标
+      }
+    }    .reasoning-section {
+      margin-bottom: 0.5rem;
+      
+      .reasoning-header {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        cursor: pointer;
+        padding: 8px 12px;
+        color: var(--text-color-secondary);
+        font-size: 13px;
+        background-color: var(--background-tertiary);
+        border: 1px solid var(--border-color-split);
+        border-radius: 6px;
+        margin-bottom: 8px;
+        transition: all 0.3s ease;
+
+        &:hover {
+          background: var(--background-hover);
+          border-color: var(--success-color);
+          color: var(--success-color);
+        }
+
+        .anticon {
+          font-size: 12px;
+          color: var(--text-color-secondary);
+          transition: all 0.3s ease;
+        }
+
+        &:hover .anticon {
+          color: var(--success-color);
+          transform: scale(1.1);
+        }
+      }      .reasoning-content {
+        background-color: var(--background-input);
+        border: 1px solid var(--border-color-split);
+        border-radius: 6px;
+        padding: 1rem;
+        margin: 0.25rem 0;
+        font-size: 13px;
+        color: var(--text-color-secondary);
+        line-height: 1.6;
+        white-space: pre-wrap;
+        overflow-wrap: break-word;
+        word-break: normal;
+        font-family: 'JetBrains Mono', Consolas, Monaco, monospace;
+        max-width: 100%;
+        overflow-x: auto;
+      }
+    }
   }
 
-  .message-container {
+  .message-inner {
     display: flex;
     align-items: flex-start;
-    gap: 12px;
+    gap: 0.5rem;
     max-width: 80%;
   }
 
-  .avatar {
-    width: 32px;
-    height: 32px;
+  .message-avatar {
+    width: 36px;
+    height: 36px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
+    color: #fff;
     flex-shrink: 0;
-
-    &.user-avatar {
-      background-color: #1890ff;
-      color: #fff;
-    }
-
-    &.assistant-avatar {
-      background-color: #52c41a;
-      color: #fff;
-    }
   }
-
-  .message-content {
-    padding: 8px 12px;
-    border-radius: 8px;
-    word-break: break-word;
+  .message-body {
+    flex: 1;
+    min-width: 0;
+    max-width: 800px; // 固定最大宽度
+    width: 100%; // 占满可用空间
     
-    &.user-message {
-      background-color: #1890ff;
-      color: #fff;
+    .reasoning-section {
+      width: 100%; // 确保思考过程占满容器宽度
+      box-sizing: border-box; // 包含padding和border在内
+    }
+  }  .message-content {
+    padding: 0.75rem 1rem;
+    word-wrap: break-word;
+    line-height: 1.6;
+    font-size: 14px;
+    position: relative;
+
+    .message-content-header {
+      position: absolute;
+      top: 0.5rem;
+      right: 0.5rem;
+      z-index: 1;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+      display: flex;
+      gap: 4px;
+
+      .ant-btn {
+        color: var(--text-color-secondary);
+        opacity: 0.6;
+        transition: all 0.3s ease;
+
+        &:hover {
+          opacity: 1;
+          color: var(--primary-color);
+          background: var(--background-tertiary);
+        }
+
+        &.active {
+          color: var(--primary-color);
+          opacity: 0.8;
+        }
+      }
     }
 
-    &.assistant-message {
-      background-color: var(--background-color-light);
-      border: 1px solid var(--border-color-split);
+    &:hover .message-content-header {
+      opacity: 1;
+    }
+
+    .plain-text {
+      white-space: pre-wrap;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }      .markdown-content {
+        a {
+          color: var(--primary-color);
+          text-decoration: none;
+          transition: all 0.3s ease;
+          
+          &:hover {
+            color: var(--primary-color-hover);
+            text-decoration: underline;
+          }
+          
+          &:active {
+            color: var(--primary-color-active);
+          }
+
+          &:visited {
+            color: var(--primary-color);
+            opacity: 0.8;
+          }
+        }
+
+        h1, h2, h3, h4, h5, h6 {
+          margin: 1em 0 0.5em;
+          font-weight: 600;
+          line-height: 1.25;
+        }
+
+      pre {
+        margin: 0.75rem 0;
+        padding: 1rem;
+        border-radius: 6px;
+        overflow-x: auto;
+        background-color: var(--background-code);
+        border: 1px solid var(--border-color-split);
+
+        code {
+          font-family: 'JetBrains Mono', Consolas, Monaco, monospace;
+          font-size: 13px;
+          background: none;
+          padding: 0;
+          color: inherit;
+        }
+      }
+
+      code {
+        font-family: 'JetBrains Mono', Consolas, Monaco, monospace;
+        font-size: 13px;
+        background-color: var(--background-code);
+        padding: 0.2em 0.4em;
+        border-radius: 3px;
+        margin: 0 0.2em;
+      }
+
+      p {
+        margin: 0.5em 0;
+      }
+
+      ul, ol {
+        padding-left: 1.5em;
+        margin: 0.5em 0;
+      }
+
+      blockquote {
+        margin: 0.5em 0;
+        padding: 0.5em 1em;
+        border-left: 4px solid var(--border-color-split);
+        background-color: var(--background-tertiary);
+      }
+
+      img {
+        max-width: 100%;
+        height: auto;
+        border-radius: 4px;
+      }
+
+      table {
+        width: 100%;
+        margin: 0.5em 0;
+        border-collapse: collapse;
+        
+        th, td {
+          padding: 0.5em;
+          border: 1px solid var(--border-color-split);
+          text-align: left;
+        }
+
+        th {
+          background-color: var(--background-tertiary);
+          font-weight: 600;
+        }
+
+        tr:nth-child(even) {
+          background-color: var(--background-tertiary);
+        }
+      }
+    }
+
+    .typing-cursor {
+      display: inline-block;
+      width: 4px;
+      height: 16px;
+      background-color: currentColor;
+      margin-left: 4px;
+      vertical-align: middle;
+      animation: blink 1s infinite;
     }
   }
 
-  &.message-streaming {
-    .markdown-wrapper {
-      position: relative;
-    }
-
-    .streaming-cursor {
-      display: inline-block;
-      width: 6px;
-      height: 15px;
-      background: currentColor;
-      margin-left: 2px;
-      vertical-align: middle;
-      animation: blink 1s step-start infinite;
-      opacity: 0.7;
-    }
+  .typing-cursor {
+    display: inline-block;
+    width: 4px;
+    height: 16px;
+    background: currentColor;
+    margin-left: 4px;
+    vertical-align: middle;
+    animation: blink 1s infinite;
+    opacity: 0.7;
   }
 }
 
 @keyframes blink {
   0%, 100% { opacity: 0; }
   50% { opacity: 1; }
+}
+
+:global {
+  .copy-success-message {
+    .ant-message-notice-content {
+      background: var(--success-color);
+      color: #fff;
+      
+      .anticon {
+        color: #fff;
+      }
+    }
+  }
 }
