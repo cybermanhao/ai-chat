@@ -104,7 +104,7 @@ const ChatList: React.FC = () => {
   });
 
   const style = {
-    width: '100%',
+    width: '80%',
     height: '100%',
     background: token.colorBgContainer,
     borderRadius: token.borderRadius,

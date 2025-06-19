@@ -1,6 +1,6 @@
 import React from 'react';
 import AppSider from '@/components/AppSider';
-import Chat from '@/pages/Chat';
+import { Outlet } from 'react-router-dom';
 import './styles.less';
 
 const Layout = () => {
@@ -13,8 +13,9 @@ const Layout = () => {
           collapsed={collapsed}
           onCollapse={setCollapsed}
         />
-      </div>      <div className="app-chat">
-        <Chat messages={[]} loading={false} />
+      </div>
+      <div className="app-chat">
+        <Outlet />
       </div>
     </div>
   );

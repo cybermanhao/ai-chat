@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
-import { Layout, Button } from 'antd';
-import { useNavigate, useOutlet } from 'react-router-dom';
+import { Layout } from 'antd';
 import {
   UserOutlined,
   SettingOutlined,
-  MessageOutlined,  MenuFoldOutlined,
+  MessageOutlined,
   RobotOutlined,
   AppstoreOutlined
 } from '@ant-design/icons';
@@ -20,75 +19,65 @@ interface AppSiderProps {
 
 type PanelType = 'chat' | 'settings' | 'mcp' | 'profile' | 'roles' | 'plugins';
 
+// 创建一个 PanelContent 映射
+const PanelContent = {
+  chat: React.lazy(() => import('@/pages/ChatList')),
+  roles: React.lazy(() => import('@/pages/RoleList')),
+  profile: React.lazy(() => import('@/pages/Profile')),
+  settings: React.lazy(() => import('@/pages/Settings')),
+  mcp: React.lazy(() => import('@/pages/Mcp')),
+  plugins: React.lazy(() => import('@/pages/Plugins')),
+};
+
 const AppSider = ({ collapsed, onCollapse }: AppSiderProps) => {
-  const navigate = useNavigate();
   const [activePanel, setActivePanel] = useState<PanelType>('chat');
-  const outlet = useOutlet();
 
   const handleToolClick = (panel: PanelType) => {
     if (activePanel !== panel) {
       setActivePanel(panel);
       onCollapse(false);
     }
-
-    switch (panel) {
-      case 'chat':
-        navigate('/chats');
-        break;
-      case 'roles':
-        navigate('/roles');
-        break;
-      case 'profile':
-        navigate('/profile');
-        break;
-      case 'settings':
-        navigate('/settings');
-        break;      case 'mcp':
-        navigate('/mcp');
-        break;
-      case 'plugins':
-        navigate('/plugins');
-        break;
-    }
   };
+
+  const ActivePanelComponent = PanelContent[activePanel];
 
   return (
     <div className="app-sider-container">
       <div className="app-toolbar">
         <div className="toolbar-top">
-          <div 
+          <div
             className={`toolbar-item ${activePanel === 'chat' ? 'active' : ''}`}
             onClick={() => handleToolClick('chat')}
           >
             <MessageOutlined />
           </div>
-          <div 
+          <div
             className={`toolbar-item ${activePanel === 'roles' ? 'active' : ''}`}
             onClick={() => handleToolClick('roles')}
           >
             <RobotOutlined />
           </div>
-          <div 
-            className={`toolbar-item ${activePanel === 'plugins' ? 'active' : ''}`}
-            onClick={() => handleToolClick('plugins')}
-          >
-            <AppstoreOutlined />
-          </div>
-          <div 
+          <div
             className={`toolbar-item ${activePanel === 'settings' ? 'active' : ''}`}
             onClick={() => handleToolClick('settings')}
           >
             <SettingOutlined />
           </div>
-          <div 
+          <div
             className={`toolbar-item ${activePanel === 'mcp' ? 'active' : ''}`}
             onClick={() => handleToolClick('mcp')}
           >
             <MCP />
           </div>
+          <div
+            className={`toolbar-item ${activePanel === 'plugins' ? 'active' : ''}`}
+            onClick={() => handleToolClick('plugins')}
+          >
+            <AppstoreOutlined />
+          </div>
         </div>
         <div className="toolbar-bottom">
-          <div 
+          <div
             className={`toolbar-item ${activePanel === 'profile' ? 'active' : ''}`}
             onClick={() => handleToolClick('profile')}
           >
@@ -96,26 +85,20 @@ const AppSider = ({ collapsed, onCollapse }: AppSiderProps) => {
           </div>
         </div>
       </div>
+
       {!collapsed && (
-        <Sider className="app-panel" width={300}>
-          <div className="panel-header">
-            <span className="panel-title">              {activePanel === 'chat' && '聊天'}
-              {activePanel === 'roles' && 'AI 角色'}
-              {activePanel === 'plugins' && '插件市场'}
-              {activePanel === 'settings' && '设置'}
-              {activePanel === 'mcp' && 'MCP服务器'}
-              {activePanel === 'profile' && '个人信息'}
-            </span>
-            <Button 
-              type="text" 
-              icon={<MenuFoldOutlined />}
-              onClick={() => onCollapse(true)}
-              className="collapse-btn"
-            />
-          </div>
-          <div className="panel-content">
-            {outlet}
-          </div>
+        <Sider
+          width={360}
+          className="app-sider"
+          style={{ 
+            height: '100%',
+            background: 'var(--sider-panel-bg)',
+            borderRight: '1px solid var(--border-color-split)'
+          }}
+        >
+          <React.Suspense fallback={<div>Loading...</div>}>
+            <ActivePanelComponent />
+          </React.Suspense>
         </Sider>
       )}
     </div>
