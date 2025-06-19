@@ -6,6 +6,7 @@ import InputSender from './components/InputSender';
 import type { ChatMessage } from '@/types';
 import { llmService, getCurrentStream } from '@/services/llmService';
 import './styles.less';
+import { CloudSyncOutlined } from '@ant-design/icons';
 
 interface ChatProps {
   messages: ChatMessage[];
@@ -14,14 +15,19 @@ interface ChatProps {
   disabled?: boolean;
 }
 
+type MessageStatus = 'connecting' | 'thinking' | 'answering' | 'stable';
+
 interface StreamingMessage extends ChatMessage {
-  streaming?: boolean;
+  reasoning_content?: string;
+  status: MessageStatus;
 }
 
 const Chat: React.FC<ChatProps> = ({ messages = [], loading = false, onSend, disabled }) => {
   const [value, setValue] = useState('');
-  const [localMessages, setLocalMessages] = useState<StreamingMessage[]>(messages);
-  const [isStreaming, setIsStreaming] = useState(false);
+  const [localMessages, setLocalMessages] = useState<StreamingMessage[]>(
+    messages.map(msg => ({ ...msg, status: 'stable' }))
+  );
+  const [isGenerating, setIsGenerating] = useState(false);
   const { activeLLM, currentConfig } = useLLMConfig();
   const { config } = useModelConfig();
 
@@ -40,36 +46,48 @@ const Chat: React.FC<ChatProps> = ({ messages = [], loading = false, onSend, dis
     const stream = getCurrentStream();
     if (stream) {
       llmService.abortCurrentStream();
-      setIsStreaming(false);
+      setIsGenerating(false);
       // 移除最后一条未完成的消息
       setLocalMessages(prev => {
         const last = prev[prev.length - 1];
-        if (last?.streaming) {
+        if (last.status !== 'stable') {
           return prev.slice(0, -1);
         }
         return prev;
       });
     }
   }, []);
-
   React.useEffect(() => {
-    // Only sync messages when not streaming
-    if (!isStreaming) {
-      setLocalMessages(messages);
+    // Sync initial messages only when the component mounts
+    if (messages.length > 0 && localMessages.length === 0) {
+      setLocalMessages(messages.map(msg => ({ ...msg, status: 'stable' })));
     }
-  }, [messages, isStreaming]);
+  }, [messages, localMessages]);
+
+  // 在生成完成时通知父组件更新
+  useEffect(() => {
+    if (!isGenerating && localMessages.length > 0) {
+      const lastMessage = localMessages[localMessages.length - 1];
+      if (lastMessage.role === 'assistant' && lastMessage.status === 'stable') {
+        // 将所有本地消息同步回父组件
+        if (onSend) {
+          onSend(lastMessage.content);
+        }
+      }
+    }
+  }, [isGenerating, localMessages, onSend]);
 
   const handleSubmit = async () => {
     if (!value.trim() || !currentConfig?.model || !currentConfig.apiKey) return;
-      const timestamp = Date.now();
+    const timestamp = Date.now();
     const messageId = `msg-${timestamp}`;
-    const trimmedValue = value.trim();
     
     const userMessage: StreamingMessage = {
       id: messageId,
       role: 'user',
-      content: trimmedValue,
+      content: value.trim(),
       timestamp,
+      status: 'stable'
     };
     
     const assistantMessage: StreamingMessage = {
@@ -77,12 +95,12 @@ const Chat: React.FC<ChatProps> = ({ messages = [], loading = false, onSend, dis
       role: 'assistant',
       content: '',
       timestamp,
-      streaming: true,
+      status: 'connecting'
     };
     
     setValue('');
     setLocalMessages(prev => [...prev, userMessage, assistantMessage]);
-    setIsStreaming(true);
+    setIsGenerating(true);
     
     try {
       if (!currentConfig.baseUrl || !currentConfig.apiKey || !currentConfig.model) {
@@ -100,81 +118,107 @@ const Chat: React.FC<ChatProps> = ({ messages = [], loading = false, onSend, dis
       });
 
       let fullResponse = '';
-      try {
-        for await (const chunk of stream) {
-          if (!chunk.data) continue;
+      let fullReasoningResponse = '';      try {
+        for await (const chunk of stream) {          if (!chunk.data) continue;
           
-          console.log('Received chunk:', chunk.data);
+          console.log('Chunk data:', JSON.stringify(chunk.data));
           
-          // 处理 [DONE] 标记
-          if (chunk.data === '[DONE]') {
-            console.log('Stream completed');
-            break;
+          let data;
+          try {
+            data = JSON.parse(chunk.data);
+
+            // 如果是最后一条消息（包含finish_reason和统计信息），跳过处理
+            if (data.choices?.[0]?.finish_reason === 'stop' && data.usage) {
+              console.log('Stream ended with finish_reason: stop');
+              console.log('Final response:', { reasoning: fullReasoningResponse, content: fullResponse });
+              break;
+            }          } catch {
+            // 仅在非 [DONE] 标记时打印错误
+            if (chunk.data !== '[DONE]') {
+              console.warn('Failed to parse chunk:', chunk.data);
+            }
+            continue;
+          }
+
+          const delta = data.choices?.[0]?.delta;
+          if (!delta) continue;
+          
+          // 处理 reasoning_content
+          if (delta.reasoning_content) {
+            fullReasoningResponse += delta.reasoning_content;
+            setLocalMessages(prev => {
+              const lastMessage = prev[prev.length - 1];
+              if (lastMessage.status !== 'stable') {
+                return [
+                  ...prev.slice(0, -1),
+                  { ...lastMessage, status: 'thinking', reasoning_content: fullReasoningResponse }
+                ];
+              }
+              return prev;
+            });
           }
           
-          try {
-            const data = JSON.parse(chunk.data);
-            // 处理 OpenAI 格式的响应
-            if (data.choices?.[0]?.delta?.content) {
-              const content = data.choices[0].delta.content;
-              console.log('Content chunk:', content);
-              fullResponse += content;
-              setLocalMessages(prev => {
-                const lastMessage = prev[prev.length - 1];
-                if (lastMessage?.streaming) {
-                  return [
-                    ...prev.slice(0, -1),
-                    { ...lastMessage, content: fullResponse },
-                  ];
-                }
-                return prev;
-              });
-            }
-          } catch {
-            console.warn('Failed to parse chunk:', chunk.data);
-            continue;
+          // 处理 content
+          if (delta.content) {
+            fullResponse += delta.content;
+            setLocalMessages(prev => {
+              const lastMessage = prev[prev.length - 1];
+              if (lastMessage.status !== 'stable') {
+                return [
+                  ...prev.slice(0, -1),
+                  { 
+                    ...lastMessage, 
+                    status: 'answering',
+                    content: fullResponse,
+                    reasoning_content: fullReasoningResponse || undefined 
+                  }
+                ];
+              }
+              return prev;
+            });
           }
         }
 
         // 流式响应完成，添加最终消息
         setLocalMessages(prev => {
           const lastMessage = prev[prev.length - 1];
-          if (lastMessage?.streaming) {
+          if (lastMessage.status !== 'stable') {
             return [
               ...prev.slice(0, -1),
-              { ...lastMessage, content: fullResponse, streaming: false },
+              { 
+                ...lastMessage, 
+                content: fullResponse,
+                reasoning_content: fullReasoningResponse || undefined,
+                status: 'stable'
+              }
             ];
           }
-          return prev;
-        });
+          return prev;        });
       } catch (streamError) {
         console.error('Streaming error:', streamError);
-        // 出错时移除最后一条消息
         setLocalMessages(prev => prev.slice(0, -1));
         throw streamError;
-      }
-
-      if (onSend) {
-        onSend(trimmedValue);
       }
     } catch (error) {
       console.error('Chat completion error:', error);
       setLocalMessages(prev => prev.slice(0, -1));
     } finally {
-      setIsStreaming(false);
+      setIsGenerating(false);
     }
-  };  return (
+  };
+
+  return (
     <div className="talking">
       <div className="talking-inner">
         <MessageList messages={localMessages} />
       </div>
       <div className="input-area">
         <InputSender 
-          loading={loading || disabled || !activeLLM || isStreaming}
+          loading={loading || disabled || !activeLLM || isGenerating}
           value={value}
           onChange={setValue}
           onSubmit={handleSubmit}
-          onAbort={isStreaming ? handleAbort : undefined}
+          onAbort={isGenerating ? handleAbort : undefined}
           placeholder={activeLLM ? "输入消息..." : "请先在设置中选择模型..."}
         />
       </div>

@@ -31,16 +31,17 @@ const MessageCard: React.FC<MessageCardProps> = ({ id, content, role, streaming 
       <Bubble
         key={id}
         placement={isUser ? 'end' : 'start'}
-        content={
-          isAssistant ? (
-            <div className="markdown-wrapper">
-              <Markdown content={content} />
-              {streaming && (
-                <span className="streaming-cursor" />
-              )}
-            </div>
-          ) : content
-        }
+        // content={
+        //   isAssistant ? (
+        //     <div className="markdown-wrapper">
+        //       <Markdown content={content} />
+        //       {streaming && (
+        //         <span className="streaming-cursor" />
+        //       )}
+        //     </div>
+        //   ) : content
+        // }
+        content={content}
         avatar={{ 
           icon: isUser ? <UserOutlined /> : <RobotOutlined />,
           style: isUser ? userAvatar : assistantAvatar

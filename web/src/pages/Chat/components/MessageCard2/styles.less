@@ -1,0 +1,143 @@
+.message-card2 {
+  display: flex;
+  margin-bottom: 1rem;
+  padding: 0 1rem;
+
+  &.message-user {
+    justify-content: flex-end;
+    
+    .message-inner {
+      flex-direction: row-reverse;
+    }
+    
+    .message-body {
+      margin-right: 1rem;
+      margin-left: 0;
+    }
+
+    .message-content {
+      background-color: #1890ff;
+      color: #fff;
+      border-radius: 12px 2px 12px 12px;
+    }
+
+    .message-avatar {
+      background-color: #1890ff;
+    }
+  }
+
+  &.message-assistant {
+    justify-content: flex-start;
+
+    .message-content {
+      background-color: #f5f5f5;
+      border-radius: 2px 12px 12px 12px;
+    }
+
+    .message-avatar {
+      background-color: #52c41a;
+    }
+
+    .message-status {
+      font-size: 12px;
+      color: #999;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+
+      .anticon {
+        font-size: 14px;
+      }
+    }
+
+    .reasoning-section {
+      margin-bottom: 0.5rem;
+      
+      .reasoning-header {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        cursor: pointer;
+        padding: 0.25rem 0;
+        color: #666;
+        font-size: 12px;
+
+        &:hover {
+          color: #1890ff;
+        }
+      }
+
+      .reasoning-content {
+        background-color: #fafafa;
+        border: 1px solid #f0f0f0;
+        border-radius: 6px;
+        padding: 0.75rem;
+        margin: 0.25rem 0;
+        font-size: 13px;
+        color: #666;
+        line-height: 1.5;
+        white-space: pre-wrap;
+      }
+    }
+  }
+
+  .message-inner {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    max-width: 80%;
+  }
+
+  .message-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    flex-shrink: 0;
+  }
+
+  .message-body {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .message-content {
+    padding: 0.75rem 1rem;
+    word-wrap: break-word;
+    line-height: 1.5;
+    font-size: 14px;
+    position: relative;
+    white-space: pre-wrap;
+
+    pre {
+      margin: 0.5rem 0;
+      padding: 1rem;
+      border-radius: 6px;
+      overflow-x: auto;
+    }
+
+    code {
+      font-family: Consolas, Monaco, 'Andale Mono', monospace;
+    }
+  }
+
+  .typing-cursor {
+    display: inline-block;
+    width: 4px;
+    height: 16px;
+    background: currentColor;
+    margin-left: 4px;
+    vertical-align: middle;
+    animation: blink 1s infinite;
+    opacity: 0.7;
+  }
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 0; }
+  50% { opacity: 1; }
+}
