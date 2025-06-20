@@ -46,48 +46,46 @@ const InputSender: React.FC<InputSenderProps> = ({
     // Focus the textarea when the component mounts
     textAreaRef.current?.focus();
   }, []);
-  
-  return (    
+    return (    
     <div className="input-sender">
-      <div className="sender-header">
-      </div>
+      <div className="sender-container">
+        <div className="input-wrapper">
+          <TextArea
+            ref={textAreaRef}
+            value={value}
+            disabled={isDisabled}
+            placeholder={placeholder}
+            onChange={e => onInputChange(e.target.value)}
+            onKeyDown={handleKeyDown}
+            autoSize={{ minRows: 1, maxRows: 5 }}
+            className="message-input"
+          />
+        </div>
 
-      <div className="input-wrapper">
-        <TextArea
-          ref={textAreaRef}
-          value={value}
-          disabled={isDisabled}
-          placeholder={placeholder}
-          onChange={e => onInputChange(e.target.value)}
-          onKeyDown={handleKeyDown}
-          autoSize={{ minRows: 1, maxRows: 5 }}
-          className="message-input"
-        />
-      </div>
+        <div className="sender-footer">
+          <InputToolbar loading={loading} />
 
-      <div className="sender-footer">
-        <InputToolbar loading={loading} />
-
-        <div className="action-buttons">
-          {isGenerating ? (
-            <Button
-              type="primary"
-              danger
-              icon={<StopOutlined />}
-              onClick={onStop}
-            >
-              停止生成
-            </Button>
-          ) : (
-            <Button
-              type="primary"
-              icon={<SendOutlined />}
-              disabled={!value.trim() || isDisabled}
-              onClick={onSend}
-            >
-              发送
-            </Button>
-          )}
+          <div className="action-buttons">
+            {isGenerating ? (
+              <Button
+                type="primary"
+                danger
+                icon={<StopOutlined />}
+                onClick={onStop}
+              >
+                停止生成
+              </Button>
+            ) : (
+              <Button
+                type="primary"
+                icon={<SendOutlined />}
+                disabled={!value.trim() || isDisabled}
+                onClick={onSend}
+              >
+                发送
+              </Button>
+            )}
+          </div>
         </div>
       </div>
     </div>

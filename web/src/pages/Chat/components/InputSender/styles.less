@@ -1,13 +1,43 @@
 .input-sender {
   padding: 16px;
   position: relative;
-  background: var(--component-background);
+  background: var(--background-elevated);  // 与 header 背景色互换
   border-top: 1px solid var(--border-color-split);
-  
-  .input-wrapper {
+    .sender-container {
+    border: 1px solid var(--border-color-base);
+    border-radius: 8px;
+    padding: 12px;
+    background: var(--component-background);
+    transition: all 0.3s ease;
+    
+    &:focus-within {
+      border-color: var(--primary-color);
+      box-shadow: 0 0 0 2px rgba(var(--primary-rgb), 0.1);
+      transform: translateY(-1px);
+    }
+  }
+    .input-wrapper {
     width: 100%;
-
     margin: 0;
+    
+    .message-input {
+      border: none !important;
+      padding: 0;
+      resize: none;
+      background: transparent;
+      
+      &:focus {
+        box-shadow: none !important;
+      }
+      
+      &.ant-input {
+        border: none !important;
+      }
+      
+      &:hover {
+        border: none !important;
+      }
+    }
   }
 
   .ant-sender {
@@ -16,6 +46,8 @@
 
   .sender-footer {
     margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px dashed var(--border-color-split);
     display: flex;
     justify-content: space-between;
   }
