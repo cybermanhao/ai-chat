@@ -1,7 +1,18 @@
-export const DEEPSEEK_API_KEY = import.meta.env.VITE_DEEPSEEK_API_KEY
+import { type Config } from '@/types';
 
-// 你可以在这里添加更多配置项
-export const config = {
-  deepseekApiKey: DEEPSEEK_API_KEY,
-  defaultModelName: 'deepseek-chat' as const,
-} as const
+export const DEEPSEEK_API_KEY = import.meta.env.VITE_DEEPSEEK_API_KEY;
+
+export const config: Config = {
+  providers: {
+    deepseek: {
+      apiKey: DEEPSEEK_API_KEY,
+      defaultModel: 'deepseek-chat'
+    }
+  }
+};
+
+export function getConfig(): Config {
+  return config;
+}
+
+export default config;

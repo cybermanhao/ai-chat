@@ -20,13 +20,15 @@ export const useChatMessages = (
   const [localMessages, setLocalMessages] = useState<RuntimeMessage[]>([]);
   // 是否正在生成回复
   const [isGenerating, setIsGenerating] = useState(false);
+  // 修正 chatId 类型问题，内部始终用 string
+  const safeChatId = chatId ?? '';
   // 初始化加载聊天数据和清理函数
   useEffect(() => {
     let mounted = true;
 
     const loadChatMessages = async () => {
-      if (chatId) {
-        const chatData = chatStorage.getChatData(chatId);
+      if (safeChatId) {
+        const chatData = chatStorage.getChatData(safeChatId);
         if (mounted && chatData?.messages) {
           // 加载聊天数据并设置所有消息为稳定状态
           const runtimeMessages: RuntimeMessage[] = [];
@@ -44,10 +46,7 @@ export const useChatMessages = (
           setLocalMessages([]);
         }
       } else {
-        // 如果没有选中的聊天，清空本地消息列表
-        if (mounted) {
-          setLocalMessages([]);
-        }
+        setLocalMessages([]);
       }
       // 切换聊天时重置生成状态
       if (mounted) {
@@ -61,7 +60,7 @@ export const useChatMessages = (
     return () => {
       mounted = false;
       // 清理和保存当前状态 - 使用最新可用的状态，但不依赖它进行重渲染
-      if (chatId) {
+      if (safeChatId) {
         // 获取最新的 localMessages，但不将其作为依赖
         // 这样在组件卸载时会保存一次数据，但不会因为数据变化而触发重新渲染
         const currentMessages = localMessages.map(msg => {
@@ -70,9 +69,9 @@ export const useChatMessages = (
           return chatMessage as ChatMessage;
         });
         
-        chatStorage.saveChatData(chatId, {
+        chatStorage.saveChatData(safeChatId, {
           info: {
-            id: chatId,
+            id: safeChatId,
             title: '新对话',
             createTime: Date.now(),
             updateTime: Date.now(),
@@ -93,49 +92,42 @@ export const useChatMessages = (
       }
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [chatId]); 
-  // 添加新消息
+  }, [safeChatId]);   // 添加新消息
   const addMessage = useCallback((message: RuntimeMessage) => {
-    if (!chatId) return;
+    if (!safeChatId) return;
     
     setLocalMessages(prev => {
       const newMessages = [...prev, message];
-      // 保存到存储
-      const chatData = chatStorage.getChatData(chatId);
-      
-      // 将RuntimeMessage转换为ChatMessage (去除status属性)
-      // 并过滤掉客户端提示消息，因为它们不应该存储和发送给模型
-      const chatMessages = newMessages
-        .filter(msg => msg.role !== 'client-notice')
-        .map(msg => {
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      if (message.status === 'stable') {
+        const chatData = chatStorage.getChatData(safeChatId);
+        const chatMessages = newMessages.map(msg => {
           const { status, ...chatMessage } = msg;
           return chatMessage as ChatMessage;
         });
-      
-      chatStorage.saveChatData(chatId, {
-        info: chatData?.info || {
-          id: chatId,
-          title: '新对话',
-          createTime: Date.now(),
-          updateTime: Date.now(),
-          messageCount: chatMessages.length
-        },
-        messages: chatMessages,
-        settings: chatData?.settings || {
-          modelIndex: 0,
-          systemPrompt: '',
-          enableTools: [],
-          temperature: 0.7,
-          enableWebSearch: false,
-          contextLength: 2000,
-          parallelToolCalls: false
-        },
-        updateTime: Date.now()
-      });
+        chatStorage.saveChatData(safeChatId, {
+          info: chatData?.info || {
+            id: safeChatId,
+            title: '新对话',
+            createTime: Date.now(),
+            updateTime: Date.now(),
+            messageCount: chatMessages.length
+          },
+          messages: chatMessages,
+          settings: chatData?.settings || {
+            modelIndex: 0,
+            systemPrompt: '',
+            enableTools: [],
+            temperature: 0.7,
+            enableWebSearch: false,
+            contextLength: 2000,
+            parallelToolCalls: false
+          },
+          updateTime: Date.now()
+        });
+      }
       return newMessages;
     });
-  }, [chatId]);  /**
+  }, [safeChatId]);  /**
    * 添加客户端提示消息（不进入大模型上下文）
    * 用于显示错误、警告或提示信息的卡片
    * @param content - 提示消息内容
@@ -148,7 +140,7 @@ export const useChatMessages = (
     noticeType: 'error' | 'warning' | 'info' = 'error', 
     errorCode?: string
   ): string | undefined => {
-    if (!chatId) return;
+    if (!safeChatId) return;
     
     // 生成唯一ID
     const id = `notice-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
@@ -171,21 +163,20 @@ export const useChatMessages = (
     
     // 客户端提示消息不需要保存到持久化存储中
     return id;
-  }, [chatId]);
-
-// 更新最后一条消息
-  const updateLastMessage = useCallback((update: Partial<RuntimeMessage>) => {
-    if (!chatId) return;
+  }, [safeChatId]);  // 更新最后一条消息
+  const updateLastMessage = useCallback((update: Partial<RuntimeMessage> & { reasoning_content?: string }) => {
+    if (!safeChatId) return;
     
     setLocalMessages(prev => {
       const lastMessage = prev[prev.length - 1];
-      if (lastMessage && lastMessage.status !== 'stable') {
+      if (lastMessage) {
         // 确保保留reasoning_content字段
+        const lastReasoning = isAssistantMessage(lastMessage) ? lastMessage.reasoning_content : undefined;
         const updatedMessage = {
           ...lastMessage,
           ...update,
           // 如果update中没有reasoning_content但lastMessage有，则保留原有的reasoning_content
-          reasoning_content: update.reasoning_content || lastMessage.reasoning_content
+          reasoning_content: update.reasoning_content || lastReasoning
         };
         const newMessages = [
           ...prev.slice(0, -1),
@@ -193,7 +184,7 @@ export const useChatMessages = (
         ] as RuntimeMessage[];
         // 如果消息状态变为稳定，保存到存储
         if (update.status === 'stable') {
-          const chatData = chatStorage.getChatData(chatId);
+          const chatData = chatStorage.getChatData(safeChatId);
           
           // 将RuntimeMessage转换为ChatMessage (去除status属性)
           const chatMessages = newMessages.map(msg => {
@@ -202,9 +193,9 @@ export const useChatMessages = (
             return chatMessage as ChatMessage;
           });
           
-          chatStorage.saveChatData(chatId, {
+          chatStorage.saveChatData(safeChatId, {
             info: chatData?.info || {
-              id: chatId,
+              id: safeChatId,
               title: '新对话',
               createTime: Date.now(),
               updateTime: Date.now(),
@@ -227,11 +218,11 @@ export const useChatMessages = (
       }
       return prev;
     });
-  }, [chatId]);
+  }, [safeChatId]);
 
   // 删除最后一条消息
   const removeLastMessage = useCallback(() => {
-    if (!chatId) return;
+    if (!safeChatId) return;
     
     setLocalMessages(prev => {
       const newMessages = prev.slice(0, -1);
@@ -243,10 +234,10 @@ export const useChatMessages = (
         return chatMessage as ChatMessage;
       });
       
-      const chatData = chatStorage.getChatData(chatId);
-      chatStorage.saveChatData(chatId, {
+      const chatData = chatStorage.getChatData(safeChatId);
+      chatStorage.saveChatData(safeChatId, {
         info: chatData?.info || {
-          id: chatId,
+          id: safeChatId,
           title: '新对话',
           createTime: Date.now(),
           updateTime: Date.now(),
@@ -266,17 +257,17 @@ export const useChatMessages = (
       });
       return newMessages;
     });
-  }, [chatId]);
+  }, [safeChatId]);
 
   // 清空消息
   const clearMessages = useCallback(() => {
-    if (!chatId) return;
+    if (!safeChatId) return;
     
     setLocalMessages([]);
-    const chatData = chatStorage.getChatData(chatId);
-    chatStorage.saveChatData(chatId, {
+    const chatData = chatStorage.getChatData(safeChatId);
+    chatStorage.saveChatData(safeChatId, {
       info: chatData?.info || {
-        id: chatId,
+        id: safeChatId,
         title: '新对话',
         createTime: Date.now(),
         updateTime: Date.now(),
@@ -294,7 +285,7 @@ export const useChatMessages = (
       },
       updateTime: Date.now()
     });
-  }, [chatId]);
+  }, [safeChatId]);
 
   // 生成完成时触发回调
   useEffect(() => {
@@ -332,3 +323,8 @@ export const useChatMessages = (
     handleAbort
   };
 };
+
+// 类型守卫：判断是否为助手消息
+function isAssistantMessage(msg: RuntimeMessage): msg is (import('@/types/chat').AssistantMessage & { status: import('@/types/chat').MessageStatus }) {
+  return msg.role === 'assistant';
+}

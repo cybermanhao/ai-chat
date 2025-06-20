@@ -29,6 +29,9 @@ export type UserMessage = BaseMessage & {
 export type AssistantMessage = BaseMessage & {
   role: 'assistant';
   reasoning_content?: string;
+  tool_content?: string;
+  observation_content?: string;
+  thought_content?: string;
   tool_calls?: Array<ChatCompletionMessageToolCall>;
 };
 
@@ -52,7 +55,10 @@ export type ChatMessage = SystemMessage | UserMessage | AssistantMessage | ToolM
 // 流式响应块
 export interface StreamChunk {
   content: string;
-  reasoning?: string;
+  reasoning_content?: string;
+  tool_content?: string;
+  observation_content?: string;
+  thought_content?: string;
   error?: string;
   status?: MessageStatus;
 }
@@ -106,4 +112,13 @@ export interface ChatData {
   messages: ChatMessage[];
   updateTime: number;
   settings: ChatSetting;
+}
+
+// 类型守卫：判断是否为助手消息
+export function isAssistantMessage(msg: RuntimeMessage): msg is (AssistantMessage & { status: MessageStatus }) {
+  return msg.role === 'assistant';
+}
+// 类型守卫：判断是否为客户端提示消息
+export function isClientNoticeMessage(msg: RuntimeMessage): msg is ClientNoticeMessage {
+  return msg.role === 'client-notice';
 }

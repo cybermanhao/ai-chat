@@ -1,12 +1,12 @@
 import { OpenAI } from 'openai';
 import type {
   ChatCompletionCreateParams,
-  ChatCompletionMessageParam,
-  ChatCompletionChunk
+  ChatCompletionMessageParam
 } from 'openai/resources/chat/completions';
 import type { ChatMessage } from '@/types/chat';
 import type { ModelConfig } from '@/types/model';
 import type { Stream } from 'openai/streaming';
+import type { ExtendedChatCompletionChunk } from '@/types/openai-extended';
 
 import type { LLMConfig } from '@/types/llm';
 
@@ -87,15 +87,14 @@ export class LLMService {
       apiKey: config.apiKey || '',
       dangerouslyAllowBrowser: true
     });
-  }
-  async generate(
+  }  async generate(
     messages: ChatMessage[],
     modelConfig: ModelConfig,
     llmConfig: LLMConfig,
     signal?: AbortSignal
-  ): Promise<Stream<ChatCompletionChunk>> {
+  ): Promise<Stream<ExtendedChatCompletionChunk>> {
     const client = this.createClient(llmConfig);
-      const params: ChatCompletionCreateParams = {
+    const params: ChatCompletionCreateParams = {
       model: llmConfig.model,
       messages: this.formatMessages(messages),
       temperature: modelConfig.temperature,
@@ -116,9 +115,10 @@ export class LLMService {
         }
       }, 10000);
       
+      // 强制断言 response 类型为 Stream<ExtendedChatCompletionChunk>
       const response = await client.chat.completions.create(params, {
         signal: signal || abortController.signal
-      });
+      }) as unknown as Stream<ExtendedChatCompletionChunk>;
       
       // 请求成功，清除超时
       clearTimeout(timeoutId);

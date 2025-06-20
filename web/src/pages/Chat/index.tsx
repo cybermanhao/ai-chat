@@ -13,6 +13,8 @@ import { useChatMessages } from '@/hooks/useChatMessages';
 import { handleLLMError } from '@/utils/errorHandler';
 import { useChatRuntimeStore } from '@/store/chatRuntimeStore';
 import type { StreamChunk, RuntimeMessage } from '@/types/chat';
+import type { AssistantMessage } from '@/types/chat';
+import type { CompletionResult } from '@/utils/streamHandler';
 import './styles.less';
 
 export const Chat = () => {
@@ -54,10 +56,15 @@ export const Chat = () => {
       loadChat(urlChatId);
     }
   }, [urlChatId, setCurrentId, loadChat]);
-
   // 自动保存聊天内容
   useEffect(() => {
+    console.log('Saving messages:', messages.length);
     if (messages.length > 0) {
+      console.log('Messages to save:', messages.map(m => ({
+        role: m.role,
+        content: m.content.slice(0, 50) + '...',
+        reasoning: 'reasoning_content' in m ? (m as AssistantMessage).reasoning_content?.slice(0, 50) + '...' : undefined
+      })));
       saveChat();
     }
   }, [messages, saveChat]);
@@ -86,8 +93,11 @@ export const Chat = () => {
   };  const handleSend = async () => {
     if (!inputValue.trim() || !urlChatId) return;
 
-    try {      // 创建用户消息
+    try {
+      // 创建用户消息
       const userMessage = createMessage.user(inputValue.trim()) as RuntimeMessage;
+      console.log('Created user message:', userMessage);
+      
       addMessage(userMessage);
       setInputValue('');
       scrollToBottom();
@@ -96,10 +106,12 @@ export const Chat = () => {
         setIsGenerating(true);
         // 创建助手消息
         const assistantMessage = createMessage.assistant('') as RuntimeMessage;
+        console.log('Created assistant message:', assistantMessage);
+        
         addMessage(assistantMessage);
         
-        // 构建包含新用户消息的消息列表
-        const currentMessages = [...messages, userMessage];        // 构建完整的消息列表，包括系统提示词
+        // 构建完整的消息列表，包括系统提示词
+        const currentMessages = [...messages, userMessage];
         const systemMessage = createMessage.system(config.systemPrompt) as RuntimeMessage;
         const fullMessages = [systemMessage, ...currentMessages];
         
@@ -115,32 +127,68 @@ export const Chat = () => {
         // 处理流式响应
         await handleResponseStream(
           stream,          async (chunk: StreamChunk) => {
+            console.log('Received chunk:', {
+              content: chunk.content.slice(0, 50) + '...',
+              reasoning_content: chunk.reasoning_content ? chunk.reasoning_content.slice(0, 50) + '...' : undefined,
+              tool_content: chunk.tool_content ? chunk.tool_content.slice(0, 50) + '...' : undefined,
+              observation_content: chunk.observation_content ? chunk.observation_content.slice(0, 50) + '...' : undefined,
+              thought_content: chunk.thought_content ? chunk.thought_content.slice(0, 50) + '...' : undefined,
+              status: chunk.status
+            });
+            
             // 更新消息内容和状态
             updateLastMessage({
               content: chunk.content,
-              reasoning_content: chunk.reasoning,
+              reasoning_content: chunk.reasoning_content,
+              tool_content: chunk.tool_content,
+              observation_content: chunk.observation_content,
+              thought_content: chunk.thought_content,
               status: chunk.status || 'generating'
             });
             
-            // 确保运行时状态也保存思考过程
+            // 确保运行时状态也保存特定内容
             const lastMessage = messages[messages.length - 1];
             if (lastMessage && lastMessage.id) {
-              updateMessageContent(lastMessage.id, chunk.content, chunk.reasoning);
+              updateMessageContent({
+                messageId: lastMessage.id,
+                content: chunk.content,
+                reasoning_content: chunk.reasoning_content,
+                tool_content: chunk.tool_content,
+                observation_content: chunk.observation_content,
+                thought_content: chunk.thought_content,
+              });
             }
             
             scrollToBottom();
           },
-          async (result: { content: string; reasoning?: string }) => {
-            // 更新最终内容和状态
+          async (result: CompletionResult) => {
+            console.log('Stream completed:', {
+              content: result.content.slice(0, 50) + '...',
+              reasoning_content: result.reasoning_content ? result.reasoning_content.slice(0, 50) + '...' : undefined,
+              tool_content: result.tool_content ? result.tool_content.slice(0, 50) + '...' : undefined,
+              observation_content: result.observation_content ? result.observation_content.slice(0, 50) + '...' : undefined,
+              thought_content: result.thought_content ? result.thought_content.slice(0, 50) + '...' : undefined
+            });
+              // 更新最终内容和状态
             updateLastMessage({
               content: result.content,
-              reasoning_content: result.reasoning,
+              reasoning_content: result.reasoning_content,
+              tool_content: result.tool_content,
+              observation_content: result.observation_content,
+              thought_content: result.thought_content,
               status: 'stable'
             });
-              // 确保运行时状态也保存最终的思考过程
+              // 确保运行时状态也保存所有内容
             const lastMessage = messages[messages.length - 1];
             if (lastMessage && lastMessage.id) {
-              updateMessageContent(lastMessage.id, result.content, result.reasoning);
+              updateMessageContent({
+                messageId: lastMessage.id,
+                content: result.content,
+                reasoning_content: result.reasoning_content,
+                tool_content: result.tool_content,
+                observation_content: result.observation_content,
+                thought_content: result.thought_content,
+              });
             }
             scrollToBottom();
           }
@@ -187,7 +235,11 @@ export const Chat = () => {
         if (lastMessage.role === 'assistant') {          // 使用类型断言访问助手消息特有的属性
           const assistantMessage = lastMessage as { reasoning_content?: string };
           const reasoning = assistantMessage.reasoning_content;
-          updateMessageContent(lastMessage.id, lastMessage.content, reasoning);
+          updateMessageContent({
+  messageId: lastMessage.id,
+  content: lastMessage.content,
+  reasoning_content: reasoning
+});
         }
       }
     }

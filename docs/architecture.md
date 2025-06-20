@@ -76,10 +76,8 @@ graph TD
   // 示例: styles.less
   .chat-container {
     @import '../../styles/variables';
-    
     display: flex;
     flex-direction: column;
-    
     .message-list {
       flex: 1;
       overflow-y: auto;
@@ -89,12 +87,15 @@ graph TD
 
 ### 2.2 LLM 集成
 
-#### 2.2.1 OpenAI SDK 使用 (已实现)
+#### 2.2.1 OpenAI/Deepseek/多模型集成（已实现）
 - [OpenAI SDK指南](./openai-guide.md) (TODO)
   - Stream API
   - Tool Calls
   - Function Calling
   - 错误处理
+- Deepseek API 流式响应与多字段支持（reasoning_content, tool_content, observation_content, thought_content）
+- 统一的流式处理与 runtime store 更新逻辑
+- 详见 [chat-flow.md](./chat-flow.md)
 
 #### 2.2.2 其他模型适配 (待实现)
 - Claude API
@@ -116,7 +117,6 @@ app.on('ready', () => {
       contextIsolation: true,
     },
   });
-  
   // 加载前端应用
   win.loadURL(process.env.VITE_DEV_SERVER_URL);
 });
@@ -127,7 +127,7 @@ app.on('ready', () => {
 ### 3.1 插件类型
 
 1. **渲染插件**
-   - Markdown 渲染
+   - Markdown 渲染（支持 dangerouslySetInnerHTML，详见 renderer.md）
    - 代码高亮
    - LaTeX 公式
    - 图表绘制
@@ -184,19 +184,19 @@ interface PluginAPI {
   - 网络请求
   - 组件适配
 
-
 ## 5. 开发计划
 
 ### 5.1 近期目标
 1. 完善基础聊天功能
    - Stream处理优化
    - 错误处理完善
-   - 消息状态管理
-
+   - 消息状态管理（多状态流转、UI同步、runtime store 与持久化分离）
+   - Deepseek/多模型流式字段支持
 2. 文档补充
    - 补充各项技术指南
    - 完善API文档
    - 添加开发示例
+   - [Markdown渲染机制说明](./renderer.md)
 
 ### 5.2 中期规划
 1. 插件系统实现

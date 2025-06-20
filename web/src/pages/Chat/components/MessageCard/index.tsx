@@ -1,8 +1,7 @@
-import React, { useState, useMemo } from 'react';
-import { UserOutlined, RobotOutlined, DownOutlined, RightOutlined, LoadingOutlined, FormOutlined, CopyOutlined, InfoCircleOutlined, WarningOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
-// import type { ChatCompletionRole } from 'openai/resources/chat/completions';
+import React, { useState } from 'react';
+import { UserOutlined, RobotOutlined, DownOutlined, RightOutlined, LoadingOutlined, FormOutlined, CopyOutlined, InfoCircleOutlined, ExclamationCircleOutlined, WarningOutlined } from '@ant-design/icons';
 import type { MessageRole } from '@/types/chat';
-import { Button, Tooltip, message } from 'antd';
+import { Button, Tooltip } from 'antd';
 import { markdownToHtml, copyToClipboard } from '@/utils/markdown';
 import { useChatRuntimeStore } from '@/store/chatRuntimeStore';
 import './styles.less';
@@ -14,6 +13,9 @@ interface MessageCardProps {
   content: string;
   role: MessageRole;
   reasoning_content?: string;
+  tool_content?: string;
+  observation_content?: string;
+  thought_content?: string;
   status?: MessageStatus;
   isGenerating?: boolean;
   noticeType?: 'error' | 'warning' | 'info';
@@ -25,34 +27,48 @@ const MessageCard: React.FC<MessageCardProps> = ({
   content, 
   role, 
   reasoning_content,
+  tool_content,
+  observation_content,
+  thought_content,
   status = 'stable',
   isGenerating = false,
   noticeType = 'info',
-  // errorCode
+  errorCode
 }) => {
   const runtimeMessage = useChatRuntimeStore(state => state.runtimeMessages[id]);
   const [showReasoning, setShowReasoning] = useState(true);
+  const [showToolOutput, setShowToolOutput] = useState(true);
+  const [showThoughts, setShowThoughts] = useState(true);
   const [useMarkdown, setUseMarkdown] = useState(true);
-    // Computed
+  
+  // Computed basic states
   const isUser = role === 'user';
   const isAssistant = role === 'assistant';
-  const isClientNotice = role === 'client-notice';  // 从runtimeMessage中获取reasoning_content或使用props中的reasoning_content  // 使用类型断言访问可能存在的reasoning_content属性
-  const runtimeReasoningContent = runtimeMessage ? 
-    (runtimeMessage as { reasoning_content?: string }).reasoning_content : undefined;
-  const currentReasoningContent = runtimeReasoningContent || reasoning_content;
-  const hasReasoning = isAssistant && currentReasoningContent;
+  const isClientNotice = role === 'client-notice';
   const currentStatus = runtimeMessage?.status || status;
   const isStreaming = currentStatus === 'generating' && isGenerating;
-  const isThinking = currentStatus === 'thinking';
-  
-  // Memoized content
-  const renderedContent = useMemo(() => {
-    if (!content && !isStreaming) return '';
-    const processed = useMarkdown ? markdownToHtml(content || '') : content;
-    return processed || (isStreaming ? ' ' : '');
-  }, [content, useMarkdown, isStreaming]);
+
+  // Get runtime content from store or props
+  const runtimeContent = runtimeMessage ? {
+    reasoning_content: (runtimeMessage as { reasoning_content?: string }).reasoning_content,
+    tool_content: (runtimeMessage as { tool_content?: string }).tool_content,
+    observation_content: (runtimeMessage as { observation_content?: string }).observation_content,
+    thought_content: (runtimeMessage as { thought_content?: string }).thought_content
+  } : {};
+
+  // Clean and filter content
+  const cleanContent = (str?: string) => {
+    if (!str) return '';
+    return str.replace(/null/g, '').trim();
+  };
+
+  const currentReasoningContent = cleanContent(runtimeContent.reasoning_content || reasoning_content);
+  const currentToolContent = cleanContent(runtimeContent.tool_content || tool_content);
+  const currentObservationContent = cleanContent(runtimeContent.observation_content || observation_content);
+  const currentThoughtContent = cleanContent(runtimeContent.thought_content || thought_content);
 
   // Status rendering
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const renderStatus = () => {
     if (isUser || currentStatus === 'stable' || currentStatus === 'done') return null;
       const statusMap: Record<MessageStatus, { text: string; icon: React.ReactNode; className: string }> = {
@@ -98,6 +114,7 @@ const MessageCard: React.FC<MessageCardProps> = ({
     );
   };
   // Get notice icon based on type
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const getNoticeIcon = () => {
     if (!isClientNotice) return null;
     
@@ -112,71 +129,121 @@ const MessageCard: React.FC<MessageCardProps> = ({
     }
   };
 
-  return (    <div 
-      className={`message-card ${isUser ? 'message-user' : isClientNotice ? 'message-notice' : 'message-assistant'} status-${currentStatus} ${isClientNotice ? `notice-${noticeType}` : ''}`}
-    >
-      <div className="message-inner">
-        <div className="message-avatar">
-          {isUser ? <UserOutlined /> : isClientNotice ? getNoticeIcon() : <RobotOutlined />}
-        </div>
-        <div className="message-body">
+  const roleClass = isUser ? 'message-user' : isClientNotice ? 'message-notice' : 'message-assistant';
+
+  return (
+    <div className={`message-card ${roleClass}`}>
+      <div className="message-header">
+        {isUser ? <UserOutlined /> : isAssistant ? <RobotOutlined /> : <InfoCircleOutlined />}
+        <div className="message-status">
           {renderStatus()}
-          {hasReasoning && (
-            <div className="reasoning-section">
-              <div 
-                className="reasoning-header" 
-                onClick={() => setShowReasoning(!showReasoning)}
-              >
-                {showReasoning ? <DownOutlined /> : <RightOutlined />}
-                <span>思考过程</span>
-              </div>              {showReasoning && (
-                <pre className="reasoning-content">
-                  {currentReasoningContent}
-                </pre>
-              )}
+        </div>
+      </div>
+      <div className="message-content">
+        {isAssistant && currentReasoningContent && (
+          <div className="reasoning-section">
+            <Button 
+              type="text" 
+              icon={showReasoning ? <DownOutlined /> : <RightOutlined />}
+              onClick={() => setShowReasoning(!showReasoning)}
+            >
+              Reasoning
+            </Button>
+            {showReasoning && (
+              <div className="reasoning-content">
+                {useMarkdown ? (
+                  <div className="markdown-body" dangerouslySetInnerHTML={{ __html: markdownToHtml(currentReasoningContent) }} />
+                ) : (
+                  currentReasoningContent
+                )}
+              </div>
+            )}
+          </div>
+        )}
+        {isAssistant && (currentToolContent || currentObservationContent) && (
+          <div className="tool-section">
+            <Button 
+              type="text" 
+              icon={showToolOutput ? <DownOutlined /> : <RightOutlined />}
+              onClick={() => setShowToolOutput(!showToolOutput)}
+            >
+              Tool Output
+            </Button>
+            {showToolOutput && (
+              <>
+                {currentToolContent && (
+                  <div className="tool-content">
+                    {useMarkdown ? (
+                      <div className="markdown-body" dangerouslySetInnerHTML={{ __html: markdownToHtml(currentToolContent) }} />
+                    ) : (
+                      currentToolContent
+                    )}
+                  </div>
+                )}
+                {currentObservationContent && (
+                  <div className="observation-content">
+                    {useMarkdown ? (
+                      <div className="markdown-body" dangerouslySetInnerHTML={{ __html: markdownToHtml(currentObservationContent) }} />
+                    ) : (
+                      currentObservationContent
+                    )}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        )}
+        {isAssistant && currentThoughtContent && (
+          <div className="thought-section">
+            <Button 
+              type="text" 
+              icon={showThoughts ? <DownOutlined /> : <RightOutlined />}
+              onClick={() => setShowThoughts(!showThoughts)}
+            >
+              Thoughts
+            </Button>
+            {showThoughts && (
+              <div className="thought-content">
+                {useMarkdown ? (
+                  <div className="markdown-body" dangerouslySetInnerHTML={{ __html: markdownToHtml(currentThoughtContent) }} />
+                ) : (
+                  currentThoughtContent
+                )}
+              </div>
+            )}
+          </div>
+        )}
+        <div className="main-content">
+          {isClientNotice ? (
+            <div className={`notice-content ${noticeType}`}>
+              {content}
+              {errorCode && <div className="error-code">{errorCode}</div>}
             </div>
-          )}
-          {!isThinking && (
-            <div className="message-content">
-              {!isUser && (
-                <div className="message-content-header">
-                  <Tooltip title={useMarkdown ? "关闭 Markdown 渲染" : "开启 Markdown 渲染"}>
-                    <Button 
-                      type="text" 
-                      size="small" 
-                      icon={<FormOutlined />} 
-                      onClick={() => setUseMarkdown(!useMarkdown)}
-                      className={`markdown-toggle ${useMarkdown ? 'active' : ''}`}
-                    />
-                  </Tooltip>
-                  <Tooltip title="复制内容">
-                    <Button
-                      type="text"
-                      size="small"
-                      icon={<CopyOutlined />}
-                      onClick={() => {
-                        copyToClipboard(content);
-                        message.success({ 
-                          content: '已复制到剪贴板',
-                          className: 'copy-success-message'
-                        });
-                      }}
-                      className="copy-button"
-                    />
-                  </Tooltip>
-                </div>
-              )}
-              <div 
-                className={`message-content-body ${useMarkdown ? "markdown-content" : "plain-text"}`}
-                dangerouslySetInnerHTML={{ 
-                  __html: renderedContent
-                }}
-              />
-              {isStreaming && <span className="typing-cursor" />}
-            </div>
+          ) : useMarkdown ? (
+            <div className="markdown-body" dangerouslySetInnerHTML={{ __html: markdownToHtml(content) }} />
+          ) : (
+            content
           )}
         </div>
       </div>
+      {isAssistant && (
+        <div className="message-actions">
+          <Tooltip title="Copy">
+            <Button 
+              type="text" 
+              icon={<CopyOutlined />} 
+              onClick={() => copyToClipboard(content)}
+            />
+          </Tooltip>
+          <Tooltip title="Toggle Markdown">
+            <Button 
+              type="text" 
+              icon={<FormOutlined />}
+              onClick={() => setUseMarkdown(!useMarkdown)} 
+            />
+          </Tooltip>
+        </div>
+      )}
     </div>
   );
 };

@@ -233,7 +233,67 @@
         font-family: 'JetBrains Mono', Consolas, Monaco, monospace;
         max-width: 100%;
         overflow-x: auto;
+        display: block; /* 确保显示元素 */
       }
+    }
+
+    .tool-section,
+    .reasoning-section,
+    .thought-section {
+      margin-bottom: 1rem;
+      border-left: 3px solid var(--border-color-split);
+      padding-left: 1rem;
+      
+      .section-header {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        cursor: pointer;
+        padding: 8px 12px;
+        color: var(--text-color-secondary);
+        font-size: 13px;
+        background-color: var(--background-tertiary);
+        border: 1px solid var(--border-color-split);
+        border-radius: 6px;
+        margin-bottom: 8px;
+        transition: all 0.3s ease;
+
+        &:hover {
+          background: var(--background-hover);
+          border-color: var(--primary-color);
+          color: var(--primary-color);
+        }
+      }
+
+      .section-content {
+        background-color: var(--background-input);
+        border: 1px solid var(--border-color-split);
+        border-radius: 6px;
+        padding: 1rem;
+        margin: 0.25rem 0;
+        font-size: 13px;
+        color: var(--text-color-secondary);
+        line-height: 1.6;
+        white-space: pre-wrap;
+        font-family: 'JetBrains Mono', Consolas, Monaco, monospace;
+      }
+    }
+
+    .tool-section {
+      border-left-color: var(--warning-color);
+      
+      .tool-content,
+      .observation-content {
+        margin-bottom: 0.5rem;
+      }
+    }
+
+    .reasoning-section {
+      border-left-color: var(--processing-color);
+    }
+
+    .thought-section {
+      border-left-color: var(--success-color);
     }
   }
 
