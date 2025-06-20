@@ -10,24 +10,59 @@
     "mcp-server"
   ],
   "scripts": {
-    "web:dev": "cd web && npm run dev",
-    "web:build": "cd web && npm run build",
+    "web:dev": "vite --config web/vite.config.ts",
+    "web:build": "tsc -b web && vite build --config web/vite.config.ts",
+    "web:lint": "eslint web",
+    "web:preview": "vite preview --config web/vite.config.ts",
+    "web:test": "vitest --config web/vitest.config.ts",
+    "web:test:coverage": "vitest run --coverage --config web/vitest.config.ts",
+    "web:test:ui": "vitest --ui --config web/vitest.config.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",
   "license": "ISC",
+  "dependencies": {
+    "@ant-design/icons": "^6.0.0",
+    "@ant-design/v5-patch-for-react-19": "^1.0.3",
+    "@lobehub/icons": "^2.4.0",
+    "@types/highlight.js": "^10.1.0",
+    "@types/prismjs": "^1.26.5",
+    "antd": "^5.26.1",
+    "highlight.js": "^11.11.1",
+    "markdown-it": "^14.1.0",
+    "normalize.css": "^8.0.1",
+    "openai": "^5.5.0",
+    "prismjs": "^1.30.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "react-router-dom": "^7.6.2",
+    "scroll-into-view-if-needed": "^3.1.0",
+    "zustand": "^5.0.5"
+  },
   "devDependencies": {
+    "@testing-library/react": "^16.3.0",
+    "@types/markdown-it": "^14.1.2",
     "@types/node": "^24.0.3",
+    "@types/react": "^19.1.8",
+    "@types/react-dom": "^19.1.6",
     "@typescript-eslint/eslint-plugin": "^5.62.0",
     "@typescript-eslint/parser": "^5.62.0",
-    "eslint": "^8.57.1",
+    "@vitejs/plugin-react": "^4.4.1",
+    "@vitest/coverage-c8": "^0.33.0",
+    "@vitest/ui": "^3.2.4",
+    "eslint": "^8.57.0",
     "eslint-config-prettier": "^8.10.0",
     "eslint-plugin-prettier": "^4.2.1",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "eslint-plugin-react-refresh": "^0.4.19",
+    "globals": "^16.0.0",
+    "happy-dom": "^18.0.1",
+    "jsdom": "^26.1.0",
     "less": "^4.3.0",
     "prettier": "^2.8.8",
-    "typescript": "^5.1.6"
-  },
-  "dependencies": {
-    "markdown-it": "^14.1.0"
+    "typescript": "~5.8.3",
+    "typescript-eslint": "^8.30.1",
+    "vite": "^6.3.5",
+    "vitest": "^3.2.4"
   }
 }
