@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { UserOutlined, RobotOutlined, DownOutlined, RightOutlined, LoadingOutlined, FormOutlined, CopyOutlined } from '@ant-design/icons';
 import type { ChatRole } from '@/types';
 import { Button, Tooltip, message } from 'antd';
@@ -19,64 +19,36 @@ const MessageCard: React.FC<MessageCardProps> = ({
   content, 
   role, 
   reasoning_content,
-  status 
+  status = 'stable'
 }) => {
   const [showReasoning, setShowReasoning] = useState(true);
   const [useMarkdown, setUseMarkdown] = useState(true);
+  
   const isUser = role === 'user';
   const isAssistant = role === 'assistant';
   const hasReasoning = isAssistant && reasoning_content;
-  const isStreaming = status !== 'stable';
-
-  const toggleReasoning = () => {
-    setShowReasoning(!showReasoning);
-  };
-
-  const toggleMarkdown = () => {
-    setUseMarkdown(!useMarkdown);
-  };
-
-  const handleCopy = async (text: string) => {
-    const success = await copyToClipboard(text);
-    if (success) {
-      message.success({
-        content: '已复制到剪贴板',
-        duration: 1,
-        className: 'copy-success-message'
-      });
-    } else {
-      message.error({
-        content: '复制失败',
-        duration: 2
-      });
-    }
-  };
-
-  const renderMarkdownContent = (mdContent: string) => {
-    if (!mdContent) return '';
-    return useMarkdown ? markdownToHtml(mdContent) : mdContent;
-  };
+  const isStreaming = status !== 'stable';  const isThinking = status === 'thinking';
+  const renderedContent = useMemo(() => {
+    if (!content) return '';
+    return useMarkdown ? markdownToHtml(content) : content;
+  }, [content, useMarkdown]);
 
   const renderStatus = () => {
     if (isUser || status === 'stable') return null;
 
-    const statusMap = {
-      connecting: { text: '连接中...', icon: <LoadingOutlined /> },
-      thinking: { text: '思考中...', icon: <LoadingOutlined /> },
-      answering: { text: '回答中...', icon: <LoadingOutlined /> }
+  const statusMap = {
+      connecting: { text: '连接中...', icon: <LoadingOutlined />, className: 'status-connecting' },
+      thinking: { text: '思考中...', icon: <LoadingOutlined />, className: 'status-thinking' },
+      answering: { text: '回答中...', icon: <LoadingOutlined />, className: 'status-answering' }
     };
 
     const statusInfo = statusMap[status];
-    if (!statusInfo) return null;
-
-    return (
-      <div className="message-status">
+    if (!statusInfo) return null;    return (
+      <div className={`message-status ${statusInfo.className || ''}`}>
         {statusInfo.icon} <span>{statusInfo.text}</span>
       </div>
     );
   };
-
-  const renderedContent = renderMarkdownContent(content);
 
   return (
     <div className={`message-card ${isUser ? 'message-user' : 'message-assistant'} status-${status}`}>
@@ -88,7 +60,7 @@ const MessageCard: React.FC<MessageCardProps> = ({
           {renderStatus()}
           {hasReasoning && (
             <div className="reasoning-section">
-              <div className="reasoning-header" onClick={toggleReasoning}>
+              <div className="reasoning-header" onClick={() => setShowReasoning(!showReasoning)}>
                 {showReasoning ? <DownOutlined /> : <RightOutlined />}
                 <span>思考过程</span>
               </div>
@@ -98,7 +70,8 @@ const MessageCard: React.FC<MessageCardProps> = ({
                 </pre>
               )}
             </div>
-          )}          {status !== 'thinking' && (
+          )}
+          {!isThinking && (
             <div className="message-content">
               {!isUser && (
                 <div className="message-content-header">
@@ -107,7 +80,7 @@ const MessageCard: React.FC<MessageCardProps> = ({
                       type="text" 
                       size="small" 
                       icon={<FormOutlined />} 
-                      onClick={toggleMarkdown}
+                      onClick={() => setUseMarkdown(!useMarkdown)}
                       className={`markdown-toggle ${useMarkdown ? 'active' : ''}`}
                     />
                   </Tooltip>
@@ -116,15 +89,22 @@ const MessageCard: React.FC<MessageCardProps> = ({
                       type="text"
                       size="small"
                       icon={<CopyOutlined />}
-                      onClick={() => handleCopy(useMarkdown ? content : renderedContent)}
+                      onClick={() => {
+                        copyToClipboard(content);
+                        message.success({ 
+                          content: '已复制到剪贴板',
+                          className: 'copy-success-message'
+                        });
+                      }}
                       className="copy-button"
                     />
                   </Tooltip>
                 </div>
-              )}
-              <div 
-                className={useMarkdown ? "markdown-content" : "plain-text"}
-                dangerouslySetInnerHTML={{ __html: renderedContent }}
+              )}              <div 
+                className={`message-content-body ${useMarkdown ? "markdown-content" : "plain-text"}`}
+                dangerouslySetInnerHTML={{ 
+                  __html: renderedContent + (isStreaming ? '<span class="typing-cursor"></span>' : '') 
+                }}
               />
               {isStreaming && <span className="typing-cursor" />}
             </div>

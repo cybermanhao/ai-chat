@@ -57,24 +57,32 @@ export const useChatList = () => {
 
     return newChat.id
   }, [])
-
   // 删除聊天
   const deleteChat = useCallback((chatId: string) => {
-    setChatList(prev => {
-      const newList = prev.filter(chat => chat.id !== chatId)
-      chatStorage.saveChatList(newList)
-      return newList
-    })
+    try {
+      // 先删除聊天数据
+      chatStorage.deleteChatData(chatId);
 
-    chatStorage.deleteChatData(chatId)
+      setChatList(prev => {
+        const newList = prev.filter(chat => chat.id !== chatId);
+        
+        // 如果删除的是当前聊天，切换到新列表的第一个聊天
+        if (currentChatId === chatId) {
+          const newCurrentId = newList[0]?.id || null;
+          setCurrentChatId(newCurrentId);
+          chatStorage.saveCurrentChatId(newCurrentId);
+        }
+        
+        // 保存新的聊天列表
+        chatStorage.saveChatList(newList);
+        return newList;
+      });
 
-    // 如果删除的是当前聊天，切换到第一个聊天
-    if (currentChatId === chatId) {
-      const newCurrentId = chatList[0]?.id || null
-      setCurrentChatId(newCurrentId)
-      chatStorage.saveCurrentChatId(newCurrentId)
+    } catch (error) {
+      console.error('Failed to delete chat:', error);
+      throw error;
     }
-  }, [chatList, currentChatId])
+  }, [currentChatId])
 
   // 更新聊天信息
   const updateChatInfo = useCallback((chatId: string, updates: Partial<ChatInfo>) => {
@@ -88,11 +96,23 @@ export const useChatList = () => {
       return newList
     })
   }, [])
-
   // 切换当前聊天
   const switchChat = useCallback((chatId: string) => {
-    setCurrentChatId(chatId)
-    chatStorage.saveCurrentChatId(chatId)
+    setCurrentChatId(chatId);
+    chatStorage.saveCurrentChatId(chatId);
+    
+    // 确保聊天存在于列表中
+    setChatList(prev => {
+      if (!prev.find(chat => chat.id === chatId)) {
+        const chatData = chatStorage.getChatData(chatId);
+        if (chatData?.info) {
+          const newList = [chatData.info, ...prev];
+          chatStorage.saveChatList(newList);
+          return newList;
+        }
+      }
+      return prev;
+    });
   }, [])
 
   return {

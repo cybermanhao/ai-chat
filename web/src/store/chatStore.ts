@@ -1,140 +1,203 @@
 import { create } from 'zustand';
 import { persist, devtools } from 'zustand/middleware';
-import type { ChatMessage } from '@/types';
-
-export interface Chat {
-  id: string;
-  title: string;
-  messages: ChatMessage[];
-  createdAt: number;
-  updatedAt: number;
-}
+import { v4 as uuidv4 } from 'uuid';
+import type { ChatMessage, ChatInfo } from '@/types/chat';
 
 interface ChatState {
   messages: ChatMessage[];
   currentId: string | null;
+  activeChatRef: React.RefObject<HTMLDivElement> | null;
+  chats: ChatInfo[];
+  setMessages: (messages: ChatMessage[]) => void;
   addMessage: (message: Omit<ChatMessage, 'id' | 'timestamp'>) => void;
   clearMessages: () => void;
   setCurrentId: (id: string | null) => void;
-  chats: Chat[];
-  currentChat: Chat | null;
+  setActiveChatRef: (ref: React.RefObject<HTMLDivElement>) => void;
+  createChat: () => Promise<string>;
   deleteChat: (id: string) => Promise<void>;
   renameChat: (id: string, title: string) => Promise<void>;
   exportChat: (id: string) => Promise<void>;
-  createChat: () => Promise<string>;
+  getCurrentChat: () => ChatInfo | null;
 }
 
 export const useChatStore = create<ChatState>()(
   devtools(
     persist(
       (set, get) => ({
-        messages: [],
-        currentId: null,
-        chats: [],        currentChat: null,
+        messages: [] as ChatMessage[],
+        currentId: null as string | null,
+        activeChatRef: null as React.RefObject<HTMLDivElement> | null,
+        chats: [] as ChatInfo[],
         
+        setMessages: (messages: ChatMessage[]) => set({ messages }),
+        
+        getCurrentChat: () => {
+          const { currentId, chats } = get();
+          return currentId ? chats.find((chat: ChatInfo) => chat.id === currentId) ?? null : null;
+        },
+
         addMessage: (message) => set((state) => {
           const newMessage = {
             ...message,
-            id: `${Date.now()}-${Math.random().toString(36).substring(2)}`,
+            id: uuidv4(),
             timestamp: Date.now(),
           };
-
-          if (!state.currentChat) {
-            // If no chat is selected, create a new one
-            const newChat: Chat = {
-              id: Date.now().toString(),
-              title: '新对话',
-              messages: [newMessage],
-              createdAt: Date.now(),
-              updatedAt: Date.now(),
+          
+          const currentChat = state.chats.find((chat: ChatInfo) => chat.id === state.currentId);
+          const newMessages = [...state.messages, newMessage];
+          
+          if (!currentChat) {
+            // 如果没有当前聊天，创建一个新的，使用消息内容作为标题
+            const title = message.role === 'user' 
+              ? message.content.slice(0, 20) + (message.content.length > 20 ? '...' : '')
+              : '新对话';
+            
+            const newChat: ChatInfo = {
+              id: uuidv4(),
+              title,
+              createTime: Date.now(),
+              updateTime: Date.now(),
+              messageCount: 1,
             };
+
+            // 保存聊天数据到本地存储
+            localStorage.setItem(`chat-data-${newChat.id}`, JSON.stringify({
+              messages: [newMessage],
+              updateTime: Date.now()
+            }));
             
             return {
-              messages: [...state.messages, newMessage],
-              currentChat: newChat,
+              messages: [newMessage],
               chats: [newChat, ...state.chats],
+              currentId: newChat.id,
             };
           }
-
-          // Update existing chat
+          
+          // 更新现有聊天
           const updatedChat = {
-            ...state.currentChat,
-            messages: [...state.currentChat.messages, newMessage],
-            updatedAt: Date.now(),
+            ...currentChat,
+            updateTime: Date.now(),
+            messageCount: currentChat.messageCount + 1,
           };
 
+          // 保存更新后的消息到本地存储
+          localStorage.setItem(`chat-data-${state.currentId}`, JSON.stringify({
+            messages: newMessages,
+            updateTime: Date.now()
+          }));
+          
           return {
-            messages: [...state.messages, newMessage],
-            currentChat: updatedChat,
-            chats: state.chats.map(chat => 
+            messages: newMessages,
+            chats: state.chats.map((chat: ChatInfo) => 
               chat.id === updatedChat.id ? updatedChat : chat
             ),
           };
         }),
-
+        
         clearMessages: () => set({ messages: [] }),
+        
+        setCurrentId: (id) => {
+          // 如果没有ID，清空当前聊天和消息
+          if (!id) {
+            set({
+              currentId: null,
+              messages: []
+            });
+            return;
+          }
 
-        setCurrentId: (id) => set({ currentId: id }),
+          // 从本地存储加载聊天数据
+          const chatData = localStorage.getItem(`chat-data-${id}`);
+          let messages: ChatMessage[] = [];
+          
+          if (chatData) {
+            try {
+              const data = JSON.parse(chatData);
+              if (data.messages && Array.isArray(data.messages)) {
+                messages = data.messages;
+              }
+            } catch (e) {
+              console.error('Failed to parse chat data:', e);
+            }
+          }
 
+          set({
+            currentId: id,
+            messages
+          });
+        },
+        
+        setActiveChatRef: (ref) => set({ activeChatRef: ref }),
+        
         createChat: async () => {
-          const newChat: Chat = {
-            id: Date.now().toString(),
+          const newChat: ChatInfo = {
+            id: uuidv4(),
             title: '新对话',
-            messages: [],
-            createdAt: Date.now(),
-            updatedAt: Date.now(),
+            createTime: Date.now(),
+            updateTime: Date.now(),
+            messageCount: 0,
           };
-
-          set(state => ({
+          
+          set((state) => ({
             chats: [newChat, ...state.chats],
-            currentChat: newChat,
+            currentId: newChat.id,
           }));
-
+          
           return newChat.id;
         },
-
-        deleteChat: async (id: string) => {
-          set(state => ({
-            chats: state.chats.filter(chat => chat.id !== id),
-            currentChat: state.currentChat?.id === id ? null : state.currentChat,
-          }));
+        
+        deleteChat: async (id) => {
+          // 从本地存储中删除聊天数据
+          localStorage.removeItem(`chat-data-${id}`);
+          
+          set((state) => {
+            const nextChat = state.chats.find((chat: ChatInfo) => chat.id !== id);
+            
+            return {
+              chats: state.chats.filter((chat: ChatInfo) => chat.id !== id),
+              currentId: state.currentId === id ? (nextChat?.id ?? null) : state.currentId,
+              messages: state.currentId === id ? [] : state.messages,
+            };
+          });
         },
-
-        renameChat: async (id: string, title: string) => {
-          set(state => ({
-            chats: state.chats.map(chat =>
-              chat.id === id ? { ...chat, title, updatedAt: Date.now() } : chat
-            ),
-            currentChat:
-              state.currentChat?.id === id
-                ? { ...state.currentChat, title, updatedAt: Date.now() }
-                : state.currentChat,
-          }));
+        
+        renameChat: async (id, title) => {
+          set((state) => {
+            const updatedChats = state.chats.map((chat: ChatInfo) =>
+              chat.id === id 
+                ? { ...chat, title, updateTime: Date.now() }
+                : chat
+            );
+            return {
+              chats: updatedChats,
+              messages: state.currentId === id 
+                ? state.messages.map((msg: ChatMessage) => ({ ...msg }))  // 触发消息列表更新
+                : state.messages
+            };
+          });
         },
-
-        exportChat: async (id: string) => {
-          const chat = get().chats.find(c => c.id === id);
+        
+        exportChat: async (id) => {
+          const chat = get().chats.find((chat: ChatInfo) => chat.id === id);
           if (!chat) return;
-
-          const content = chat.messages
-            .map(msg => `${msg.role}: ${msg.content}`)
-            .join('\n\n');
-
+          
+          const content = get().messages
+            .map((msg: ChatMessage) => `${msg.role}: ${msg.content}`)
+            .join('\n');
+            
           const blob = new Blob([content], { type: 'text/plain' });
           const url = URL.createObjectURL(blob);
           const a = document.createElement('a');
           a.href = url;
-          a.download = `${chat.title}.txt`;
+          a.download = `chat-${chat.title}-${new Date().toISOString().split('T')[0]}.txt`;
           a.click();
           URL.revokeObjectURL(url);
         },
       }),
       {
-        name: 'chat-storage',
+        name: 'chat-store',
+        version: 1,
       }
-    ),
-    {
-      name: 'chat-store',
-    }
+    )
   )
 );

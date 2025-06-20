@@ -27,19 +27,8 @@ const InputSender: React.FC<InputSenderProps> = ({
   onAbort,
 }) => {
   const isDisabled = loading || disabled;
-
   return (    
     <div className="input-sender">
-      {onAbort && (
-        <Button 
-          type="link" 
-          danger 
-          onClick={onAbort}
-          className="abort-button"
-        >
-          停止生成
-        </Button>
-      )}
       <Sender
         loading={isDisabled}
         value={value}
@@ -51,14 +40,15 @@ const InputSender: React.FC<InputSenderProps> = ({
           <Flex className="sender-footer" justify="space-between" align="center" gap={8}>
             <div className="toolbar-container">
               <InputToolbar />
-            </div>
-            <Button
+            </div>            <Button
               type="primary"
-              onClick={onSubmit}
-              disabled={isDisabled}
+              onClick={loading ? onAbort : onSubmit}
+              danger={loading}
               icon={loading ? <LoadingOutlined /> : <SendOutlined />}
               style={{ flexShrink: 0 }}
-            />
+            >
+              {loading ? '停止生成' : ''}
+            </Button>
           </Flex>
         }
         actions={false}

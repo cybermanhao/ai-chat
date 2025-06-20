@@ -11,30 +11,70 @@ const chatStorage = new ChatStorageService(defaultStorage);
  * 聊天消息管理Hook
  * 处理聊天消息的展示、更新和存储
  * @param chatId - 当前聊天的ID
- * @param initialMessages - 初始消息列表
- * @param onSend - 消息发送后的回调
  */
 export const useChatMessages = (
   chatId: string | null,
-  initialMessages: ChatMessage[] = [], 
   onSend?: (value: string) => void
 ) => {
   // 本地消息状态，包含流式传输状态
-  const [localMessages, setLocalMessages] = useState<StreamingMessage[]>(
-    initialMessages.map((msg: ChatMessage) => ({ ...msg, status: 'stable' }))
-  );
+  const [localMessages, setLocalMessages] = useState<StreamingMessage[]>([]);
   // 是否正在生成回复
   const [isGenerating, setIsGenerating] = useState(false);
 
-  // 初始化加载聊天数据
+  // 初始化加载聊天数据和清理函数
   useEffect(() => {
-    if (chatId) {
-      const chatData = chatStorage.getChatData(chatId);
-      if (chatData?.messages) {
-        setLocalMessages(chatData.messages.map((msg: ChatMessage) => ({ ...msg, status: 'stable' })));
+    let mounted = true;
+
+    const loadChatMessages = async () => {
+      if (chatId) {
+        const chatData = chatStorage.getChatData(chatId);
+        if (mounted && chatData?.messages) {
+          // 加载聊天数据并设置所有消息为稳定状态
+          setLocalMessages(chatData.messages.map((msg: ChatMessage) => ({ 
+            ...msg, 
+            status: 'stable' 
+          })));
+        } else if (mounted) {
+          // 如果没有消息，清空本地消息列表
+          setLocalMessages([]);
+        }
+      } else {
+        // 如果没有选中的聊天，清空本地消息列表
+        if (mounted) {
+          setLocalMessages([]);
+        }
       }
-    }
-  }, [chatId]);
+      // 切换聊天时重置生成状态
+      if (mounted) {
+        setIsGenerating(false);
+      }
+    };
+
+    loadChatMessages();
+
+    // Cleanup function
+    return () => {
+      mounted = false;
+      // 清理和保存当前状态
+      if (chatId) {
+        const currentMessages = localMessages.map(msg => ({
+          ...msg,
+          status: 'stable' as const
+        }));
+        chatStorage.saveChatData(chatId, {
+          info: {
+            id: chatId,
+            title: '新对话',
+            createTime: Date.now(),
+            updateTime: Date.now(),
+            messageCount: currentMessages.length
+          },
+          messages: currentMessages,
+          updateTime: Date.now()
+        });
+      }
+    };
+  }, [chatId, localMessages]); // Include localMessages since it's used in cleanup
 
   // 添加新消息
   const addMessage = useCallback((message: StreamingMessage) => {

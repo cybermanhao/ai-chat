@@ -145,6 +145,18 @@
         font-size: 14px;
         color: var(--success-color); // 使用主色调来强调状态图标
       }
+
+      &.status-connecting {
+        color: var(--warning-color);
+      }
+      
+      &.status-thinking {
+        color: var(--processing-color);
+      }
+      
+      &.status-answering {
+        color: var(--success-color);
+      }
     }    .reasoning-section {
       margin-bottom: 0.5rem;
       
@@ -261,6 +273,27 @@
 
     &:hover .message-content-header {
       opacity: 1;
+    }
+
+    .message-content-body {
+      // ...existing code...
+      
+      &.markdown-content {
+        line-height: 1.6;
+        
+        p:first-child {
+          margin-top: 0;
+        }
+        
+        p:last-child {
+          margin-bottom: 0;
+        }
+      }
+      
+      &.plain-text {
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
     }
 
     .plain-text {

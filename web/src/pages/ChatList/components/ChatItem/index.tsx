@@ -22,6 +22,7 @@ const ChatItem: React.FC<ChatItemProps> = ({
   onDelete,
   onExport
 }) => {
+
   const items: MenuProps['items'] = [
     {
       key: 'rename',
@@ -54,29 +55,31 @@ const ChatItem: React.FC<ChatItemProps> = ({
   ];
 
   return (
-    <List.Item 
-      className={`chat-item ${active ? 'active' : ''}`}
-      onClick={() => onSelect(chat.id)}
-    >
-      <div className="chat-item-content">
-        <div className="chat-item-title">{chat.title}</div>
-        <div className="chat-item-description">
-          {chat.messageCount}条消息 · {new Date(chat.updateTime).toLocaleString()}
-        </div>
-      </div>
-      <Dropdown 
-        menu={{ items }} 
-        trigger={['click']} 
-        placement="bottomRight"
+    <div className={`chat-item-wrapper ${active ? 'active' : ''}`}>
+      <List.Item 
+        className={`chat-item ${active ? 'active' : ''}`}
+        onClick={() => onSelect(chat.id)}
       >
-        <Button 
-          type="text" 
-          icon={<MoreOutlined />}
-          className="chat-item-more"
-          onClick={e => e.stopPropagation()}
-        />
-      </Dropdown>
-    </List.Item>
+        <div className="chat-item-content">
+          <div className="chat-item-title">{chat.title}</div>
+          <div className="chat-item-description">
+            {chat.messageCount}条消息 · {new Date(chat.updateTime).toLocaleString()}
+          </div>
+        </div>
+        <Dropdown 
+          menu={{ items }} 
+          trigger={['click']} 
+          placement="bottomRight"
+        >
+          <Button 
+            type="text" 
+            icon={<MoreOutlined />}
+            className="chat-item-more"
+            onClick={e => e.stopPropagation()}
+          />
+        </Dropdown>
+      </List.Item>
+    </div>
   );
 };
 

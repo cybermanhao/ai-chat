@@ -21,36 +21,58 @@ export const handleResponseStream = async (
 ) => {
   let fullResponse = '';
   let fullReasoningResponse = '';
+  let isFirstChunk = true;
+  let hasStartedAnswering = false;
 
-  for await (const chunk of stream) {
-    if (!chunk.data) continue;
-    
-    let data: StreamResponse;
-    try {
-      data = JSON.parse(chunk.data);
-      if (data.choices?.[0]?.finish_reason === 'stop' && data.usage) {
-        break;
+  try {
+    for await (const chunk of stream) {
+      if (!chunk.data) continue;
+      
+      let data: StreamResponse;
+      try {
+        data = JSON.parse(chunk.data);
+        if (data.choices?.[0]?.finish_reason === 'stop' && data.usage) {
+          break;
+        }
+      } catch {
+        if (chunk.data !== '[DONE]') {
+          console.warn('Failed to parse chunk:', chunk.data);
+        }
+        continue;
       }
-    } catch {
-      if (chunk.data !== '[DONE]') {
-        console.warn('Failed to parse chunk:', chunk.data);
+
+      const delta = data.choices?.[0]?.delta;
+      if (!delta) continue;
+
+      if (isFirstChunk) {
+        onThinking('');  // 初始状态
+        isFirstChunk = false;
       }
-      continue;
+
+      if (delta.reasoning_content) {
+        fullReasoningResponse += delta.reasoning_content;
+        onThinking(fullReasoningResponse);  // 思考状态
+      }
+
+      if (delta.content) {
+        if (!hasStartedAnswering) {
+          hasStartedAnswering = true;
+        }
+        fullResponse += delta.content;
+        onAnswering(fullResponse, fullReasoningResponse);  // 回答状态
+      }
     }
 
-    const delta = data.choices?.[0]?.delta;
-    if (!delta) continue;
-
-    if (delta.reasoning_content) {
-      fullReasoningResponse += delta.reasoning_content;
-      onThinking(fullReasoningResponse);
+    // 完成状态
+    if (fullResponse || fullReasoningResponse) {
+      onComplete(fullResponse, fullReasoningResponse);
     }
-
-    if (delta.content) {
-      fullResponse += delta.content;
-      onAnswering(fullResponse, fullReasoningResponse);
+  } catch (error) {
+    console.error('Error processing stream:', error);
+    // 确保即使在错误情况下也能保存已经接收到的内容
+    if (fullResponse || fullReasoningResponse) {
+      onComplete(fullResponse, fullReasoningResponse);
     }
+    throw error;
   }
-
-  onComplete(fullResponse, fullReasoningResponse);
 };
