@@ -5,10 +5,10 @@ interface ChatRuntimeState {
   // 连接状态
   isGenerating: boolean;
   abortController: AbortController | null;
-  
-  // 消息状态
+    // 消息状态
   runtimeMessages: Record<string, RuntimeMessage>;
   setMessageStatus: (messageId: string, status: MessageStatus) => void;
+  updateMessageContent: (messageId: string, content: string, reasoning_content?: string) => void;
   
   // 运行时聊天状态
   runtimeStates: Record<string, RuntimeChatState>;
@@ -25,8 +25,7 @@ export const useChatRuntimeStore = create<ChatRuntimeState>((set) => ({
   abortController: null,
   runtimeMessages: {},
   runtimeStates: {},
-  
-  // 消息状态管理
+    // 消息状态管理
   setMessageStatus: (messageId: string, status: MessageStatus) => {
     set((state) => ({
       runtimeMessages: {
@@ -37,6 +36,24 @@ export const useChatRuntimeStore = create<ChatRuntimeState>((set) => ({
         }
       }
     }));
+  },
+    // 更新消息的内容和推理过程
+  updateMessageContent: (messageId: string, content: string, reasoning_content?: string) => {
+    set((state) => {
+      const message = state.runtimeMessages[messageId];
+      if (!message) return state;
+      
+      return {
+        runtimeMessages: {
+          ...state.runtimeMessages,
+          [messageId]: {
+            ...message,
+            content,
+            ...(reasoning_content && { reasoning_content })
+          }
+        }
+      };
+    });
   },
   
   // 运行时状态管理

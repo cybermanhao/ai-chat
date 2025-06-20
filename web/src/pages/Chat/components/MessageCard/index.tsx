@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { UserOutlined, RobotOutlined, DownOutlined, RightOutlined, LoadingOutlined, FormOutlined, CopyOutlined, InfoCircleOutlined, WarningOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
-import type { ChatCompletionRole } from 'openai/resources/chat/completions';
+// import type { ChatCompletionRole } from 'openai/resources/chat/completions';
 import type { MessageRole } from '@/types/chat';
 import { Button, Tooltip, message } from 'antd';
 import { markdownToHtml, copyToClipboard } from '@/utils/markdown';
@@ -28,17 +28,19 @@ const MessageCard: React.FC<MessageCardProps> = ({
   status = 'stable',
   isGenerating = false,
   noticeType = 'info',
-  errorCode
+  // errorCode
 }) => {
   const runtimeMessage = useChatRuntimeStore(state => state.runtimeMessages[id]);
   const [showReasoning, setShowReasoning] = useState(true);
   const [useMarkdown, setUseMarkdown] = useState(true);
-  
-  // Computed
+    // Computed
   const isUser = role === 'user';
   const isAssistant = role === 'assistant';
-  const isClientNotice = role === 'client-notice';
-  const hasReasoning = isAssistant && reasoning_content;
+  const isClientNotice = role === 'client-notice';  // 从runtimeMessage中获取reasoning_content或使用props中的reasoning_content  // 使用类型断言访问可能存在的reasoning_content属性
+  const runtimeReasoningContent = runtimeMessage ? 
+    (runtimeMessage as { reasoning_content?: string }).reasoning_content : undefined;
+  const currentReasoningContent = runtimeReasoningContent || reasoning_content;
+  const hasReasoning = isAssistant && currentReasoningContent;
   const currentStatus = runtimeMessage?.status || status;
   const isStreaming = currentStatus === 'generating' && isGenerating;
   const isThinking = currentStatus === 'thinking';
@@ -127,10 +129,9 @@ const MessageCard: React.FC<MessageCardProps> = ({
               >
                 {showReasoning ? <DownOutlined /> : <RightOutlined />}
                 <span>思考过程</span>
-              </div>
-              {showReasoning && (
+              </div>              {showReasoning && (
                 <pre className="reasoning-content">
-                  {reasoning_content}
+                  {currentReasoningContent}
                 </pre>
               )}
             </div>

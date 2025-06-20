@@ -28,6 +28,7 @@ export type UserMessage = BaseMessage & {
 // 助手消息
 export type AssistantMessage = BaseMessage & {
   role: 'assistant';
+  reasoning_content?: string;
   tool_calls?: Array<ChatCompletionMessageToolCall>;
 };
 

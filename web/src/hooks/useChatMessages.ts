@@ -93,7 +93,7 @@ export const useChatMessages = (
       }
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [chatId]); // 有意移除 localMessages 依赖以避免无限循环，同时在清理函数中使用它的最新值
+  }, [chatId]); 
   // 添加新消息
   const addMessage = useCallback((message: RuntimeMessage) => {
     if (!chatId) return;
@@ -180,9 +180,16 @@ export const useChatMessages = (
     setLocalMessages(prev => {
       const lastMessage = prev[prev.length - 1];
       if (lastMessage && lastMessage.status !== 'stable') {
+        // 确保保留reasoning_content字段
+        const updatedMessage = {
+          ...lastMessage,
+          ...update,
+          // 如果update中没有reasoning_content但lastMessage有，则保留原有的reasoning_content
+          reasoning_content: update.reasoning_content || lastMessage.reasoning_content
+        };
         const newMessages = [
           ...prev.slice(0, -1),
-          { ...lastMessage, ...update }
+          updatedMessage
         ] as RuntimeMessage[];
         // 如果消息状态变为稳定，保存到存储
         if (update.status === 'stable') {

@@ -11,6 +11,7 @@ import { handleResponseStream } from '@/utils/streamHandler.new';
 import { useChatStore } from '@/store/chatStore';
 import { useChatMessages } from '@/hooks/useChatMessages';
 import { handleLLMError } from '@/utils/errorHandler';
+import { useChatRuntimeStore } from '@/store/chatRuntimeStore';
 import type { StreamChunk, RuntimeMessage } from '@/types/chat';
 import './styles.less';
 
@@ -21,6 +22,9 @@ export const Chat = () => {
   const { chatId: urlChatId } = useParams<{ chatId: string }>();
   const abortControllerRef = useRef<AbortController | null>(null);
   const messageListRef = useRef<HTMLDivElement>(null);
+
+  // 获取消息运行时状态更新函数
+  const updateMessageContent = useChatRuntimeStore(state => state.updateMessageContent);
 
   const {
     setCurrentId,
@@ -110,19 +114,34 @@ export const Chat = () => {
         
         // 处理流式响应
         await handleResponseStream(
-          stream,
-          async (chunk: StreamChunk) => {
+          stream,          async (chunk: StreamChunk) => {
+            // 更新消息内容和状态
             updateLastMessage({
               content: chunk.content,
+              reasoning_content: chunk.reasoning,
               status: chunk.status || 'generating'
             });
+            
+            // 确保运行时状态也保存思考过程
+            const lastMessage = messages[messages.length - 1];
+            if (lastMessage && lastMessage.id) {
+              updateMessageContent(lastMessage.id, chunk.content, chunk.reasoning);
+            }
+            
             scrollToBottom();
           },
           async (result: { content: string; reasoning?: string }) => {
+            // 更新最终内容和状态
             updateLastMessage({
               content: result.content,
+              reasoning_content: result.reasoning,
               status: 'stable'
             });
+              // 确保运行时状态也保存最终的思考过程
+            const lastMessage = messages[messages.length - 1];
+            if (lastMessage && lastMessage.id) {
+              updateMessageContent(lastMessage.id, result.content, result.reasoning);
+            }
             scrollToBottom();
           }
         );
@@ -151,16 +170,26 @@ export const Chat = () => {
     } catch (error) {
       console.error('Send message failed:', error);
     }
-  };
-  const handleStop = () => {
+  };  const handleStop = () => {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
       abortControllerRef.current = null;
       setIsGenerating(false);
-      updateLastMessage({
-        content: messages[messages.length - 1].content,
-        status: 'done'
-      });
+        const lastMessage = messages[messages.length - 1];
+      if (lastMessage && lastMessage.id) {
+        // 只更新状态为done
+        updateLastMessage({
+          content: lastMessage.content,
+          status: 'done'
+        });
+        
+        // 同步运行时状态，但保留现有的reasoning_content
+        if (lastMessage.role === 'assistant') {          // 使用类型断言访问助手消息特有的属性
+          const assistantMessage = lastMessage as { reasoning_content?: string };
+          const reasoning = assistantMessage.reasoning_content;
+          updateMessageContent(lastMessage.id, lastMessage.content, reasoning);
+        }
+      }
     }
   };
 
