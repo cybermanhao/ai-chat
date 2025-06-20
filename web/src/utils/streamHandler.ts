@@ -1,78 +1,62 @@
-export interface StreamChunk {
-  data?: string;
+import type { StreamChunk, MessageStatus } from '@/types/chat';
+import type { ChatCompletionChunk } from 'openai/resources/chat/completions';
+
+interface CompletionResult {
+  content: string;
+  reasoning?: string;
 }
 
-interface StreamResponse {
-  choices?: Array<{
-    finish_reason?: string;
-    delta?: {
-      content?: string;
-      reasoning_content?: string;
-    };
-  }>;
-  usage?: unknown;
-}
-
-export const handleResponseStream = async (
-  stream: AsyncIterable<StreamChunk>,
-  onThinking: (content: string) => void,
-  onAnswering: (content: string, reasoning: string) => void,
-  onComplete: (content: string, reasoning: string) => void
-) => {
-  let fullResponse = '';
-  let fullReasoningResponse = '';
-  let isFirstChunk = true;
-  let hasStartedAnswering = false;
+export async function handleResponseStream(
+  stream: AsyncIterable<ChatCompletionChunk>,
+  onChunk?: (chunk: StreamChunk) => void | Promise<void>,
+  onDone?: (result: CompletionResult) => void | Promise<void>,
+) {  let content = '';
+  let reasoning = '';
+  let isReasoning = false;
+  const status: MessageStatus = 'generating';
 
   try {
     for await (const chunk of stream) {
-      if (!chunk.data) continue;
-      
-      let data: StreamResponse;
-      try {
-        data = JSON.parse(chunk.data);
-        if (data.choices?.[0]?.finish_reason === 'stop' && data.usage) {
-          break;
-        }
-      } catch {
-        if (chunk.data !== '[DONE]') {
-          console.warn('Failed to parse chunk:', chunk.data);
-        }
-        continue;
-      }
-
-      const delta = data.choices?.[0]?.delta;
+      const delta = chunk.choices[0]?.delta;
       if (!delta) continue;
 
-      if (isFirstChunk) {
-        onThinking('');  // 初始状态
-        isFirstChunk = false;
-      }
-
-      if (delta.reasoning_content) {
-        fullReasoningResponse += delta.reasoning_content;
-        onThinking(fullReasoningResponse);  // 思考状态
-      }
-
+      // 处理新内容
       if (delta.content) {
-        if (!hasStartedAnswering) {
-          hasStartedAnswering = true;
+        const text = delta.content;
+        
+        // 解析推理内容
+        if (text.includes('[REASONING]')) {
+          isReasoning = true;
+          continue;
         }
-        fullResponse += delta.content;
-        onAnswering(fullResponse, fullReasoningResponse);  // 回答状态
+        if (text.includes('[/REASONING]')) {
+          isReasoning = false;
+          continue;
+        }
+
+        // 区分是推理内容还是正文内容
+        if (isReasoning) {
+          reasoning += text;
+        } else {
+          content += text;
+        }
+
+        // 调用onChunk回调
+        onChunk?.({
+          content,
+          reasoning: reasoning || undefined,
+          status
+        });
       }
     }
 
-    // 完成状态
-    if (fullResponse || fullReasoningResponse) {
-      onComplete(fullResponse, fullReasoningResponse);
-    }
+    // 完成时调用onDone回调
+    onDone?.({
+      content,
+      reasoning: reasoning || undefined
+    });
   } catch (error) {
-    console.error('Error processing stream:', error);
-    // 确保即使在错误情况下也能保存已经接收到的内容
-    if (fullResponse || fullReasoningResponse) {
-      onComplete(fullResponse, fullReasoningResponse);
-    }
+    console.error('Stream handling error:', error);
     throw error;
   }
-};
+}

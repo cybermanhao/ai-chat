@@ -7,7 +7,7 @@ import InputSender from './components/InputSender';
 import ChatHeader from './components/ChatHeader';
 import { llmService } from '@/services/llmService';
 import { createMessage } from '@/utils/messageFactory';
-import { handleResponseStream } from '@/utils/streamHandler.new';
+import { handleResponseStream } from '@/utils/streamHandler';
 import { useChatStore } from '@/store/chatStore';
 import { useChatMessages } from '@/hooks/useChatMessages';
 import { handleLLMError } from '@/utils/errorHandler';
