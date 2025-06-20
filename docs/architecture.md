@@ -18,134 +18,197 @@ Context (UI状态)
 - `/store/modelConfigStore.ts`: 模型配置管理
 - `/store/pluginStore.ts`: 插件状态管理
 - `/store/themeStore.ts`: 主题配置
+- `/store/chatRuntimeStore.ts`: 聊天运行时状态管理
 
 #### 1.1.2 Context 职责
-- `/contexts/ModalContext.tsx`: 模态框状态管理
-- `/contexts/ListSelectionContext.tsx`: 列表选择状态
-- `/pages/Chat/context/ChatContext.tsx`: 聊天UI状态
+- `/contexts/chat/`: 聊天界面UI状态管理
+- `/contexts/modal/`: 模态框状态管理
+- `/contexts/list/`: 列表选择状态管理
 
-### 1.2 Hook 设计
+### 1.2 数据流向
 
-#### 1.2.1 数据操作 Hooks
-- `useChatList`: 聊天列表管理
-- `useChatMessages`: 消息操作与状态
-- `useModelConfig`: 模型配置
-- `useLLMConfig`: LLM设置
-
-#### 1.2.2 功能型 Hooks
-- `useModelSelection`: 模型选择逻辑
-- `usePluginManager`: 插件管理
-- `useTheme`: 主题切换
-
-### 1.3 服务层设计
-- `/services/chatStorage.ts`: 聊天数据持久化
-- `/services/llmService.ts`: LLM通信
-- `/services/mcpService.ts`: MCP协议实现
-
-## 2. 文件结构职责
-
-### 2.1 核心功能模块
-```
-/src
-  /components  - 可复用UI组件
-  /contexts    - React Context定义
-  /hooks      - 自定义Hook
-  /services   - 业务服务
-  /store      - 全局状态
-  /utils      - 工具函数
+```mermaid
+graph TD
+    A[用户输入] --> B[UI组件]
+    B --> C[Context状态]
+    C --> D[Zustand Store]
+    D --> E[持久化存储]
+    F[LLM响应] --> G[运行时状态]
+    G --> H[UI更新]
 ```
 
-### 2.2 页面模块
-```
-/pages
-  /Chat       - 聊天主界面
-  /ChatList   - 聊天列表
-  /Settings   - 设置页面
-  /Plugins    - 插件管理
-```
+## 2. 技术栈实现
 
-## 3. 架构问题分析
+### 2.1 前端技术栈
 
-### 3.1 当前存在的问题
+- **构建工具**: Vite
+  - 开发时 HMR
+  - 生产环境优化
+  - 插件系统支持
 
-1. Context/Store 职责重叠
+- **状态管理**: Zustand
+  ```typescript
+  // 示例: chatStore.ts
+  export const useChatStore = create<ChatState>()(
+    persist(
+      (set) => ({
+        messages: [],
+        addMessage: (message) => 
+          set((state) => ({
+            messages: [...state.messages, message]
+          })),
+      }),
+      {
+        name: 'chat-storage',
+      }
+    )
+  );
+  ```
+
+- **样式方案**: Less + CSS Modules
+  ```less
+  // 示例: styles.less
+  .chat-container {
+    @import '../../styles/variables';
+    
+    display: flex;
+    flex-direction: column;
+    
+    .message-list {
+      flex: 1;
+      overflow-y: auto;
+    }
+  }
+  ```
+
+### 2.2 后端服务
+
+#### 2.2.1 Python 后端 (MCP)
+- FastAPI 框架
+- 异步请求处理
+- WebSocket 支持
+- 插件系统集成
+
+#### 2.2.2 Node.js 后端
+- Express 框架
+- 静态资源服务
+- API 代理
+- 开发服务器
+
+### 2.3 桌面应用
+
+使用 Electron 构建桌面应用:
+
 ```typescript
-// ChatContext.tsx 中包含了数据状态
-export interface ChatContextType {
-  chatList: ChatInfo[];  // 应该放在 store 中
-  chatId: string;        // 应该放在 store 中
-  // ...
-}
-```
-
-2. Ref 管理混乱
-```typescript
-// ChatContext 中的 DOM 引用应该独立
-activeChatRef: React.RefObject<HTMLDivElement | null>;
-```
-
-3. 状态更新耦合
-- 消息状态更新同时触发多个 store 更新
-- UI 状态和数据状态未完全分离
-
-### 3.2 改进建议
-
-1. Context 重构
-```typescript
-// 建议的 ChatContext 结构
-export interface ChatContextType {
-  // UI 状态
-  isGenerating: boolean;
-  scrollPosition: number;
+// main/index.ts
+app.on('ready', () => {
+  const win = new BrowserWindow({
+    width: 1200,
+    height: 800,
+    webPreferences: {
+      nodeIntegration: true,
+      contextIsolation: true,
+    },
+  });
   
-  // 视图控制
-  scrollToBottom: () => void;
-  setGenerating: (status: boolean) => void;
-}
+  // 加载前端应用
+  win.loadURL(process.env.VITE_DEV_SERVER_URL);
+});
 ```
 
-2. Store 职责明确化
+## 3. 插件系统
+
+### 3.1 插件类型
+
+1. **渲染插件**
+   - Markdown 渲染
+   - 代码高亮
+   - LaTeX 公式
+   - 图表绘制
+
+2. **工具插件**
+   - 文件处理
+   - 代码执行
+   - API调用
+   - 数据分析
+
+3. **主题插件**
+   - 颜色方案
+   - 组件样式
+   - 动画效果
+
+### 3.2 插件接口
+
 ```typescript
-// chatStore.ts
-interface ChatStore {
-  chats: Record<string, ChatInfo>;
-  messages: Record<string, ChatMessage[]>;
-  currentChatId: string | null;
-  
-  // 操作方法
-  addChat: (chat: ChatInfo) => void;
-  addMessage: (chatId: string, message: ChatMessage) => void;
+interface Plugin {
+  id: string;
+  name: string;
+  version: string;
+  type: 'renderer' | 'tool' | 'theme';
+  register: (api: PluginAPI) => void;
+  unregister?: () => void;
+}
+
+interface PluginAPI {
+  registerRenderer: (renderer: Renderer) => void;
+  registerTool: (tool: Tool) => void;
+  registerTheme: (theme: Theme) => void;
 }
 ```
 
-3. 服务层抽象
-```typescript
-// 建议的服务层结构
-interface ChatService {
-  sendMessage: (content: string) => Promise<void>;
-  loadHistory: (chatId: string) => Promise<ChatMessage[]>;
-  saveChat: (chat: ChatInfo) => Promise<void>;
-}
-```
+## 4. 多端适配
 
-## 4. 最佳实践建议
+### 4.1 Web 端
 
-1. 状态管理原则
-- Store: 持久化数据、全局共享状态
-- Context: UI状态、临时状态
-- Local State: 组件内部状态
 
-2. 数据流向
-- 单向数据流
-- Props Down, Events Up
-- 避免状态提升过高
+### 4.2 桌面端
+- 本地mcp服务集成
+- 离线功能
 
-3. 组件设计
-- 保持组件纯函数特性
-- 使用 React.memo 优化渲染
-- 合理拆分业务逻辑和UI逻辑
+### 4.3 小程序端
+- 轻量化UI
+- 微信API集成
 
-4. Hook 设计
-- 单一职责
-- 可复用性
-- 性能优化
+
+## 5. 性能优化
+
+### 5.1 前端优化
+- 代码分割
+- 懒加载
+- 虚拟列表
+- 缓存策略
+
+### 5.2 构建优化
+- Tree-shaking
+- 压缩混淆
+- 资源优化
+- CDN部署
+
+## 6. 安全性
+
+### 6.1 前端安全
+- XSS防护
+- CSRF防护
+- 敏感信息加密
+
+### 6.2 API安全
+- 认证授权
+- 请求限流
+- 数据校验
+
+## 7. 监控和日志
+
+### 7.1 性能监控
+- 页面加载时间
+- API响应时间
+- 资源使用情况
+
+### 7.2 错误监控
+- JS错误捕获
+- API错误统计
+- 性能异常报警
+
+### 7.3 用户行为分析
+- 页面访问
+- 功能使用
+- 异常操作

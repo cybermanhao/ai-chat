@@ -1,13 +1,21 @@
 # 聊天界面插件开发指南
 
-## 插件系统概述
-插件系统允许开发者通过自定义 XML 标签来扩展聊天界面的渲染能力。每个插件需要先用 `<plugin>` 标签声明，然后可以在声明的范围内使用自己的 XML 标签和渲染逻辑。这种设计确保了插件之间的隔离，并使得系统能够精确知道每段内容应该由哪个插件来处理。
+## 1. 插件系统概述
 
-## XML 插件规范
+插件系统允许开发者通过多种方式扩展聊天界面的功能：
+- XML渲染插件：自定义消息渲染
+- 工具插件：提供额外功能
+- 主题插件：自定义界面主题
+- AI模型插件：集成新的模型
 
-### 插件定义
+## 2. 插件类型
+
+### 2.1 XML渲染插件
+
+用于扩展消息的渲染能力，通过自定义 XML 标签实现。
+
 ```typescript
-interface Plugin {
+interface XMLPlugin {
   id: string;          // 插件唯一标识
   name: string;        // 插件名称
   description: string; // 插件描述
@@ -18,109 +26,305 @@ interface Plugin {
   // XML 标签定义
   xmlTags: {
     [tagName: string]: {
-      description: string;       // 标签说明
-      allowedAttributes?: string[];  // 允许的属性列表
-      render: (content: string, attributes: Record<string, string>) => string;  // 渲染函数
-    }
+      description: string;        // 标签说明
+      attributes?: {             // 属性定义
+        [attrName: string]: {
+          type: 'string' | 'number' | 'boolean';
+          required?: boolean;
+          description: string;
+        };
+      };
+      render: (props: any) => React.ReactNode; // 渲染函数
+    };
   };
-  
-  // 插件的系统提示词，用于告诉 AI 如何使用这个插件的标签
-  systemPrompt?: string;
 }
 ```
 
-### 示例：Button 插件
-以下是一个示例插件，它实现了一个可点击按钮的渲染：
-
-```typescript
-const buttonPlugin: Plugin = {
-  id: 'button-renderer',
-  name: '按钮渲染器',
-  description: '将 XML 标签渲染为可交互的按钮组件',
+使用示例：
+```tsx
+// 代码高亮插件
+export const CodeHighlightPlugin: XMLPlugin = {
+  id: 'code-highlight',
+  name: '代码高亮',
   version: '1.0.0',
-  author: 'Example',
+  author: 'Your Name',
+  description: '为代码添加语法高亮',
   enabled: true,
-
-  xmlTags: {
-    'button': {
-      description: '渲染一个按钮',
-      allowedAttributes: ['type', 'size'],
-      render: (content, attrs) => {
-        const type = attrs.type || 'default';
-        const size = attrs.size || 'middle';
-        return `<button class="ant-btn ant-btn-${type} ant-btn-${size}">${content}</button>`;
-      }
-    }
-  },
-
-  systemPrompt: `你可以使用 <button> 标签来渲染按钮：
   
-基础用法：
-<button>点击我</button>
-
-带属性的用法：
-<button type="primary" size="large">主要按钮</button>
-
-支持的属性：
-- type: default | primary | dashed | text | link
-- size: small | middle | large`
+  xmlTags: {
+    'code': {
+      description: '代码块',
+      attributes: {
+        lang: {
+          type: 'string',
+          description: '编程语言',
+          required: true
+        }
+      },
+      render: ({ lang, children }) => (
+        <SyntaxHighlighter language={lang}>
+          {children}
+        </SyntaxHighlighter>
+      )
+    }
+  }
 };
 ```
 
-### XML 格式规范
+### 2.2 工具插件
 
-要使用插件功能，内容必须先用 `<xml>` 标签包裹，并且其中第一层内容必须是 `<plugin>` 标签：
+扩展聊天功能，提供额外的工具和能力。
 
-```xml
-<xml>
-  <plugin name="插件ID">
-    实际内容...
-  </plugin>
-</xml>
+```typescript
+interface ToolPlugin {
+  id: string;
+  name: string;
+  version: string;
+  description: string;
+  
+  // 工具定义
+  tools: {
+    [name: string]: {
+      description: string;
+      parameters: {
+        [key: string]: {
+          type: string;
+          description: string;
+          required?: boolean;
+        };
+      };
+      execute: (params: any) => Promise<any>;
+    };
+  };
+  
+  // UI组件（可选）
+  components?: {
+    toolbar?: React.ComponentType;
+    settings?: React.ComponentType;
+  };
+}
 ```
 
-系统只会处理被 `<xml>` 标签包裹的内容，而且只有当 `<xml>` 标签内第一层是 `<plugin>` 标签时，才会进行插件渲染处理。这样设计可以让系统明确知道哪些内容需要进行插件处理。
+使用示例：
+```typescript
+// 文件处理插件
+export const FileProcessorPlugin: ToolPlugin = {
+  id: 'file-processor',
+  name: '文件处理器',
+  version: '1.0.0',
+  description: '处理各种文件格式',
+  
+  tools: {
+    readPdf: {
+      description: '读取PDF文件内容',
+      parameters: {
+        file: {
+          type: 'file',
+          description: 'PDF文件',
+          required: true
+        }
+      },
+      async execute({ file }) {
+        // PDF处理逻辑
+      }
+    }
+  },
+  
+  components: {
+    toolbar: FileUploadButton,
+    settings: FileProcessorSettings
+  }
+};
+```
 
-### 使用示例
+### 2.3 主题插件
 
-在对话中，你可以这样使用这个按钮插件：
+自定义界面主题和样式。
 
-\`\`\`
-AI: 让我展示一下按钮插件的功能：
+```typescript
+interface ThemePlugin {
+  id: string;
+  name: string;
+  version: string;
+  
+  // 主题定义
+  theme: {
+    colors: {
+      primary: string;
+      secondary: string;
+      background: string;
+      text: string;
+      [key: string]: string;
+    };
+    typography: {
+      fontFamily: string;
+      fontSize: {
+        small: string;
+        medium: string;
+        large: string;
+      };
+    };
+    spacing: {
+      small: string;
+      medium: string;
+      large: string;
+    };
+  };
+  
+  // 组件样式覆盖
+  components?: {
+    [componentName: string]: {
+      styleOverrides: Record<string, any>;
+    };
+  };
+}
+```
 
-<xml>
-  <plugin name="button-renderer">
-    这是一些按钮示例：
-    <button type="primary">确认操作</button>
-    <button type="dashed">取消操作</button>
+## 3. 插件开发流程
 
-    不同尺寸的按钮：
-    <button type="primary" size="large">大按钮</button>
-    <button size="small">小按钮</button>
-  </plugin>
-</xml>
-\`\`\`
+### 3.1 创建插件
 
-注意事项：
-1. 必须先使用 `<plugin>` 标签声明要使用的插件
-2. 一个回答中可以使用多个不同的插件，每个插件的内容都需要用 `<plugin>` 标签包裹
-3. 插件的 name 属性必须匹配已安装插件的 ID
+1. 在 `plugins` 目录下创建新文件：
+```
+src/plugins/
+  ├── myPlugin/
+  │   ├── index.ts
+  │   ├── components/
+  │   └── utils/
+```
 
-## 实现原理
+2. 实现插件接口：
+```typescript
+export const myPlugin: Plugin = {
+  id: 'my-plugin',
+  name: 'My Plugin',
+  version: '1.0.0',
+  // ... 其他配置
+};
+```
 
-1. 插件注册时，系统会收集所有插件的定义
-2. 在渲染聊天消息时，系统会：
-   - 首先查找并解析 `<plugin name="xxx">` 标签来确定使用的插件
-   - 将插件标签内的内容交给对应的插件处理
-   - 插件使用正则表达式匹配自己定义的 XML 标签
-   - 解析标签的属性和内容
-   - 调用渲染函数生成 HTML
-   - 用渲染结果替换原始的 XML 标签
-3. 每个 `<plugin>` 标签的内容都是相互独立的处理空间
+### 3.2 注册插件
 
-## 注意事项
+在 `plugins/index.ts` 中注册：
 
-1. XML 标签名称必须是唯一的，不能和其他插件冲突
-2. 渲染函数应该返回有效的 HTML 字符串
-3. 为了安全起见，要注意对内容和属性进行适当的转义
-4. 复杂的交互逻辑需要通过全局事件系统来实现
+```typescript
+import { myPlugin } from './myPlugin';
+
+export const plugins = [
+  myPlugin,
+  // ... 其他插件
+];
+```
+
+### 3.3 测试插件
+
+1. 创建测试文件：
+```typescript
+// __tests__/myPlugin.test.ts
+describe('My Plugin', () => {
+  it('should render correctly', () => {
+    // 测试代码
+  });
+});
+```
+
+2. 运行测试：
+```bash
+pnpm test
+```
+
+## 4. 最佳实践
+
+### 4.1 性能优化
+
+- 使用 React.memo 优化渲染
+- 避免不必要的状态更新
+- 合理使用 useCallback 和 useMemo
+
+### 4.2 安全性
+
+- 验证用户输入
+- 避免 XSS 漏洞
+- 使用安全的依赖包
+
+### 4.3 可维护性
+
+- 遵循类型系统
+- 编写清晰的文档
+- 添加适当的注释
+
+## 5. API参考
+
+### 5.1 核心API
+
+```typescript
+interface PluginAPI {
+  // 注册渲染器
+  registerRenderer: (renderer: Renderer) => void;
+  
+  // 注册工具
+  registerTool: (tool: Tool) => void;
+  
+  // 注册主题
+  registerTheme: (theme: Theme) => void;
+  
+  // 获取应用状态
+  getState: () => AppState;
+  
+  // 发送消息
+  sendMessage: (message: Message) => void;
+}
+```
+
+### 5.2 工具函数
+
+```typescript
+// 工具函数
+export const pluginUtils = {
+  // XML解析
+  parseXML: (xml: string) => Element;
+  
+  // 安全的HTML渲染
+  sanitizeHTML: (html: string) => string;
+  
+  // 样式处理
+  createStyles: (styles: Styles) => string;
+};
+```
+
+## 6. 调试指南
+
+### 6.1 开发环境
+
+1. 启动开发服务器：
+```bash
+pnpm dev
+```
+
+2. 开启调试模式：
+```typescript
+localStorage.setItem('debug', 'plugin:*');
+```
+
+### 6.2 调试工具
+
+- React Developer Tools
+- 控制台日志
+- 性能分析
+
+## 7. 发布流程
+
+1. 构建插件：
+```bash
+pnpm build:plugin
+```
+
+2. 测试构建结果：
+```bash
+pnpm test:plugin
+```
+
+3. 发布到插件市场：
+```bash
+pnpm publish:plugin
+```
