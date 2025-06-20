@@ -48,7 +48,17 @@ export const useChatList = () => {
     // 创建空的聊天数据
     chatStorage.saveChatData(newChat.id, {
       info: newChat,
-      messages: []
+      messages: [],
+      updateTime: Date.now(),
+      settings: {
+        modelIndex: 0,
+        systemPrompt: '',
+        enableTools: [],
+        temperature: 0.7,
+        enableWebSearch: false,
+        contextLength: 2000,
+        parallelToolCalls: false
+      }
     })
 
     // 设置为当前聊天

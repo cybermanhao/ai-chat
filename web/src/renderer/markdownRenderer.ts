@@ -12,3 +12,5 @@ export class MarkdownRenderer implements ContentRenderer {
     return markdownToHtml(content);
   }
 }
+
+// 已从 engine/render/markdownRenderer.ts 移动至 web/src/renderer/markdownRenderer.ts，UI 渲染相关实现应只在 web 端维护。

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { UserOutlined, RobotOutlined, DownOutlined, RightOutlined, LoadingOutlined, FormOutlined, CopyOutlined, InfoCircleOutlined, ExclamationCircleOutlined, WarningOutlined } from '@ant-design/icons';
+import { UserOutlined, RobotOutlined, DownOutlined, RightOutlined, LoadingOutlined, FormOutlined, CopyOutlined, InfoCircleOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import type { MessageRole } from '@/types/chat';
 import { Button, Tooltip } from 'antd';
 import { markdownToHtml, copyToClipboard } from '@/utils/markdown';
@@ -31,7 +31,6 @@ const MessageCard: React.FC<MessageCardProps> = ({
   observation_content,
   thought_content,
   status = 'stable',
-  isGenerating = false,
   noticeType = 'info',
   errorCode
 }) => {
@@ -46,7 +45,6 @@ const MessageCard: React.FC<MessageCardProps> = ({
   const isAssistant = role === 'assistant';
   const isClientNotice = role === 'client-notice';
   const currentStatus = runtimeMessage?.status || status;
-  const isStreaming = currentStatus === 'generating' && isGenerating;
 
   // Get runtime content from store or props
   const runtimeContent = runtimeMessage ? {
@@ -113,22 +111,6 @@ const MessageCard: React.FC<MessageCardProps> = ({
       </div>
     );
   };
-  // Get notice icon based on type
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const getNoticeIcon = () => {
-    if (!isClientNotice) return null;
-    
-    switch (noticeType) {
-      case 'error':
-        return <ExclamationCircleOutlined style={{ color: '#ff4d4f' }} />;
-      case 'warning':
-        return <WarningOutlined style={{ color: '#faad14' }} />;
-      case 'info':
-      default:
-        return <InfoCircleOutlined style={{ color: '#1677ff' }} />;
-    }
-  };
-
   const roleClass = isUser ? 'message-user' : isClientNotice ? 'message-notice' : 'message-assistant';
 
   return (

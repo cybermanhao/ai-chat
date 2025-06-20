@@ -1,5 +1,5 @@
 import { createContext, useRef, useState, type FC, type ReactNode } from 'react';
-import type { ChatMessage } from '@/types/chat';
+import type { ChatMessage } from '../../../../engine/types/chat';
 import type { ChatContextValue } from './types';
 
 const ChatContext = createContext<ChatContextValue | null>(null);
@@ -12,33 +12,37 @@ export const ChatProvider: FC<Props> = ({ children }) => {
   // UI State
   const [isGenerating, setGenerating] = useState(false);
   const [pendingMessage, setPendingMessage] = useState<ChatMessage | null>(null);
-  
+
   // Refs
-  const messageListRef = useRef<HTMLDivElement>(null);
-  
+  const messageListRef = useRef<HTMLDivElement | null>(null);
+  const activeChatRef = useRef<HTMLDivElement | null>(null);
+
   const scrollToBottom = () => {
     if (messageListRef.current) {
       messageListRef.current.scrollTo({
         top: messageListRef.current.scrollHeight,
-        behavior: 'smooth'
+        behavior: 'smooth',
       });
     }
   };
 
+  const scrollToChat = () => {
+    if (activeChatRef.current) {
+      activeChatRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
   return (
-    <ChatContext.Provider 
+    <ChatContext.Provider
       value={{
-        // State
         isGenerating,
         pendingMessage,
-        
-        // Actions
         setGenerating,
         setPendingMessage,
         scrollToBottom,
-        
-        // Refs
+        scrollToChat,
         messageListRef,
+        activeChatRef,
       }}
     >
       {children}

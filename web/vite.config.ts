@@ -7,10 +7,12 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 // https://vitejs.dev/config/
 export default defineConfig({
+  root: __dirname, // 让 Vite 以 web/ 目录为根目录，解决 index.html 入口问题
   plugins: [react()],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+      '@engine': path.resolve(__dirname, '../engine'),
     },
   },
   css: {

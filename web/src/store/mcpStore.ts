@@ -51,7 +51,7 @@ export const useMCPStore = create<MCPState>()(
       activeServerId: undefined,
       messages: [],
       isLoading: false,
-      currentModel: config.defaultModelName,
+      currentModel: config.providers.deepseek.defaultModel,
 
       addServer: (name: string, url: string) => {
         const id = Math.random().toString(36).substring(7)

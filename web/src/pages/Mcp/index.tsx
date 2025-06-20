@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { List, Button, Modal, Form, Input, Collapse, message } from 'antd';
 import { PlusOutlined, ApiOutlined, DisconnectOutlined } from '@ant-design/icons';
 import { useMCPStore } from '@/store/mcpStore';

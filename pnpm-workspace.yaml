@@ -1,0 +1,10 @@
+packages:
+  - 'web'
+  - 'engine'
+  - 'electron'
+  - 'iframe'
+  - 'api'
+  - 'mcp-server'
+  - 'mcp-node'
+  - 'mcp-python'
+  - 'miniprogram'

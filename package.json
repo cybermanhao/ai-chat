@@ -17,7 +17,9 @@
     "web:test": "vitest --config web/vitest.config.ts",
     "web:test:coverage": "vitest run --coverage --config web/vitest.config.ts",
     "web:test:ui": "vitest --ui --config web/vitest.config.ts",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build:engine": "tsc -b engine",
+    "test:engine": "vitest run engine/tests"
   },
   "author": "",
   "license": "ISC",
@@ -37,6 +39,7 @@
     "react-dom": "^19.1.0",
     "react-router-dom": "^7.6.2",
     "scroll-into-view-if-needed": "^3.1.0",
+    "uuid": "^11.1.0",
     "zustand": "^5.0.5"
   },
   "devDependencies": {

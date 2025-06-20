@@ -46,3 +46,5 @@ export class XmlPluginRenderer implements ContentRenderer {
     return processedContent;
   }
 }
+
+// 已从 engine/render/xmlPluginRenderer.ts 移动至 web/src/renderer/xmlPluginRenderer.ts，UI 渲染相关实现应只在 web 端维护。
