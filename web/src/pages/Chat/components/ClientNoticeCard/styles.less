@@ -1,0 +1,78 @@
+.client-notice-card {
+  margin: 1rem auto;
+  max-width: 90%;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  font-size: 0.9rem;
+
+  &.notice-error {
+    background-color: #fff1f0;
+    border: 1px solid #ffccc7;
+  }
+
+  &.notice-warning {
+    background-color: #fffbe6;
+    border: 1px solid #ffe58f;
+  }
+
+  &.notice-info {
+    background-color: #e6f7ff;
+    border: 1px solid #91d5ff;
+  }
+
+  .notice-header {
+    display: flex;
+    padding: 0.75rem 1rem;
+    align-items: center;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+
+    .notice-icon {
+      font-size: 1.2rem;
+      margin-right: 0.5rem;
+      display: flex;
+      align-items: center;
+    }
+
+    .notice-title {
+      font-weight: 500;
+      flex-grow: 1;
+    }
+
+    .notice-code {
+      font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+      font-size: 0.8rem;
+      color: #888;
+      margin-right: 1rem;
+    }
+
+    .notice-actions {
+      display: flex;
+      gap: 0.25rem;
+      margin-left: auto;
+    }
+  }
+
+  .notice-content {
+    padding: 1rem;
+
+    .notice-message {
+      margin-bottom: 0.5rem;
+      line-height: 1.5;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .notice-time {
+      text-align: right;
+      font-size: 0.75rem;
+      color: #888;
+      margin-top: 0.5rem;
+    }
+  }
+
+  &:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  }
+}

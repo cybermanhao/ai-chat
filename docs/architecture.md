@@ -12,13 +12,19 @@ Context (UI状态)
 组件状态 (Local State)
 ```
 
-#### 1.1.1 Zustand Store 职责
+#### 1.1.1 全局状态 (已实现)
 - `/store/chatStore.ts`: 聊天数据的持久化存储
 - `/store/llmConfigStore.ts`: LLM配置管理
 - `/store/modelConfigStore.ts`: 模型配置管理
-- `/store/pluginStore.ts`: 插件状态管理
 - `/store/themeStore.ts`: 主题配置
 - `/store/chatRuntimeStore.ts`: 聊天运行时状态管理
+
+相关技术:
+- [Zustand基础用法](./zustand-guide.md) (TODO)
+  - create store
+  - middleware (persist, devtools)
+  - typescript支持
+  - store组合
 
 #### 1.1.2 Context 职责
 - `/contexts/chat/`: 聊天界面UI状态管理
@@ -81,19 +87,19 @@ graph TD
   }
   ```
 
-### 2.2 后端服务
+### 2.2 LLM 集成
 
-#### 2.2.1 Python 后端 (MCP)
-- FastAPI 框架
-- 异步请求处理
-- WebSocket 支持
-- 插件系统集成
+#### 2.2.1 OpenAI SDK 使用 (已实现)
+- [OpenAI SDK指南](./openai-guide.md) (TODO)
+  - Stream API
+  - Tool Calls
+  - Function Calling
+  - 错误处理
 
-#### 2.2.2 Node.js 后端
-- Express 框架
-- 静态资源服务
-- API 代理
-- 开发服务器
+#### 2.2.2 其他模型适配 (待实现)
+- Claude API
+- Anthropic SDK
+- 本地模型
 
 ### 2.3 桌面应用
 
@@ -158,57 +164,46 @@ interface PluginAPI {
 
 ## 4. 多端适配
 
-### 4.1 Web 端
+### 4.1 Web 端 (已实现)
+- 基于 React + Vite
+- Electron 环境集成
+- Ant Design 组件库
+- 响应式布局
+
+### 4.2 桌面端 (待实现)
+需要了解:
+- [Electron 开发指南](./electron-guide.md) (TODO)
+  - 主进程通信
+  - 本地服务集成
+  - 离线功能
+
+### 4.3 小程序端 (待实现)
+需要了解:
+- [小程序开发指南](./miniprogram-guide.md) (TODO)
+  - 框架限制
+  - 网络请求
+  - 组件适配
 
 
-### 4.2 桌面端
-- 本地mcp服务集成
-- 离线功能
+## 5. 开发计划
 
-### 4.3 小程序端
-- 轻量化UI
-- 微信API集成
+### 5.1 近期目标
+1. 完善基础聊天功能
+   - Stream处理优化
+   - 错误处理完善
+   - 消息状态管理
 
+2. 文档补充
+   - 补充各项技术指南
+   - 完善API文档
+   - 添加开发示例
 
-## 5. 性能优化
+### 5.2 中期规划
+1. 插件系统实现
+2. 更多模型支持
+3. 桌面端适配
 
-### 5.1 前端优化
-- 代码分割
-- 懒加载
-- 虚拟列表
-- 缓存策略
-
-### 5.2 构建优化
-- Tree-shaking
-- 压缩混淆
-- 资源优化
-- CDN部署
-
-## 6. 安全性
-
-### 6.1 前端安全
-- XSS防护
-- CSRF防护
-- 敏感信息加密
-
-### 6.2 API安全
-- 认证授权
-- 请求限流
-- 数据校验
-
-## 7. 监控和日志
-
-### 7.1 性能监控
-- 页面加载时间
-- API响应时间
-- 资源使用情况
-
-### 7.2 错误监控
-- JS错误捕获
-- API错误统计
-- 性能异常报警
-
-### 7.3 用户行为分析
-- 页面访问
-- 功能使用
-- 异常操作
+### 5.3 远期规划
+1. 小程序端开发
+2. 性能优化
+3. 更多功能扩展

@@ -1,31 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-
-interface LLMConfig {
-  apiKey?: string;
-  baseUrl?: string;
-  model: string;
-  temperature: number;
-  maxTokens: number;
-  systemPrompt: string;
-}
-
-interface LLMConfigState {
-  activeLLMId: string | null;
-  configs: Record<string, LLMConfig>;
-  
-  // Actions
-  setActiveLLM: (llmId: string | null) => void;
-  updateConfig: (llmId: string, config: Partial<LLMConfig>) => void;
-  resetConfig: (llmId: string) => void;
-}
-
-const defaultConfig: LLMConfig = {
-  model: '',
-  temperature: 0.7,
-  maxTokens: 2000,
-  systemPrompt: 'You are a helpful assistant.',
-};
+import type { LLMConfigState } from '@/types/llm';
+import { defaultLLMConfig } from '@/types/llm';
 
 export const useLLMConfigStore = create<LLMConfigState>()(
   persist(
@@ -40,7 +16,7 @@ export const useLLMConfigStore = create<LLMConfigState>()(
           configs: {
             ...state.configs,
             [llmId]: {
-              ...(state.configs[llmId] || defaultConfig),
+              ...(state.configs[llmId] || defaultLLMConfig),
               ...config,
             },
           },
@@ -50,7 +26,7 @@ export const useLLMConfigStore = create<LLMConfigState>()(
         set((state) => ({
           configs: {
             ...state.configs,
-            [llmId]: { ...defaultConfig },
+            [llmId]: { ...defaultLLMConfig },
           },
         })),
     }),

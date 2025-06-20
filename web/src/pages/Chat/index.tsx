@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { useLLMConfig } from '@/hooks/useLLMConfig';
 import { useModelConfig } from '@/hooks/useModelConfig';
@@ -7,155 +7,182 @@ import InputSender from './components/InputSender';
 import ChatHeader from './components/ChatHeader';
 import { llmService } from '@/services/llmService';
 import { createMessage } from '@/utils/messageFactory';
-import { handleResponseStream } from '@/utils/streamHandler';
+import { handleResponseStream } from '@/utils/streamHandler.new';
 import { useChatStore } from '@/store/chatStore';
-import type { StreamingMessage } from '@/types/chat';
+import { useChatMessages } from '@/hooks/useChatMessages';
+import { handleLLMError } from '@/utils/errorHandler';
+import type { StreamChunk, RuntimeMessage } from '@/types/chat';
 import './styles.less';
 
-const Chat: React.FC = () => {
-  const [value, setValue] = useState('');
+export const Chat = () => {
+  const [inputValue, setInputValue] = useState('');
   const { activeLLM, currentConfig } = useLLMConfig();
   const { config } = useModelConfig();
   const { chatId: urlChatId } = useParams<{ chatId: string }>();
-  const [isGenerating, setIsGenerating] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const messageListRef = useRef<HTMLDivElement>(null);
 
   const {
-    messages,
-    addMessage,
     setCurrentId,
+    getCurrentChat,
+    saveChat,
+    loadChat,
   } = useChatStore();
+    // 使用增强的消息管理Hook
+  const {
+    messages,
+    isGenerating,
+    setIsGenerating,
+    addMessage,
+    updateLastMessage
+    // 未使用的功能
+    // addClientNotice,
+    // handleAbort
+  } = useChatMessages(urlChatId || null);
 
   const isDisabled = !urlChatId || !activeLLM || !currentConfig?.model || !currentConfig?.apiKey;
 
-  // 当切换聊天时，清空输入框并更新当前聊天ID
+  // 当切换聊天时，清空输入框、加载消息并更新当前聊天ID
   useEffect(() => {
-    setValue('');
+    setInputValue('');
     if (urlChatId) {
       setCurrentId(urlChatId);
+      loadChat(urlChatId);
     }
-  }, [urlChatId, setCurrentId]);  // 更新最后一条消息
-  const updateLastMessage = useCallback((update: Partial<StreamingMessage>) => {
-    const lastMessage = messages[messages.length - 1];
-    if (lastMessage && lastMessage.role === 'assistant') {
-      const updatedMessage = {
-        role: 'assistant' as const,
-        id: lastMessage.id,
-        timestamp: lastMessage.timestamp,
-        content: update.content || lastMessage.content,
-        status: update.status || 'stable',
-        reasoning_content: update.reasoning_content
-      };
-      addMessage(updatedMessage);
-    }
-  }, [messages, addMessage]);
+  }, [urlChatId, setCurrentId, loadChat]);
 
-  // 删除最后一条消息
-  const removeLastMessage = useCallback(() => {
-    const newMessages = [...messages];
-    newMessages.pop();
-    addMessage(newMessages[newMessages.length - 1]);
-  }, [messages, addMessage]);
-  // 处理中止请求
-  const handleAbort = useCallback(() => {
+  // 自动保存聊天内容
+  useEffect(() => {
+    if (messages.length > 0) {
+      saveChat();
+    }
+  }, [messages, saveChat]);
+
+  // 滚动到底部
+  const scrollToBottom = useCallback(() => {
+    if (messageListRef.current) {
+      messageListRef.current.scrollTop = messageListRef.current.scrollHeight;
+    }
+  }, []);
+  // 滚动到当前聊天 - 暂时不使用这个功能
+  // const scrollToChat = useCallback((id: string) => {
+  //   const target = document.getElementById(id);
+  //   if (target) {
+  //     target.scrollIntoView({ behavior: 'smooth' });
+  //   }
+  // }, []);
+
+  // 监听消息变化自动滚动
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, scrollToBottom]);
+
+  const handleInputChange = (value: string) => {
+    setInputValue(value);
+  };  const handleSend = async () => {
+    if (!inputValue.trim() || !urlChatId) return;
+
+    try {      // 创建用户消息
+      const userMessage = createMessage.user(inputValue.trim()) as RuntimeMessage;
+      addMessage(userMessage);
+      setInputValue('');
+      scrollToBottom();
+
+      try {
+        setIsGenerating(true);
+        // 创建助手消息
+        const assistantMessage = createMessage.assistant('') as RuntimeMessage;
+        addMessage(assistantMessage);
+        
+        // 构建包含新用户消息的消息列表
+        const currentMessages = [...messages, userMessage];        // 构建完整的消息列表，包括系统提示词
+        const systemMessage = createMessage.system(config.systemPrompt) as RuntimeMessage;
+        const fullMessages = [systemMessage, ...currentMessages];
+        
+        // 发送请求
+        abortControllerRef.current = new AbortController();
+        const stream = await llmService.generate(
+          fullMessages,
+          config,
+          currentConfig!,
+          abortControllerRef.current.signal
+        );
+        
+        // 处理流式响应
+        await handleResponseStream(
+          stream,
+          async (chunk: StreamChunk) => {
+            updateLastMessage({
+              content: chunk.content,
+              status: chunk.status || 'generating'
+            });
+            scrollToBottom();
+          },
+          async (result: { content: string; reasoning?: string }) => {
+            updateLastMessage({
+              content: result.content,
+              status: 'stable'
+            });
+            scrollToBottom();
+          }
+        );
+      } catch (err) {
+        console.error('Generate failed:', err);
+        
+        // 使用错误处理器生成适当的客户端提示消息
+        const errorNotice = handleLLMError(err);
+        
+        // 先移除"生成中"的消息
+        const lastMessage = messages[messages.length - 1];
+        if (lastMessage && lastMessage.role === 'assistant' && lastMessage.status !== 'stable') {
+          addMessage({
+            ...lastMessage,
+            content: '',
+            status: 'done'
+          });
+        }
+        
+        // 添加错误提示消息
+        addMessage(errorNotice);
+      } finally {
+        setIsGenerating(false);
+        abortControllerRef.current = null;
+      }
+    } catch (error) {
+      console.error('Send message failed:', error);
+    }
+  };
+  const handleStop = () => {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
       abortControllerRef.current = null;
-    }
-    setIsGenerating(false);
-  }, []);
-
-  const handleSubmit = async () => {
-    if (!value.trim() || isDisabled) return;
-    
-    const userMessage = createMessage.user(value);
-    const assistantMessage = createMessage.assistant('');
-    
-    setValue('');
-    addMessage(userMessage);
-    addMessage(assistantMessage);
-    setIsGenerating(true);
-      try {
-      abortControllerRef.current = new AbortController();
-      
-      // 仅发送标准的 OpenAI 格式消息
-      const standardMessages = messages
-        .map(({ role, content }) => ({
-          role,
-          content: content.trim()
-        }));
-      
-      // 添加当前用户消息
-      standardMessages.push({
-        role: 'user',
-        content: value.trim()
+      setIsGenerating(false);
+      updateLastMessage({
+        content: messages[messages.length - 1].content,
+        status: 'done'
       });
-      
-      const stream = await llmService.createChatCompletion({
-        baseURL: currentConfig.baseUrl!,
-        apiKey: currentConfig.apiKey!,
-        model: currentConfig.model!,
-        messages: standardMessages,
-        temperature: config.temperature || 1,
-        tools: config.enabledTools?.length > 0 ? [] : undefined,
-        parallelToolCalls: false,
-
-      });
-
-      await handleResponseStream(
-        stream,
-        (reasoning: string) => updateLastMessage({ 
-          status: 'thinking', 
-          reasoning_content: reasoning 
-        }),
-        (content: string, reasoning: string) => updateLastMessage({
-          status: 'answering',
-          content,
-          reasoning_content: reasoning || undefined
-        }),
-        (content: string, reasoning: string) => updateLastMessage({
-          status: 'stable',
-          content,
-          reasoning_content: reasoning || undefined
-        })
-      );
-    } catch (error) {
-      console.error('Chat completion error:', error);
-      removeLastMessage();
-    } finally {      setIsGenerating(false);
-      abortControllerRef.current = null;
     }
   };
 
+  const chat = getCurrentChat();
+  
   return (
-    <div className="chat-container">
-      <ChatHeader />
-      <div className="chat-content">
-        <div className="talking-inner">
-          <MessageList messages={messages} />
-        </div>
-        <div className="input-area">
-          <InputSender 
-            loading={isGenerating}
-            disabled={isDisabled}
-            value={value}
-            onChange={setValue}
-            onSubmit={handleSubmit}
-            onAbort={isGenerating ? handleAbort : undefined}
-            placeholder={
-              !urlChatId 
-                ? "请先创建或选择一个对话..." 
-                : !activeLLM 
-                  ? "请先在设置中选择模型..." 
-                  : !currentConfig?.apiKey 
-                    ? "请先在设置中配置 API Key..." 
-                    : "输入消息..."
-            }
-          />
-        </div>
+    <div className="chat-page">
+      <ChatHeader title={chat?.title} />
+      <div className="chat-content">        <MessageList 
+          messages={messages}
+          isGenerating={isGenerating}
+          ref={messageListRef}
+        />
+        <InputSender
+          value={inputValue}
+          disabled={isDisabled}
+          isGenerating={isGenerating}
+          onInputChange={handleInputChange}
+          onSend={handleSend}
+          onStop={handleStop}
+        />
       </div>
     </div>
   );
 };
-
-export default Chat;

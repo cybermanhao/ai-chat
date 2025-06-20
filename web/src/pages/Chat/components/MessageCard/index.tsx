@@ -1,66 +1,130 @@
 import React, { useState, useMemo } from 'react';
-import { UserOutlined, RobotOutlined, DownOutlined, RightOutlined, LoadingOutlined, FormOutlined, CopyOutlined } from '@ant-design/icons';
-import type { ChatRole } from '@/types';
+import { UserOutlined, RobotOutlined, DownOutlined, RightOutlined, LoadingOutlined, FormOutlined, CopyOutlined, InfoCircleOutlined, WarningOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
+import type { ChatCompletionRole } from 'openai/resources/chat/completions';
+import type { MessageRole } from '@/types/chat';
 import { Button, Tooltip, message } from 'antd';
 import { markdownToHtml, copyToClipboard } from '@/utils/markdown';
+import { useChatRuntimeStore } from '@/store/chatRuntimeStore';
 import './styles.less';
 
-export type MessageStatus = 'connecting' | 'thinking' | 'answering' | 'stable';
+export type MessageStatus = 'connecting' | 'thinking' | 'generating' | 'stable' | 'done' | 'error';
 
 interface MessageCardProps {
   id: string;
   content: string;
-  role: ChatRole;
+  role: MessageRole;
   reasoning_content?: string;
-  status: MessageStatus;
+  status?: MessageStatus;
+  isGenerating?: boolean;
+  noticeType?: 'error' | 'warning' | 'info';
+  errorCode?: string;
 }
 
 const MessageCard: React.FC<MessageCardProps> = ({ 
+  id,
   content, 
   role, 
   reasoning_content,
-  status = 'stable'
+  status = 'stable',
+  isGenerating = false,
+  noticeType = 'info',
+  errorCode
 }) => {
+  const runtimeMessage = useChatRuntimeStore(state => state.runtimeMessages[id]);
   const [showReasoning, setShowReasoning] = useState(true);
   const [useMarkdown, setUseMarkdown] = useState(true);
   
+  // Computed
   const isUser = role === 'user';
   const isAssistant = role === 'assistant';
+  const isClientNotice = role === 'client-notice';
   const hasReasoning = isAssistant && reasoning_content;
-  const isStreaming = status !== 'stable';  const isThinking = status === 'thinking';
+  const currentStatus = runtimeMessage?.status || status;
+  const isStreaming = currentStatus === 'generating' && isGenerating;
+  const isThinking = currentStatus === 'thinking';
+  
+  // Memoized content
   const renderedContent = useMemo(() => {
-    if (!content) return '';
-    return useMarkdown ? markdownToHtml(content) : content;
-  }, [content, useMarkdown]);
+    if (!content && !isStreaming) return '';
+    const processed = useMarkdown ? markdownToHtml(content || '') : content;
+    return processed || (isStreaming ? ' ' : '');
+  }, [content, useMarkdown, isStreaming]);
 
+  // Status rendering
   const renderStatus = () => {
-    if (isUser || status === 'stable') return null;
-
-  const statusMap = {
-      connecting: { text: '连接中...', icon: <LoadingOutlined />, className: 'status-connecting' },
-      thinking: { text: '思考中...', icon: <LoadingOutlined />, className: 'status-thinking' },
-      answering: { text: '回答中...', icon: <LoadingOutlined />, className: 'status-answering' }
+    if (isUser || currentStatus === 'stable' || currentStatus === 'done') return null;
+      const statusMap: Record<MessageStatus, { text: string; icon: React.ReactNode; className: string }> = {
+      connecting: { 
+        text: '连接中...', 
+        icon: <LoadingOutlined />, 
+        className: 'status-connecting' 
+      },
+      thinking: { 
+        text: '思考中...', 
+        icon: <LoadingOutlined />, 
+        className: 'status-thinking' 
+      },
+      generating: { 
+        text: '生成中...', 
+        icon: <LoadingOutlined />, 
+        className: 'status-generating' 
+      },
+      stable: {
+        text: '',
+        icon: <></>,
+        className: ''
+      },
+      done: {
+        text: '',
+        icon: <></>,
+        className: ''
+      },
+      error: {
+        text: '出错了',
+        icon: <ExclamationCircleOutlined />,
+        className: 'status-error'
+      }
     };
 
-    const statusInfo = statusMap[status];
-    if (!statusInfo) return null;    return (
-      <div className={`message-status ${statusInfo.className || ''}`}>
+    const statusInfo = statusMap[currentStatus];
+    if (!statusInfo) return null;
+
+    return (
+      <div className={`message-status ${statusInfo.className}`}>
         {statusInfo.icon} <span>{statusInfo.text}</span>
       </div>
     );
   };
+  // Get notice icon based on type
+  const getNoticeIcon = () => {
+    if (!isClientNotice) return null;
+    
+    switch (noticeType) {
+      case 'error':
+        return <ExclamationCircleOutlined style={{ color: '#ff4d4f' }} />;
+      case 'warning':
+        return <WarningOutlined style={{ color: '#faad14' }} />;
+      case 'info':
+      default:
+        return <InfoCircleOutlined style={{ color: '#1677ff' }} />;
+    }
+  };
 
-  return (
-    <div className={`message-card ${isUser ? 'message-user' : 'message-assistant'} status-${status}`}>
+  return (    <div 
+      className={`message-card ${isUser ? 'message-user' : isClientNotice ? 'message-notice' : 'message-assistant'} status-${currentStatus} ${isClientNotice ? `notice-${noticeType}` : ''}`}
+    >
       <div className="message-inner">
         <div className="message-avatar">
-          {isUser ? <UserOutlined /> : <RobotOutlined />}
+          {isUser ? <UserOutlined /> : isClientNotice ? getNoticeIcon() : <RobotOutlined />}
         </div>
         <div className="message-body">
           {renderStatus()}
           {hasReasoning && (
             <div className="reasoning-section">
-              <div className="reasoning-header" onClick={() => setShowReasoning(!showReasoning)}>
+              <div 
+                className="reasoning-header" 
+                onClick={() => setShowReasoning(!showReasoning)}
+              >
                 {showReasoning ? <DownOutlined /> : <RightOutlined />}
                 <span>思考过程</span>
               </div>
@@ -100,10 +164,11 @@ const MessageCard: React.FC<MessageCardProps> = ({
                     />
                   </Tooltip>
                 </div>
-              )}              <div 
+              )}
+              <div 
                 className={`message-content-body ${useMarkdown ? "markdown-content" : "plain-text"}`}
                 dangerouslySetInnerHTML={{ 
-                  __html: renderedContent + (isStreaming ? '<span class="typing-cursor"></span>' : '') 
+                  __html: renderedContent
                 }}
               />
               {isStreaming && <span className="typing-cursor" />}

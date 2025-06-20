@@ -1,10 +1,11 @@
 @import '../../styles/variables.less';
 
-.chat-container {
+.chat-page {
   height: 100%;
   display: flex;
   flex-direction: column;
   background: var(--background-content);
+  justify-content: space-between;
 
   .chat-header {
     height: 64px;
@@ -27,110 +28,43 @@
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    position: relative;
+    justify-content: space-between;
+  }
 
-    .talking-inner {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-      overflow-y: auto;
-      padding: 20px 0;
-
-      // 美化滚动条
-      &::-webkit-scrollbar {
-        width: 6px;
+  :global {
+    .markdown-body {
+      pre {
+        background: var(--code-bg);
+        border: 1px solid var(--border-color-split);
       }
-      &::-webkit-scrollbar-thumb {
-        background: var(--border-color-split);
-        border-radius: 3px;
+
+      code {
+        background: var(--code-bg);
+        color: @text-color;
       }
-      &::-webkit-scrollbar-track {
-        background: var(--background-color-light);
+
+      blockquote {
+        color: @text-color-secondary;
+        border-left-color: var(--border-color-base);
       }
-    }
 
-    .input-area {
-      border-top: 1px solid var(--border-color-split);
-      padding: 20px;
-      background: var(--sider-panel-bg);
-      margin-bottom: 20px;
-
-      :global(.ant-x-sender) {
-        background: var(--sider-panel-bg);
-        border: 1px solid var(--border-color-base);
-        border-radius: 8px;
-
-        &:hover,
-        &:focus-within {
-          border-color: @primary-color;
-          box-shadow: 0 0 0 2px rgba(var(--primary-rgb), 0.1);
+      table {
+        th, td {
+          border-color: var(--border-color-split);
+        }
+        
+        th {
+          background: var(--table-header-bg);
         }
 
-        .ant-input {
-          background: transparent;
-          color: var(--text-color);
-
-          &::placeholder {
-            color: var(--text-color-secondary);
-          }
-        }
-      }
-
-      :global {
-        .ant-x-bubble {
-          color: @text-color;
-          background: var(--background-color-light);
-          border: 1px solid @primary-color;
-
-          &.ant-x-bubble-end {
-            .ant-x-bubble-content {
-              background: @primary-color;
-              color: #fff;
-              border: none;
-            }
-          }
-
-          // 其他气泡样式
-          &:not(.ant-x-bubble-end) {
-            .ant-x-bubble-content {
-              border: 1px solid @primary-color;
-              background: transparent;
-            }
-          }
-        }
-
-        .markdown-body {
-          pre {
-            background: var(--code-bg);
-            border: 1px solid var(--border-color-split);
-          }
-
-          code {
-            background: var(--code-bg);
-            color: @text-color;
-          }
-
-          blockquote {
-            color: @text-color-secondary;
-            border-left-color: var(--border-color-base);
-          }
-
-          table {
-            th, td {
-              border-color: var(--border-color-split);
-            }
-            
-            th {
-              background: var(--table-header-bg);
-            }
-
-            tr:nth-child(2n) {
-              background: var(--table-row-hover-bg);
-            }
-          }
+        tr:nth-child(2n) {
+          background: var(--table-row-hover-bg);
         }
       }
     }
+
+
   }
 }
 

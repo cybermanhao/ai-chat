@@ -1,7 +1,9 @@
-import React from 'react';
-import { Sender } from '@ant-design/x';
-import { Button, Flex } from 'antd';
-import { SendOutlined, LoadingOutlined } from '@ant-design/icons';
+import React, { useRef, useEffect } from 'react';
+import { Input, Button } from 'antd';
+import { 
+  SendOutlined, 
+  StopOutlined,
+} from '@ant-design/icons';
 import InputToolbar from '../InputToolbar';
 import './styles.less';
 
@@ -9,51 +11,85 @@ interface InputSenderProps {
   value: string;
   loading?: boolean;
   disabled?: boolean;
+  isGenerating?: boolean;
   placeholder?: string;
-  onChange: (value: string) => void;
-  onSubmit: () => void;
-  onCancel?: () => void;
-  onAbort?: () => void;
+  onInputChange: (value: string) => void;
+  onSend: () => void;
+  onStop?: () => void;
 }
+
+const { TextArea } = Input;
 
 const InputSender: React.FC<InputSenderProps> = ({
   value,
   loading,
   disabled,
-  placeholder,
-  onChange,
-  onSubmit,
-  onCancel,
-  onAbort,
+  isGenerating,
+  placeholder = '发送消息...',
+  onInputChange,
+  onSend,
+  onStop,
 }) => {
   const isDisabled = loading || disabled;
+  const textAreaRef = useRef<HTMLTextAreaElement>(null);
+  
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      if (!isDisabled && value.trim()) {
+        onSend();
+      }
+    }
+  };
+
+  useEffect(() => {
+    // Focus the textarea when the component mounts
+    textAreaRef.current?.focus();
+  }, []);
+  
   return (    
     <div className="input-sender">
-      <Sender
-        loading={isDisabled}
-        value={value}
-        onChange={onChange}
-        onSubmit={onSubmit}
-        autoSize={{ minRows: 1, maxRows: 6 }}
-        placeholder={placeholder}
-        footer={
-          <Flex className="sender-footer" justify="space-between" align="center" gap={8}>
-            <div className="toolbar-container">
-              <InputToolbar />
-            </div>            <Button
+      <div className="sender-header">
+      </div>
+
+      <div className="input-wrapper">
+        <TextArea
+          ref={textAreaRef}
+          value={value}
+          disabled={isDisabled}
+          placeholder={placeholder}
+          onChange={e => onInputChange(e.target.value)}
+          onKeyDown={handleKeyDown}
+          autoSize={{ minRows: 1, maxRows: 5 }}
+          className="message-input"
+        />
+      </div>
+
+      <div className="sender-footer">
+        <InputToolbar loading={loading} />
+
+        <div className="action-buttons">
+          {isGenerating ? (
+            <Button
               type="primary"
-              onClick={loading ? onAbort : onSubmit}
-              danger={loading}
-              icon={loading ? <LoadingOutlined /> : <SendOutlined />}
-              style={{ flexShrink: 0 }}
+              danger
+              icon={<StopOutlined />}
+              onClick={onStop}
             >
-              {loading ? '停止生成' : ''}
+              停止生成
             </Button>
-          </Flex>
-        }
-        actions={false}
-        onCancel={onCancel}
-      />
+          ) : (
+            <Button
+              type="primary"
+              icon={<SendOutlined />}
+              disabled={!value.trim() || isDisabled}
+              onClick={onSend}
+            >
+              发送
+            </Button>
+          )}
+        </div>
+      </div>
     </div>
   );
 };

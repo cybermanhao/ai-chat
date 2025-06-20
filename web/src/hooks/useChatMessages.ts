@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react'
-import type { ChatMessage, StreamingMessage } from '@/types/chat';
-import { getCurrentStream, llmService } from '@/services/llmService';
+import type { ChatMessage, RuntimeMessage } from '@/types/chat';
+import { getCurrentStream } from '@/services/llmService';
 import { ChatStorageService } from '@/services/chatStorage';
 import { defaultStorage } from '@/utils/storage';
 
@@ -17,10 +17,9 @@ export const useChatMessages = (
   onSend?: (value: string) => void
 ) => {
   // 本地消息状态，包含流式传输状态
-  const [localMessages, setLocalMessages] = useState<StreamingMessage[]>([]);
+  const [localMessages, setLocalMessages] = useState<RuntimeMessage[]>([]);
   // 是否正在生成回复
   const [isGenerating, setIsGenerating] = useState(false);
-
   // 初始化加载聊天数据和清理函数
   useEffect(() => {
     let mounted = true;
@@ -30,10 +29,16 @@ export const useChatMessages = (
         const chatData = chatStorage.getChatData(chatId);
         if (mounted && chatData?.messages) {
           // 加载聊天数据并设置所有消息为稳定状态
-          setLocalMessages(chatData.messages.map((msg: ChatMessage) => ({ 
-            ...msg, 
-            status: 'stable' 
-          })));
+          const runtimeMessages: RuntimeMessage[] = [];
+          for (const msg of chatData.messages) {
+            // Ensure the message conforms to RuntimeMessage type by explicitly setting status
+            const runtimeMsg = { 
+              ...msg, 
+              status: 'stable' as const 
+            } as RuntimeMessage;
+            runtimeMessages.push(runtimeMsg);
+          }
+          setLocalMessages(runtimeMessages);
         } else if (mounted) {
           // 如果没有消息，清空本地消息列表
           setLocalMessages([]);
@@ -52,15 +57,19 @@ export const useChatMessages = (
 
     loadChatMessages();
 
-    // Cleanup function
+    // Cleanup function - 只在组件卸载或chatId变化时执行
     return () => {
       mounted = false;
-      // 清理和保存当前状态
+      // 清理和保存当前状态 - 使用最新可用的状态，但不依赖它进行重渲染
       if (chatId) {
-        const currentMessages = localMessages.map(msg => ({
-          ...msg,
-          status: 'stable' as const
-        }));
+        // 获取最新的 localMessages，但不将其作为依赖
+        // 这样在组件卸载时会保存一次数据，但不会因为数据变化而触发重新渲染
+        const currentMessages = localMessages.map(msg => {
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          const { status, ...chatMessage } = msg;
+          return chatMessage as ChatMessage;
+        });
+        
         chatStorage.saveChatData(chatId, {
           info: {
             id: chatId,
@@ -70,37 +79,102 @@ export const useChatMessages = (
             messageCount: currentMessages.length
           },
           messages: currentMessages,
+          settings: {
+            modelIndex: 0,
+            systemPrompt: '',
+            enableTools: [],
+            temperature: 0.7,
+            enableWebSearch: false,
+            contextLength: 2000,
+            parallelToolCalls: false
+          },
           updateTime: Date.now()
         });
       }
     };
-  }, [chatId, localMessages]); // Include localMessages since it's used in cleanup
-
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chatId]); // 有意移除 localMessages 依赖以避免无限循环，同时在清理函数中使用它的最新值
   // 添加新消息
-  const addMessage = useCallback((message: StreamingMessage) => {
+  const addMessage = useCallback((message: RuntimeMessage) => {
     if (!chatId) return;
     
     setLocalMessages(prev => {
       const newMessages = [...prev, message];
       // 保存到存储
       const chatData = chatStorage.getChatData(chatId);
+      
+      // 将RuntimeMessage转换为ChatMessage (去除status属性)
+      // 并过滤掉客户端提示消息，因为它们不应该存储和发送给模型
+      const chatMessages = newMessages
+        .filter(msg => msg.role !== 'client-notice')
+        .map(msg => {
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          const { status, ...chatMessage } = msg;
+          return chatMessage as ChatMessage;
+        });
+      
       chatStorage.saveChatData(chatId, {
         info: chatData?.info || {
           id: chatId,
           title: '新对话',
           createTime: Date.now(),
           updateTime: Date.now(),
-          messageCount: newMessages.length
+          messageCount: chatMessages.length
         },
-        messages: newMessages,
+        messages: chatMessages,
+        settings: chatData?.settings || {
+          modelIndex: 0,
+          systemPrompt: '',
+          enableTools: [],
+          temperature: 0.7,
+          enableWebSearch: false,
+          contextLength: 2000,
+          parallelToolCalls: false
+        },
         updateTime: Date.now()
       });
       return newMessages;
     });
+  }, [chatId]);  /**
+   * 添加客户端提示消息（不进入大模型上下文）
+   * 用于显示错误、警告或提示信息的卡片
+   * @param content - 提示消息内容
+   * @param noticeType - 消息类型：error/warning/info
+   * @param errorCode - 可选的错误代码
+   * @returns 生成的消息ID
+   */
+  const addClientNotice = useCallback((
+    content: string, 
+    noticeType: 'error' | 'warning' | 'info' = 'error', 
+    errorCode?: string
+  ): string | undefined => {
+    if (!chatId) return;
+    
+    // 生成唯一ID
+    const id = `notice-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+    
+    // 创建符合 ClientNoticeMessage 类型的消息
+    const noticeMessage: RuntimeMessage = {
+      id,
+      role: 'client-notice' as const,
+      content,
+      timestamp: Date.now(),
+      status: 'stable' as const,
+      noticeType,
+      errorCode
+    };
+    
+    // 使用函数式更新确保类型安全
+    setLocalMessages(prev => {
+      return [...prev, noticeMessage] as RuntimeMessage[];
+    });
+    
+    // 客户端提示消息不需要保存到持久化存储中
+    return id;
   }, [chatId]);
 
-  // 更新最后一条消息
-  const updateLastMessage = useCallback((update: Partial<StreamingMessage>) => {
+// 更新最后一条消息
+  const updateLastMessage = useCallback((update: Partial<RuntimeMessage>) => {
     if (!chatId) return;
     
     setLocalMessages(prev => {
@@ -109,19 +183,36 @@ export const useChatMessages = (
         const newMessages = [
           ...prev.slice(0, -1),
           { ...lastMessage, ...update }
-        ];
+        ] as RuntimeMessage[];
         // 如果消息状态变为稳定，保存到存储
         if (update.status === 'stable') {
           const chatData = chatStorage.getChatData(chatId);
+          
+          // 将RuntimeMessage转换为ChatMessage (去除status属性)
+          const chatMessages = newMessages.map(msg => {
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            const { status, ...chatMessage } = msg;
+            return chatMessage as ChatMessage;
+          });
+          
           chatStorage.saveChatData(chatId, {
             info: chatData?.info || {
               id: chatId,
               title: '新对话',
               createTime: Date.now(),
               updateTime: Date.now(),
-              messageCount: newMessages.length
+              messageCount: chatMessages.length
             },
-            messages: newMessages,
+            messages: chatMessages,
+            settings: chatData?.settings || {
+              modelIndex: 0,
+              systemPrompt: '',
+              enableTools: [],
+              temperature: 0.7,
+              enableWebSearch: false,
+              contextLength: 2000,
+              parallelToolCalls: false
+            },
             updateTime: Date.now()
           });
         }
@@ -137,6 +228,14 @@ export const useChatMessages = (
     
     setLocalMessages(prev => {
       const newMessages = prev.slice(0, -1);
+      
+      // 将RuntimeMessage转换为ChatMessage (去除status属性)
+      const chatMessages = newMessages.map(msg => {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { status, ...chatMessage } = msg;
+        return chatMessage as ChatMessage;
+      });
+      
       const chatData = chatStorage.getChatData(chatId);
       chatStorage.saveChatData(chatId, {
         info: chatData?.info || {
@@ -144,9 +243,18 @@ export const useChatMessages = (
           title: '新对话',
           createTime: Date.now(),
           updateTime: Date.now(),
-          messageCount: newMessages.length
+          messageCount: chatMessages.length
         },
-        messages: newMessages,
+        messages: chatMessages,
+        settings: chatData?.settings || {
+          modelIndex: 0,
+          systemPrompt: '',
+          enableTools: [],
+          temperature: 0.7,
+          enableWebSearch: false,
+          contextLength: 2000,
+          parallelToolCalls: false
+        },
         updateTime: Date.now()
       });
       return newMessages;
@@ -168,6 +276,15 @@ export const useChatMessages = (
         messageCount: 0
       },
       messages: [],
+      settings: chatData?.settings || {
+        modelIndex: 0,
+        systemPrompt: '',
+        enableTools: [],
+        temperature: 0.7,
+        enableWebSearch: false,
+        contextLength: 2000,
+        parallelToolCalls: false
+      },
       updateTime: Date.now()
     });
   }, [chatId]);
@@ -180,29 +297,28 @@ export const useChatMessages = (
         onSend?.(lastMessage.content);
       }
     }
-  }, [isGenerating, localMessages, onSend]);
-
-  // 处理中止生成
+  }, [isGenerating, localMessages, onSend]);  // 处理中止生成
   const handleAbort = useCallback(() => {
     const stream = getCurrentStream();
     if (stream) {
-      llmService.abortCurrentStream();
+      // 直接使用全局的函数而不是类方法
+      stream.abort();
       setIsGenerating(false);
       setLocalMessages(prev => {
         const last = prev[prev.length - 1];
-        if (last.status !== 'stable') {
+        if (last && last.status !== 'stable') {
           return prev.slice(0, -1);
         }
         return prev;
       });
     }
-  }, []);
-
+  }, []); // 不需要依赖 localMessages，因为我们使用了函数式更新
   return {
     messages: localMessages,
     isGenerating,
     setIsGenerating,
     addMessage,
+    addClientNotice,
     updateLastMessage,
     removeLastMessage,
     clearMessages,

@@ -1,4 +1,4 @@
-interface StreamChunk {
+export interface StreamChunk {
   data?: string;
 }
 

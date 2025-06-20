@@ -1,14 +1,17 @@
-// Chat message roles
-export type ChatRole = 'user' | 'assistant' | 'system';
+import type { 
+  ChatCompletionRole,
+  ChatCompletionContentPart
+} from 'openai/resources/chat/completions';
 
-// Base message interface
+// 基础消息接口
 export interface Message {
-  content: string;
-  role: ChatRole;
+  content: string | ChatCompletionContentPart[];
+  role: ChatCompletionRole;
+  name?: string;
 }
 
-// Message with ID for UI display
-export interface ChatMessage extends Message {
+// UI展示用的消息接口
+export interface OpenAIMessage extends Message {
   id: string;
   timestamp: number;
 }

@@ -1,6 +1,6 @@
 import { createBrowserRouter } from 'react-router-dom'
 import Layout from './layouts/Layout'
-import { ContextProvider } from './components/ContextProvider'
+
 
 export const router = createBrowserRouter([
   {
@@ -8,12 +8,14 @@ export const router = createBrowserRouter([
     element: <Layout />,
     children: [
       {
-        path: 'chat/:chatId',
+        index: true,
+        element: <div>Home</div>
+      },
+      {
+        path: 'chat/:chatId?',
         lazy: async () => {
-          const { default: Component } = await import('./pages/Chat')
-          return {
-            Component: () => <Component messages={[]} loading={false} />,
-          }
+          const { Chat } = await import('./pages/Chat');
+          return { Component: Chat }
         },
       },
     ],
