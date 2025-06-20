@@ -13,6 +13,7 @@ export const mcpStoreDefinition = (set, get) => ({
                     url,
                     isConnected: false,
                     tools: [],
+                    error: undefined
                 }]
         }));
     },

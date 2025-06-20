@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { chatRuntimeStoreDefinition } from '../store/chatRuntimeStore';
+// 修正导入，engine 只导出 storeDefinition，不导出 chatRuntimeStore
+import { useChatRuntimeStore } from '../store/chatRuntimeStore';
 import type { RuntimeMessage } from '../types/chat';
 
 function createTestStore() {
@@ -12,7 +13,8 @@ function createTestStore() {
     }
   };
   const get = () => state;
-  return { ...chatRuntimeStoreDefinition(set, get), getState: () => state, set };
+  // 直接用 storeDefinition 生成 store
+  return { ...useChatRuntimeStore(set, get), getState: () => state, set };
 }
 
 describe('chatRuntimeStore 类型和行为测试', () => {

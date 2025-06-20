@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { Button, Empty, Modal, Form, Input } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
+// 修正导入，使用 web/src/store/pluginStore
 import { usePluginStore } from '@/store/pluginStore';
-import type { Plugin } from '@/types/plugin';
+import type { Plugin } from '@engine/types/plugin';
 
 import PluginCard from '@/components/PluginCard';
 import './styles.less';
@@ -26,8 +27,8 @@ const Plugins = () => {
   const [selectedPlugin, setSelectedPlugin] = useState<PluginWithSchema | null>(null);  const handleInstallDemo = () => {
     const demoPlugins: PluginWithSchema[] = [];
     // 只添加不存在的插件
-    demoPlugins.forEach(plugin => {
-      if (!plugins.some(p => p.id === plugin.id)) {
+    demoPlugins.forEach((plugin: PluginWithSchema) => {
+      if (!plugins.some((p: PluginWithSchema) => p.id === plugin.id)) {
         addPlugin(plugin);
       }
     });
@@ -72,10 +73,11 @@ const Plugins = () => {
           />
         ) : (
           <div className="plugins-grid">
-            {plugins.map((plugin) => (
+            {plugins.map((plugin: PluginWithSchema) => (
               <PluginCard
                 key={plugin.id}
-                plugin={plugin}                enabled={Boolean(configs[plugin.id]?.enabled)}
+                plugin={plugin}
+                enabled={Boolean(configs[plugin.id]?.enabled)}
                 onToggle={(enabled) => handleTogglePlugin(plugin.id, enabled)}
                 onConfigure={plugin.configSchema ? () => showConfigModal(plugin) : undefined}
                 onDelete={() => removePlugin(plugin.id)}

@@ -12,8 +12,9 @@ interface ServerFormData {
 }
 
 const Mcp = () => {
+  // 明确 state 类型，消除隐式 any
+  const servers = useMCPStore((state: { servers: import('@engine/store/mcpStore').MCPServer[] }) => state.servers) as import('@engine/store/mcpStore').MCPServer[];
   const { 
-    servers,
     activeServerId,
     isLoading,
     addServer,
@@ -45,6 +46,9 @@ const Mcp = () => {
     }
   };
 
+  // 明确 server/tool 类型，消除 unknown 报错
+  const server = servers.find(s => s.id === activeServerId) as import('@engine/store/mcpStore').MCPServer | undefined;
+
   return (
     <div className="mcp-page">
       <div className="mcp-header">
@@ -63,7 +67,7 @@ const Mcp = () => {
           itemLayout="vertical"
           dataSource={servers}
           loading={isLoading}
-          renderItem={(server) => (
+          renderItem={(server: import('@engine/store/mcpStore').MCPServer) => (
             <List.Item
               key={server.id}
               className={`server-item ${activeServerId === server.id ? 'active' : ''}`}
@@ -108,14 +112,18 @@ const Mcp = () => {
                     <List
                       size="small"
                       dataSource={server.tools}
-                      renderItem={(tool) => (
-                        <List.Item>
-                          <List.Item.Meta
-                            title={tool.name}
-                            description={tool.description}
-                          />
-                        </List.Item>
-                      )}
+                      renderItem={(tool: import('@engine/store/mcpStore').Tool, toolIndex: number) => {
+                        // tool 类型断言
+                        const toolData = server.tools?.[toolIndex];
+                        return (
+                          <List.Item>
+                            <List.Item.Meta
+                              title={toolData?.name || ''}
+                              description={toolData?.description || ''}
+                            />
+                          </List.Item>
+                        );
+                      }}
                     />
                   </Panel>
                 </Collapse>

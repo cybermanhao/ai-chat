@@ -1,2 +1,1 @@
-"use strict";
-// ...existing code from web/src/types/config.ts...
+export {};

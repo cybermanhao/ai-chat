@@ -53,6 +53,7 @@ export const mcpStoreDefinition = (set: any, get: any) => ({
         url,
         isConnected: false,
         tools: [],
+        error: undefined
       }]
     }));
   },

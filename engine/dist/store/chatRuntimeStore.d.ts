@@ -17,6 +17,24 @@ export interface ChatRuntimeState {
     clearRuntimeState: (chatId: string) => void;
     clearAllRuntimeStates: () => void;
 }
+export declare const useChatRuntimeStore: (set: any, get: any) => {
+    isGenerating: boolean;
+    abortController: null;
+    runtimeMessages: {};
+    runtimeStates: {};
+    setMessageStatus: (messageId: string, status: MessageStatus) => void;
+    updateMessageContent: (params: {
+        messageId: string;
+        content: string;
+        reasoning_content?: string;
+        tool_content?: string;
+        observation_content?: string;
+        thought_content?: string;
+    }) => void;
+    setRuntimeState: (chatId: string, newState: Partial<RuntimeChatState>) => void;
+    clearRuntimeState: (chatId: string) => void;
+    clearAllRuntimeStates: () => void;
+};
 export declare const chatRuntimeStoreDefinition: (set: any, get: any) => {
     isGenerating: boolean;
     abortController: null;

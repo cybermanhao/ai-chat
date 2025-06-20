@@ -1,4 +1,4 @@
-import { extractXmlContent, extractPluginContent, processPluginContent } from '@/utils/xml';
+import { extractXmlContent, extractPluginContent, processPluginContent } from '@engine/utils/xml';
 import type { ContentRenderer, RenderContext } from './types';
 
 export class XmlPluginRenderer implements ContentRenderer {

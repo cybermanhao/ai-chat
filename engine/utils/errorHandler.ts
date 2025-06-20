@@ -1,5 +1,6 @@
+// engine/utils/errorHandler.ts
 import { createMessage } from './messageFactory';
-import type { ClientNoticeMessage } from '@/types/chat';
+import type { ClientNoticeMessage } from '../types/chat';
 
 // 错误代码常量
 export const ErrorCode = {
@@ -48,7 +49,8 @@ export function handleLLMError(error: unknown): ClientNoticeMessage {
       message = '请求频率过高，请稍后再试';
       code = ErrorCode.API_ERROR;
       type = 'warning';
-    }  } else if (typeof error === 'object' && error !== null) {
+    }
+  } else if (typeof error === 'object' && error !== null) {
     // 处理其他类型的错误对象
     const errObj = error as Record<string, unknown>;
     if (errObj.code && typeof errObj.code === 'string') {
@@ -61,5 +63,3 @@ export function handleLLMError(error: unknown): ClientNoticeMessage {
   
   return createMessage.clientNotice(message, type, code);
 }
-
-// 移除本地 errorHandler.ts，已迁移到 engine/utils/errorHandler.ts

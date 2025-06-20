@@ -14,3 +14,21 @@ export function buildXml(obj) {
     }
     return `<root>${xml}</root>`;
 }
+// 兼容 engine/utils/xml.ts 的 web 端导出，补充多端插件内容提取与处理
+export function extractXmlContent(xml) {
+    // 兼容旧实现，实际应由 engine/utils/xml.ts 提供
+    const matches = [...xml.matchAll(/<xml>([\s\S]*?)<\/xml>/g)];
+    return matches.map(m => ({ content: m[1], isPlugin: m[1].includes('<plugin') }));
+}
+export function extractPluginContent(xml) {
+    // 兼容旧实现，实际应由 engine/utils/xml.ts 提供
+    const matches = [...xml.matchAll(/<plugin name="([^"]+)">([\s\S]*?)<\/plugin>/g)];
+    return matches.map(m => ({ pluginId: m[1], content: m[2] }));
+}
+export function processPluginContent(content, plugin) {
+    // 兼容旧实现，实际应由 engine/utils/xml.ts 提供
+    if (plugin && typeof plugin.render === 'function') {
+        return plugin.render(content);
+    }
+    return content;
+}

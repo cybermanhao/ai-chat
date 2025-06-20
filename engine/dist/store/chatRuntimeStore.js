@@ -1,4 +1,4 @@
-export const chatRuntimeStoreDefinition = (set, get) => ({
+export const useChatRuntimeStore = (set, get) => ({
     isGenerating: false,
     abortController: null,
     runtimeMessages: {},
@@ -68,3 +68,5 @@ export const chatRuntimeStoreDefinition = (set, get) => ({
         });
     }
 });
+// 导出 storeDefinition 供多端绑定
+export const chatRuntimeStoreDefinition = useChatRuntimeStore;

@@ -1,4 +1,4 @@
-import { markdownToHtml } from '@/utils/markdown';
+import { markdownToHtml } from '@engine/utils/markdown';
 import type { ContentRenderer } from './types';
 
 export class MarkdownRenderer implements ContentRenderer {

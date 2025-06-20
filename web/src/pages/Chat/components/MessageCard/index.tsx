@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { UserOutlined, RobotOutlined, DownOutlined, RightOutlined, LoadingOutlined, FormOutlined, CopyOutlined, InfoCircleOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
-import type { MessageRole } from '@/types/chat';
+import type { MessageRole } from '@engine/types/chat';
 import { Button, Tooltip } from 'antd';
 import { markdownToHtml, copyToClipboard } from '@/utils/markdown';
-import { useChatRuntimeStore } from '@/store/chatRuntimeStore';
+import { useChatRuntimeStore } from '@engine/store/chatRuntimeStore';
 import './styles.less';
 
 export type MessageStatus = 'connecting' | 'thinking' | 'generating' | 'stable' | 'done' | 'error';
@@ -34,7 +34,8 @@ const MessageCard: React.FC<MessageCardProps> = ({
   noticeType = 'info',
   errorCode
 }) => {
-  const runtimeMessage = useChatRuntimeStore(state => state.runtimeMessages[id]);
+  // 修正 useChatRuntimeStore 用法，直接使用 web 端 store，类型自动推断
+  const runtimeMessage = useChatRuntimeStore((state: import('@/store/chatRuntimeStore').ChatRuntimeState) => state.runtimeMessages[id]);
   const [showReasoning, setShowReasoning] = useState(true);
   const [showToolOutput, setShowToolOutput] = useState(true);
   const [showThoughts, setShowThoughts] = useState(true);
@@ -44,7 +45,8 @@ const MessageCard: React.FC<MessageCardProps> = ({
   const isUser = role === 'user';
   const isAssistant = role === 'assistant';
   const isClientNotice = role === 'client-notice';
-  const currentStatus = runtimeMessage?.status || status;
+  // 修正 status 取值，避免根状态类型报错
+  const currentStatus = runtimeMessage && 'status' in runtimeMessage ? runtimeMessage.status : status;
 
   // Get runtime content from store or props
   const runtimeContent = runtimeMessage ? {
@@ -102,7 +104,8 @@ const MessageCard: React.FC<MessageCardProps> = ({
       }
     };
 
-    const statusInfo = statusMap[currentStatus];
+    // 明确 statusMap 索引类型，消除隐式 any
+    const statusInfo = statusMap[currentStatus as MessageStatus];
     if (!statusInfo) return null;
 
     return (

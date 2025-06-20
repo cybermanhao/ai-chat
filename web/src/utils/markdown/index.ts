@@ -1,4 +1,5 @@
 export * from '@engine/utils/markdown';
+export { default as MarkdownHighlight } from '@engine/utils/markdown-highlight';
 
 /**
  * Markdown渲染器配置

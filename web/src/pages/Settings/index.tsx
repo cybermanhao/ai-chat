@@ -19,8 +19,8 @@ const Settings = () => {
     selectLLM(llmId);
   };
 
-  const handleModelChange = (model: string) => {
-    updateLLMConfig({ model });
+  const handleModelChange = (userModel: string) => {
+    updateLLMConfig({ userModel });
   };
 
   const handleApiKeyChange = (value: string) => {
@@ -47,7 +47,7 @@ const Settings = () => {
             darkMode: isDarkMode,
             autoSave: true,
             llm: activeLLM?.id,
-            model: currentConfig?.model,
+            model: currentConfig?.userModel,
             apiKey: currentConfig?.apiKey,
           }}
         >
@@ -68,11 +68,11 @@ const Settings = () => {
             extra={activeLLM?.description}
           >
             <Select
-              options={availableLLMs.map(llm => ({
+              options={Array.isArray(availableLLMs) ? availableLLMs.map(llm => ({
                 label: llm.name,
                 value: llm.id,
                 description: llm.description,
-              }))}
+              })) : []}
               onChange={handleLLMChange}
             />
           </Form.Item>
@@ -100,10 +100,10 @@ const Settings = () => {
             tooltip="选择要使用的具体模型"
           >
             <Select
-              options={activeLLM?.models.map((model: string) => ({
+              options={Array.isArray(activeLLM?.models) ? activeLLM.models.map((model: string) => ({
                 label: model,
                 value: model,
-              }))}
+              })) : []}
               onChange={handleModelChange}
               disabled={!activeLLM}
             />

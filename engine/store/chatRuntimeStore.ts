@@ -21,7 +21,7 @@ export interface ChatRuntimeState {
   clearAllRuntimeStates: () => void;
 }
 
-export const chatRuntimeStoreDefinition = (set: any, get: any) => ({
+export const useChatRuntimeStore = (set: any, get: any) => ({
   isGenerating: false,
   abortController: null,
   runtimeMessages: {},
@@ -103,3 +103,6 @@ export const chatRuntimeStoreDefinition = (set: any, get: any) => ({
     });
   }
 });
+
+// 导出 storeDefinition 供多端绑定
+export const chatRuntimeStoreDefinition = useChatRuntimeStore;
