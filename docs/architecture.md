@@ -96,6 +96,9 @@ graph TD
 - Deepseek API 流式响应与多字段支持（reasoning_content, tool_content, observation_content, thought_content）
 - 统一的流式处理与 runtime store 更新逻辑
 - 详见 [chat-flow.md](./chat-flow.md)
+- Deepseek/OpenAI 响应的 chunk.id 仅用于云端追踪，本地消息 id 统一采用 uuid v4，避免混淆，详见 chat-flow.md。
+- Markdown 渲染采用 dangerouslySetInnerHTML，防止 HTML 以字符串显示，详见 renderer.md。
+- runtime store 负责流式和临时状态，持久化存储仅保存稳定消息，二者通过 useChatMessages 等 hook 保持同步。
 
 #### 2.2.2 其他模型适配 (待实现)
 - Claude API
