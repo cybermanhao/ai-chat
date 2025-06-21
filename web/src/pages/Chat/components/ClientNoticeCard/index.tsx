@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { InfoCircleOutlined, WarningOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import { Tooltip, Button, message } from 'antd';
 import { CopyOutlined } from '@ant-design/icons';
@@ -23,7 +23,6 @@ const ClientNoticeCard: React.FC<ClientNoticeCardProps> = ({
   errorCode,
   timestamp,
 }) => {
-  const [collapsed, setCollapsed] = useState(true);
   // 根据通知类型获取图标
   const getNoticeIcon = () => {
     switch (noticeType) {
@@ -51,7 +50,7 @@ const ClientNoticeCard: React.FC<ClientNoticeCardProps> = ({
   };
 
   return (
-    <div className={`client-notice-card notice-${noticeType}`}>  
+    <div className={`client-notice-card notice-${noticeType}`}>
       <div className="notice-header">
         <div className="notice-icon">{getNoticeIcon()}</div>
         <div className="notice-title">{getNoticeTitle()}</div>
@@ -63,16 +62,6 @@ const ClientNoticeCard: React.FC<ClientNoticeCardProps> = ({
           </div>
         )}
         <div className="notice-actions">
-          <Tooltip title={collapsed ? '展开详情' : '收起详情'}>
-            <Button
-              type="text"
-              size="small"
-              onClick={() => setCollapsed(c => !c)}
-              style={{ fontSize: 12 }}
-            >
-              {collapsed ? '展开' : '收起'}
-            </Button>
-          </Tooltip>
           <Tooltip title="复制内容">
             <Button
               type="text"
@@ -90,23 +79,7 @@ const ClientNoticeCard: React.FC<ClientNoticeCardProps> = ({
         </div>
       </div>
       <div className="notice-content">
-        <div
-          className="notice-message"
-          style={{
-            maxHeight: collapsed ? 60 : 300,
-            overflow: 'auto',
-            whiteSpace: 'pre-wrap',
-            wordBreak: 'break-all',
-            background: '#fff',
-            borderRadius: 4,
-            padding: 8,
-            cursor: collapsed ? 'pointer' : 'auto',
-            transition: 'max-height 0.2s',
-          }}
-          onClick={() => collapsed && setCollapsed(false)}
-        >
-          {content}
-        </div>
+        <div className="notice-message">{content}</div>
         {timestamp && (
           <div className="notice-time">
             {new Date(timestamp).toLocaleString()}

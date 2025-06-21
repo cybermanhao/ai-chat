@@ -13,14 +13,14 @@ import { useChatStore } from '@/store/chatStore';
 import { useChatMessages } from '@/hooks/useChatMessages';
 import { handleLLMError } from '@/utils/errorHandler';
 import { useChatRuntimeStore } from '@/store/chatRuntimeStore';
-import WebLLMService from '@/services/llmService';
+import { LLMService } from '@engine/service/llmService';
 import type { StreamChunk, RuntimeMessage } from '@/types/chat';
 import type { AssistantMessage } from '@/types/chat';
 import type { CompletionResult } from '@/utils/streamHandler';
 import './styles.less';
 
 // 在组件外部创建单例 llmService 实例
-const llmService = new WebLLMService();
+const llmService = new LLMService();
 
 export const Chat = () => {
   const [inputValue, setInputValue] = useState('');
@@ -51,36 +51,30 @@ export const Chat = () => {
     // handleAbort
   } = useChatMessages(urlChatId || null);
 
-  // 判断禁用原因
-  let disabledReason = '';
-  if (!urlChatId) disabledReason = '未选择对话';
-  else if (!activeLLM) disabledReason = '未选择模型';
-  else if (!currentConfig?.userModel) disabledReason = '未选择模型类型';
-  else if (!currentConfig?.apiKey) disabledReason = '未配置 API Key';
-
-  const isDisabled = Boolean(disabledReason);
+  const isDisabled = !urlChatId || !activeLLM || !currentConfig?.userModel || !currentConfig?.apiKey;
 
   // 当切换聊天时，清空输入框、加载消息并更新当前聊天ID
+  // 防止死循环：只在新建/切换对话时分配一次默认模型
+  // 只在切换对话时分配一次默认模型，彻底避免死循环
   useEffect(() => {
     setInputValue('');
     if (urlChatId) {
       setCurrentId(urlChatId);
       loadChat(urlChatId);
+      // 只在新建/切换对话时分配默认模型，且仅当 userModel 为空时
+      if (
+        activeLLM &&
+        (!currentConfig.userModel || currentConfig.userModel === '') &&
+        Array.isArray(activeLLM.models) &&
+        activeLLM.models.length > 0
+      ) {
+        // 只在 userModel 真的为空时分配，且分配后不再触发
+        updateLLMConfig({ userModel: activeLLM.models[0] });
+      }
     }
-  }, [urlChatId, setCurrentId, loadChat]);
-
-  // 只在新建/切换对话且 userModel 为空时分配默认模型，彻底避免死循环
-  useEffect(() => {
-    if (
-      urlChatId &&
-      activeLLM &&
-      (!currentConfig.userModel || currentConfig.userModel === '') &&
-      Array.isArray(activeLLM.models) &&
-      activeLLM.models.length > 0
-    ) {
-      updateLLMConfig({ userModel: activeLLM.models[0] });
-    }
-  }, [urlChatId, activeLLM, currentConfig.userModel]);
+    // 不依赖 currentConfig.userModel，彻底避免死循环
+    // 不再需要 hasSetDefaultModel 标记
+  }, [urlChatId, setCurrentId, loadChat, activeLLM, updateLLMConfig]);
   // 自动保存聊天内容
   useEffect(() => {
     console.log('Saving messages:', messages.length);
@@ -288,11 +282,6 @@ export const Chat = () => {
           onSend={handleSend}
           onStop={handleStop}
         />
-        {isDisabled && (
-          <div style={{ color: 'var(--error-color)', marginTop: 8, textAlign: 'center' }}>
-            {disabledReason}
-          </div>
-        )}
       </div>
     </div>
   );
