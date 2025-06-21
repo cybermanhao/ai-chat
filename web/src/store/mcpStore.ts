@@ -1,5 +1,4 @@
-import PubStore from 'zustand-pub';
+import { create } from 'zustand';
 import { mcpStoreDefinition } from '@engine/store/mcpStore';
 
-const pubStore = new PubStore('mcp');
-export const useMCPStore = pubStore.defineStore('mcp', mcpStoreDefinition);
+export const useMCPStore = create(mcpStoreDefinition);

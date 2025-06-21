@@ -1,7 +1,6 @@
-import PubStore from 'zustand-pub';
+import { create } from 'zustand';
 import { chatRuntimeStoreDefinition } from '@engine/store/chatRuntimeStore';
 
-const pubStore = new PubStore('chatRuntime');
-export const useChatRuntimeStore = pubStore.defineStore('chatRuntime', chatRuntimeStoreDefinition);
+export const useChatRuntimeStore = create(chatRuntimeStoreDefinition);
 
 export type { ChatRuntimeState } from '@engine/store/chatRuntimeStore';

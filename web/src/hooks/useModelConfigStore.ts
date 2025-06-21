@@ -1,5 +1,4 @@
-import PubStore from 'zustand-pub';
+import { create } from 'zustand';
 import { modelConfigStoreDefinition } from '@engine/store/modelConfigStore';
 
-const pubStore = new PubStore('modelConfig');
-export const useModelConfigStore = pubStore.defineStore('modelConfig', modelConfigStoreDefinition);
+export const useModelConfigStore = create(modelConfigStoreDefinition);
