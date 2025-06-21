@@ -39,22 +39,22 @@ const ChatList: React.FC = () => {
 
   // 自动加载聊天列表并跳转到上次聊天或新建
   useEffect(() => {
-    if (initLoading) {
-      if (!chatList || chatList.length === 0) {
-        // 无聊天，自动新建
-        (async () => {
-          const id = await addChat('新对话');
-          setActiveChat(id);
-          navigate(`/chat/${id}`);
-          setInitLoading(false);
-        })();
-      } else if (!currentChatId && persistedChatId) {
-        // 有聊天但未选中，跳转到上次聊天
-        navigate(`/chat/${persistedChatId}`);
+    if (!initLoading) return;
+    const hasLocal = !!localStorage.getItem('chat_list');
+    if (!hasLocal && (!chatList || chatList.length === 0)) {
+      // 只有本地没有才新建
+      (async () => {
+        const id = await addChat('新对话');
+        setActiveChat(id);
+        navigate(`/chat/${id}`);
         setInitLoading(false);
-      } else {
-        setInitLoading(false);
-      }
+      })();
+    } else if (!currentChatId && persistedChatId) {
+      // 有聊天但未选中，跳转到上次聊天
+      navigate(`/chat/${persistedChatId}`);
+      setInitLoading(false);
+    } else {
+      setInitLoading(false);
     }
   }, [initLoading, chatList, currentChatId, persistedChatId, addChat, setActiveChat, navigate]);
 

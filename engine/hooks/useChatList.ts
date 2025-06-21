@@ -4,11 +4,12 @@ import { useState, useCallback, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import type { ChatInfo } from '../types/chat';
 import { ChatStorageService } from '../service/chatStorage';
-import { defaultStorage } from '../utils/storage';
+import { defaultStorage, type StorageLike } from '../utils/storage';
 
-const chatStorage = new ChatStorageService(defaultStorage);
+export const useChatList = (storageArg?: StorageLike) => {
+  const storage = storageArg || defaultStorage;
+  const chatStorage = new ChatStorageService(storage);
 
-export const useChatList = () => {
   const [chatList, setChatList] = useState<ChatInfo[]>([]);
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -19,7 +20,7 @@ export const useChatList = () => {
     setChatList(list);
     setCurrentChatId(currentId || (list.length > 0 ? list[0].id : null));
     setLoading(false);
-  }, []);
+  }, [storageArg]);
 
   const addChat = useCallback((title: string) => {
     const id = uuidv4();
@@ -36,7 +37,7 @@ export const useChatList = () => {
     setCurrentChatId(id);
     chatStorage.saveCurrentChatId(id);
     return id;
-  }, [chatList]);
+  }, [chatList, storageArg]);
 
   const removeChat = useCallback((id: string) => {
     const newList = chatList.filter(chat => chat.id !== id);
@@ -48,12 +49,12 @@ export const useChatList = () => {
       chatStorage.saveCurrentChatId(nextId);
     }
     chatStorage.deleteChatData(id);
-  }, [chatList, currentChatId]);
+  }, [chatList, currentChatId, storageArg]);
 
   const setActiveChat = useCallback((id: string) => {
     setCurrentChatId(id);
     chatStorage.saveCurrentChatId(id);
-  }, []);
+  }, [storageArg]);
 
   return {
     chatList,

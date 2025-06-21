@@ -170,4 +170,23 @@ export const chatStoreDefinition = (set: any, get: any) => ({
       await chatStorage.saveMessages(currentId, messages);
     }
   },
+
+  /**
+   * 主动从本地存储加载指定 chatId 的聊天数据到 store
+   */
+  initFromStorage: (chatId: string | null) => {
+    if (!chatId) return;
+    const chatData = chatStorage.getChatData(chatId);
+    if (chatData) {
+      set({
+        currentId: chatId,
+        messages: chatData.messages || [],
+        chats: [
+          // 保证当前聊天在 chats 列表中
+          chatData.info,
+          ...get().chats.filter((c: ChatInfo) => c.id !== chatId)
+        ]
+      });
+    }
+  },
 });

@@ -47,6 +47,7 @@ export const Chat = () => {
     getCurrentChat,
     saveChat,
     loadChat,
+    initFromStorage, // 新增
   } = useStore(useChatStore);
 
   // 使用增强的消息管理Hook
@@ -83,6 +84,13 @@ export const Chat = () => {
       saveChat();
     }
   }, [messages, saveChat]);
+
+  // 页面挂载时，优先从本地存储同步 chatData 到 zust道
+  useEffect(() => {
+    if (urlChatId) {
+      initFromStorage(urlChatId);
+    }
+  }, [urlChatId, initFromStorage]);
 
   // 滚动到底部
   const scrollToBottom = useCallback(() => {

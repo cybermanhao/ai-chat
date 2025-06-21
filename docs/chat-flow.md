@@ -83,6 +83,16 @@ useEffect(() => {
 }, [safeChatId]);
 ```
 
+### 1.3 聊天数据同步到 store（2025.06 优化）
+- 页面挂载时，若 URL 中存在 chatId，优先调用 zustand 的 `initFromStorage(chatId)`，主动将本地 chatData 加载到 store（chats/messages/currentId）。
+- 这样可确保刷新页面后，聊天内容与本地持久化数据一致，避免因 zustand 初始值为空导致的“页面无消息”问题。
+- 该同步流程在 `Chat/index.tsx` 的 useEffect 中实现，优先于其它消息 hook。
+- 只有在 chatId 变化时才会重新同步，保证性能和一致性。
+
+### 1.4 useChatMessages hook 初始化
+- useChatMessages 依赖于 store 的 currentId 和 messages，确保在 initFromStorage 之后再挂载。
+- 只有在消息状态为 stable 时，才会将消息写入本地存储。
+
 ## 2. 用户输入阶段
 
 ### 2.1 用户输入处理

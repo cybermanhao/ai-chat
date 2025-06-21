@@ -39,3 +39,6 @@ export default defineConfig({
     },
   },
 })
+
+// public/avatar 目录下的图片可通过 /avatar/xxx.png 直接访问，无需特殊配置
+// 参考: https://vitejs.dev/guide/assets.html#the-public-directory

@@ -1,212 +1,97 @@
-# AI Chat 应用架构设计文档
+# ZZ AI Chat 架构与特性
 
-## 1. 数据流设计
+## 项目特性
 
-### 1.1 状态管理层次
+- 🚀 支持主流大语言模型 (目前已支持 Deepseek，OpenAI/Qwen/本地模型规划中)
+- 🔌 强大的插件系统（渲染、工具、主题、AI 模型插件）
+- 🎨 自定义主题和多语言支持
+- 💻 跨平台支持 (Web, Desktop, WeChat Mini Program)
+- 🛠 开发者友好的架构
+
+## 技术架构
+
+### 前端目录结构
 
 ```
-全局状态 (Zustand Store)
-  ↓
-Context (UI状态)
-  ↓
-组件状态 (Local State)
+web/
+├── src/
+│   ├── components/     # 公共组件
+│   ├── contexts/       # React Contexts
+│   ├── hooks/         # 自定义 Hooks
+│   ├── pages/         # 页面组件
+│   ├── plugins/       # 插件系统
+│   ├── services/      # API 服务
+│   ├── store/         # 状态管理
+│   ├── styles/        # 全局样式
+│   └── utils/         # 工具函数
 ```
 
-#### 1.1.1 全局状态 (已实现)
-- `/store/chatStore.ts`: 聊天数据的持久化存储
-- `/store/llmConfigStore.ts`: LLM配置管理
-- `/store/modelConfigStore.ts`: 模型配置管理
-- `/store/themeStore.ts`: 主题配置
-- `/store/chatRuntimeStore.ts`: 聊天运行时状态管理
+### 状态管理
 
-相关技术:
-- [Zustand基础用法](./zustand-guide.md) (TODO)
-  - create store
-  - middleware (persist, devtools)
-  - typescript支持
-  - store组合
+使用 [Zustand](https://github.com/pmndrs/zustand) 进行状态管理，相比 Redux 更加轻量和灵活。
 
-#### 1.1.2 Context 职责
-- `/contexts/chat/`: 聊天界面UI状态管理
-- `/contexts/modal/`: 模态框状态管理
-- `/contexts/list/`: 列表选择状态管理
-
-### 1.2 数据流向
-
-```mermaid
-graph TD
-    A[用户输入] --> B[UI组件]
-    B --> C[Context状态]
-    C --> D[Zustand Store]
-    D --> E[持久化存储]
-    F[LLM响应] --> G[运行时状态]
-    G --> H[UI更新]
-```
-
-## 2. 技术栈实现
-
-### 2.1 前端技术栈
-
-- **构建工具**: Vite
-  - 开发时 HMR
-  - 生产环境优化
-  - 插件系统支持
-
-- **状态管理**: Zustand
-  ```typescript
-  // 示例: chatStore.ts
-  export const useChatStore = create<ChatState>()(
-    persist(
-      (set) => ({
-        messages: [],
-        addMessage: (message) => 
-          set((state) => ({
-            messages: [...state.messages, message]
-          })),
-      }),
-      {
-        name: 'chat-storage',
-      }
-    )
-  );
-  ```
-
-- **样式方案**: Less + CSS Modules
-  ```less
-  // 示例: styles.less
-  .chat-container {
-    @import '../../styles/variables';
-    display: flex;
-    flex-direction: column;
-    .message-list {
-      flex: 1;
-      overflow-y: auto;
-    }
-  }
-  ```
-
-### 2.2 LLM 集成
-
-#### 2.2.1 OpenAI/Deepseek/多模型集成（已实现）
-- [OpenAI SDK指南](./openai-guide.md) (TODO)
-  - Stream API
-  - Tool Calls
-  - Function Calling
-  - 错误处理
-- Deepseek API 流式响应与多字段支持（reasoning_content, tool_content, observation_content, thought_content）
-- 统一的流式处理与 runtime store 更新逻辑
-- 详见 [chat-flow.md](./chat-flow.md)
-- Deepseek/OpenAI 响应的 chunk.id 仅用于云端追踪，本地消息 id 统一采用 uuid v4，避免混淆，详见 chat-flow.md。
-- Markdown 渲染采用 dangerouslySetInnerHTML，防止 HTML 以字符串显示，详见 renderer.md。
-- runtime store 负责流式和临时状态，持久化存储仅保存稳定消息，二者通过 useChatMessages 等 hook 保持同步。
-
-#### 2.2.2 其他模型适配 (待实现)
-- Claude API
-- Anthropic SDK
-- 本地模型
-
-### 2.3 桌面应用
-
-使用 Electron 构建桌面应用:
-
+示例:
 ```typescript
-// main/index.ts
-app.on('ready', () => {
-  const win = new BrowserWindow({
-    width: 1200,
-    height: 800,
-    webPreferences: {
-      nodeIntegration: true,
-      contextIsolation: true,
-    },
-  });
-  // 加载前端应用
-  win.loadURL(process.env.VITE_DEV_SERVER_URL);
-});
-```
+import { create } from 'zustand';
 
-## 3. 插件系统
-
-### 3.1 插件类型
-
-1. **渲染插件**
-   - Markdown 渲染（支持 dangerouslySetInnerHTML，详见 renderer.md）
-   - 代码高亮
-   - LaTeX 公式
-   - 图表绘制
-
-2. **工具插件**
-   - 文件处理
-   - 代码执行
-   - API调用
-   - 数据分析
-
-3. **主题插件**
-   - 颜色方案
-   - 组件样式
-   - 动画效果
-
-### 3.2 插件接口
-
-```typescript
-interface Plugin {
-  id: string;
-  name: string;
-  version: string;
-  type: 'renderer' | 'tool' | 'theme';
-  register: (api: PluginAPI) => void;
-  unregister?: () => void;
+interface ChatState {
+  messages: Message[];
+  addMessage: (message: Message) => void;
 }
 
-interface PluginAPI {
-  registerRenderer: (renderer: Renderer) => void;
-  registerTool: (tool: Tool) => void;
-  registerTheme: (theme: Theme) => void;
-}
+export const useChatStore = create<ChatState>((set) => ({
+  messages: [],
+  addMessage: (message) => set((state) => ({ 
+    messages: [...state.messages, message] 
+  })),
+}));
 ```
 
-## 4. 多端适配
+### 核心依赖
 
-### 4.1 Web 端 (已实现)
-- 基于 React + Vite
-- Electron 环境集成
-- Ant Design 组件库
-- 响应式布局
+- [React](https://react.dev/) - UI 框架
+- [Zustand](https://github.com/pmndrs/zustand) - 状态管理
+- [React Router](https://reactrouter.com/) - 路由管理
+- [Vite](https://vitejs.dev/) - 构建工具
+- [TypeScript](https://www.typescriptlang.org/) - 类型系统
+- [Less](https://lesscss.org/) - CSS 预处理器
 
-### 4.2 桌面端 (待实现)
-需要了解:
-- [Electron 开发指南](./electron-guide.md) (TODO)
-  - 主进程通信
-  - 本地服务集成
-  - 离线功能
+### 多端支持
 
-### 4.3 小程序端 (待实现)
-需要了解:
-- [小程序开发指南](./miniprogram-guide.md) (TODO)
-  - 框架限制
-  - 网络请求
-  - 组件适配
+#### Web
+标准的 Web 应用，支持所有现代浏览器。使用 Vite 构建，支持 HMR 和快速开发。
 
-## 5. 开发计划
+#### 桌面应用 (规划中)
+基于 Electron 的桌面应用，提供更多本地功能:
+- 本地模型支持
+- 文件系统集成
+- 系统托盘
+- 离线使用
 
-### 5.1 近期目标
-1. 完善基础聊天功能
-   - Stream处理优化
-   - 错误处理完善
-   - 消息状态管理（多状态流转、UI同步、runtime store 与持久化分离）
-   - Deepseek/多模型流式字段支持
-2. 文档补充
-   - 补充各项技术指南
-   - 完善API文档
-   - 添加开发示例
-   - [Markdown渲染机制说明](./renderer.md)
+#### 微信小程序 (规划中)
+原生微信小程序，提供轻量级的聊天功能:
+- 基础对话
+- 快捷分享
+- 小程序云开发集成
 
-### 5.2 中期规划
-1. 插件系统实现
-2. 更多模型支持
-3. 桌面端适配
+## 插件系统
 
-### 5.3 远期规划
-1. 小程序端开发
-2. 性能优化
-3. 更多功能扩展
+支持多种类型的插件:
+- 渲染插件: 扩展消息渲染能力
+- 工具插件: 提供额外的功能
+- 主题插件: 自定义界面主题
+- AI 模型插件: 集成新的模型
+
+详细开发指南见 [插件开发指南](./plugin-development-guide.md)
+
+## 贡献
+
+1. Fork 本仓库
+2. 创建特性分支 (`git checkout -b feature/AmazingFeature`)
+3. 提交更改 (`git commit -m 'Add some AmazingFeature'`)
+4. 推送到分支 (`git push origin feature/AmazingFeature`)
+5. 创建 Pull Request
+
+## 许可证
+
+本项目采用 MIT 许可证 - 查看 [LICENSE](../LICENSE) 了解详情

@@ -4,5 +4,9 @@
     { "path": "../engine/tsconfig.json" },
     { "path": "./tsconfig.app.json" },
     { "path": "./tsconfig.node.json" }
-  ]
+  ],
+  "compilerOptions": {
+    // public 目录下的静态资源可直接用字符串路径 '/avatar/xxx.png' 引用，无需 tsconfig 特殊配置
+    // 参考: https://vitejs.dev/guide/assets.html#the-public-directory
+  }
 }

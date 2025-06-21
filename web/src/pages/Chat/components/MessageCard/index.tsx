@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { UserOutlined, RobotOutlined, DownOutlined, RightOutlined, LoadingOutlined, FormOutlined, CopyOutlined, InfoCircleOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
+import { DownOutlined, RightOutlined, LoadingOutlined, FormOutlined, CopyOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import type { MessageRole } from '@engine/types/chat';
 import { Button, Tooltip } from 'antd';
 import { markdownToHtml, copyToClipboard } from '@/utils/markdown';
 import { useStore } from 'zustand';
 import { useChatRuntimeStore } from '@/store/chatRuntimeStore';
 import type { ChatRuntimeState } from '@/store/chatRuntimeStore';
+import AvatarIcon from '@/components/AvatarIcon';
 import './styles.less';
 
 export type MessageStatus = 'connecting' | 'thinking' | 'generating' | 'stable' | 'done' | 'error';
@@ -70,7 +71,6 @@ const MessageCard: React.FC<MessageCardProps> = ({
   const currentThoughtContent = cleanContent(runtimeContent.thought_content || thought_content);
 
   // Status rendering
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const renderStatus = () => {
     if (isUser || currentStatus === 'stable' || currentStatus === 'done') return null;
       const statusMap: Record<MessageStatus, { text: string; icon: React.ReactNode; className: string }> = {
@@ -118,10 +118,38 @@ const MessageCard: React.FC<MessageCardProps> = ({
   };
   const roleClass = isUser ? 'message-user' : isClientNotice ? 'message-notice' : 'message-assistant';
 
+  // 头像参数
+  let avatarProps = {};
+  if (isUser) {
+    avatarProps = {
+      provider: 'user',
+      backgroundColor: '#e6f7ff',
+      shape: 'circle',
+      size: 36,
+      src: undefined,
+    };
+  } else if (isAssistant) {
+    avatarProps = {
+      provider: 'chatgpt',
+      backgroundColor: '#f6ffed',
+      shape: 'circle',
+      size: 36,
+      src: undefined,
+    };
+  } else if (isClientNotice) {
+    avatarProps = {
+      provider: 'info',
+      backgroundColor: '#fffbe6',
+      shape: 'circle',
+      size: 36,
+      src: undefined,
+    };
+  }
+
   return (
     <div className={`message-card ${roleClass}`}>
       <div className="message-header">
-        {isUser ? <UserOutlined /> : isAssistant ? <RobotOutlined /> : <InfoCircleOutlined />}
+        <AvatarIcon {...avatarProps} />
         <div className="message-status">
           {renderStatus()}
         </div>

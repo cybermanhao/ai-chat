@@ -63,7 +63,21 @@
     }
   }
 
+  .chat-item-id {
+    display: none;
+    font-size: 11px;
+    color: var(--text-color-secondary);
+    word-break: break-all;
+    margin-top: 2px;
+    transition: opacity 0.2s;
+  }
+
   &:hover .chat-item-more {
+    opacity: 1;
+  }
+
+  &:hover .chat-item-id {
+    display: block;
     opacity: 1;
   }
 
