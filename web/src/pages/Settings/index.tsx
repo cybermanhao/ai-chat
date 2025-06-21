@@ -13,7 +13,7 @@ const Settings = () => {
     selectLLM,
     updateLLMConfig
   } = useLLMConfig();
-  const { isDarkMode, toggleTheme } = useThemeStore();
+  const { isDarkMode, toggleTheme, dmMode, setDMMode } = useThemeStore();
   const [form] = Form.useForm();
 
   const handleLLMChange = (llmId: string) => {
@@ -63,6 +63,7 @@ const Settings = () => {
             llm: activeLLM?.id,
             model: currentConfig?.userModel,
             apiKey: currentConfig?.apiKey,
+            dmMode: dmMode,
           }}
         >
           <Form.Item label="界面设置" className="section-title" />
@@ -71,6 +72,9 @@ const Settings = () => {
           </Form.Item>
           <Form.Item label="自动保存对话" name="autoSave">
             <Switch />
+          </Form.Item>
+          <Form.Item label="DM模式（弹幕彩蛋）" name="dmMode">
+            <Switch checked={dmMode} onChange={setDMMode} />
           </Form.Item>
 
           <Divider />

@@ -30,6 +30,7 @@
 7. **文档同步与最佳实践沉淀**
    - 持续补充/更新 chat-flow.md、multi-platform-architecture.md、engine-migration-guide.md 等文档。
    - 明确多端同构、数据流、MCP 系统现状与最佳实践。
+   - **本地存储最佳实践：所有持久化操作仅在消息状态为 stable 时进行，避免性能浪费和数据不一致。**
 
 8. **新需求/优化项跟踪**
    - 跟踪 pluginStore/themeStore 多端复用、MCP 后端联动等新需求。
@@ -39,9 +40,9 @@
 
 ## 0. 多端同构 store 绑定最佳实践
 
-- 所有核心业务 store（chatStore、roleStore、mcpStore、chatRuntimeStore）均采用 engine/storeDefinition + zustand-pub 绑定：
+- 所有核心业务 store（chatStore、roleStore、mcpStore、chatRuntimeStore）均采用 engine/storeDefinition 方案：
   - 纯逻辑 storeDefinition 统一放在 engine/store 下，供 web、api、electron、miniprogram 等多端直接 import。
-  - web 端通过 zustand-pub 绑定 engine 层 storeDefinition，导出 useXXXStore，保证多端同构、类型安全、最大复用。
+  - web 端通过 zustand create 绑定 engine 层 storeDefinition，导出 useXXXStore，保证多端同构、类型安全、最大复用。
   - 页面、hooks、组件全部通过 useStore(useXXXStore, selector) 响应式获取和操作状态，避免直接调用 store 实例。
 - UI/端专属 store（如 themeStore、pluginStore）可用 create + persist，若需多端复用可迁移到 engine/store。
 - 所有数据流、状态管理、持久化均以 store 为中心，storage 仅在 stable 状态时写入，避免性能浪费。
@@ -220,6 +221,8 @@ graph TD
     I --> J[更新本地存储]
 ```
 
+> ⚠️ 只有在消息状态为 stable 时，才会触发本地存储写入。
+
 ## 存储层级
 
 1. **临时运行时状态**
@@ -235,7 +238,7 @@ graph TD
 3. **持久化存储**
    - 位置：`chatStorage.ts`
    - 用途：持久化存储聊天记录
-   - 特点：只存储稳定状态的消息，不包含临时状态信息
+   - 特点：**只在消息状态为 stable 时写入本地存储**，不包含临时状态信息，避免频繁写入和性能浪费。
 
 ## 关键注意点
 
@@ -243,17 +246,21 @@ graph TD
    - connecting -> thinking -> generating -> stable
    - 每个状态都有对应的 UI 显示（详见 MessageCard 组件 renderStatus）
 
-2. 数据清理
+2. 本地存储时机
+   - 只有当消息状态为 stable 时，才会触发本地存储写入，避免频繁写入和性能浪费。
+   - 运行时状态、页面状态的变更不会立即持久化，只有稳定后才同步到本地存储。
+
+3. 数据清理
    - 在多个层级都有对 "null" 值的处理
    - 流处理时过滤
    - 显示时清理
    - 存储时确保数据完整性
 
-3. 状态同步
+4. 状态同步
    - 运行时状态和持久化状态的同步
    - 确保用户可见的状态和存储的状态一致
 
-4. Markdown 渲染
+5. Markdown 渲染
    - 所有 markdownToHtml 渲染均使用 dangerouslySetInnerHTML，防止 HTML 以字符串显示，详见 [renderer.md](./renderer.md)
 
 ---

@@ -31,8 +31,8 @@ interface InputToolbarProps {
 }
 
 const InputToolbar: React.FC<InputToolbarProps> = () => {
-  const { activeLLM, currentConfig } = useLLMConfig();
-  const { config } = useModelConfig();
+  const { activeLLM, currentConfig, updateLLMConfig } = useLLMConfig();
+  const { config, updateTemperature, updateContextBalance, updateSystemPrompt, toggleMultiTools, updateEnabledTools } = useModelConfig();
 
   const [isSystemPromptOpen, setIsSystemPromptOpen] = useState(false);
   const [isToolsModalOpen, setIsToolsModalOpen] = useState(false);
@@ -43,15 +43,32 @@ const InputToolbar: React.FC<InputToolbarProps> = () => {
 
   const iconStyle = { fontSize: 18 };
   
-  const handleModelChange = useCallback(() => {}, []);
+  const handleModelChange = useCallback((value: string) => {
+    updateLLMConfig({ userModel: value });
+  }, [updateLLMConfig]);
 
-  const handleTemperatureChange = useCallback(() => {}, []);
+  const handleTemperatureChange = useCallback((value: number) => {
+    updateTemperature(value);
+  }, [updateTemperature]);
 
-  const handleContextBalanceChange = useCallback(() => {}, []);
+  const handleContextBalanceChange = useCallback((value: number) => {
+    updateContextBalance(value);
+  }, [updateContextBalance]);
 
-  const handleSystemPromptChange = useCallback(() => {}, []);
+  const handleSystemPromptChange = useCallback((value: string) => {
+    updateSystemPrompt(value);
+  }, [updateSystemPrompt]);
 
-  const handleToolsToggle = useCallback(() => {}, []);
+  const handleToolsToggle = useCallback((toolId: string, enabled: boolean) => {
+    // enabledTools 是 string[]
+    let newTools = config?.enabledTools ? [...config.enabledTools] : [];
+    if (enabled) {
+      if (!newTools.includes(toolId)) newTools.push(toolId);
+    } else {
+      newTools = newTools.filter(t => t !== toolId);
+    }
+    updateEnabledTools(newTools);
+  }, [config?.enabledTools, updateEnabledTools]);
 
   const handleMultiCallToggle = () => {
     setMultiCallEnabled(!multiCallEnabled);

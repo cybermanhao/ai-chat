@@ -1,14 +1,12 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { useLLMConfig } from '@/hooks/useLLMConfig';
-// web 端请勿复用 engine/hooks/useModelConfig，需从 web/hooks/useModelConfig 导入
 import { useModelConfig } from '@/hooks/useModelConfig';
 import MessageList from './components/MessageList';
 import InputSender from './components/InputSender';
 import ChatHeader from './components/ChatHeader';
 import { Card } from 'antd';
 import WebLLMService from '@/services/llmService';
-
 import { createMessage } from '@engine/utils/messageFactory';
 import { handleResponseStream } from '@/utils/streamHandler';
 import { useChatStore } from '@/store/chatStore';
@@ -19,6 +17,9 @@ import { useStore } from 'zustand';
 import type { StreamChunk, RuntimeMessage } from '@/types/chat';
 import type { AssistantMessage } from '@/types/chat';
 import type { CompletionResult } from '@/utils/streamHandler';
+import GlobalLoading from '@/components/GlobalLoading';
+import MemeLoading from '@/components/memeLoading';
+import { useThemeStore } from '@/store/themeStore';
 import './styles.less';
 
 // 实例化 llmService
@@ -32,6 +33,8 @@ export const Chat = () => {
   const abortControllerRef = useRef<AbortController | null>(null);
   const messageListRef = useRef<HTMLDivElement>(null);
   const [llmError, setLlmError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const { dmMode } = useThemeStore();
 
   // 获取消息运行时状态更新函数
   const updateMessageContent = useStore(useChatRuntimeStore, state => state.updateMessageContent);
@@ -44,16 +47,14 @@ export const Chat = () => {
   } = useStore(useChatStore);
 
   // 使用增强的消息管理Hook
+  // 修正 useChatMessages 参数类型
   const {
     messages,
     isGenerating,
     setIsGenerating,
     addMessage,
     updateLastMessage
-    // 未使用的功能
-    // addClientNotice,
-    // handleAbort
-  } = useChatMessages(urlChatId || null);
+  } = useChatMessages(urlChatId || '');
 
   const isDisabled = !urlChatId || !activeLLM || !currentConfig?.models || !currentConfig?.apiKey;
 
@@ -64,7 +65,11 @@ export const Chat = () => {
     setInputValue('');
     if (urlChatId) {
       setCurrentId(urlChatId);
-      loadChat(urlChatId);
+      // 载入消息时显示 loading
+      setLoading(true);
+      Promise.resolve(loadChat(urlChatId)).finally(() => setLoading(false));
+    } else {
+      setLoading(false);
     }
   }, [urlChatId, setCurrentId, loadChat]);
   // 自动保存聊天内容
@@ -246,6 +251,7 @@ export const Chat = () => {
 
   const chat = getCurrentChat();
   
+  // 渲染部分
   return (
     <div className="chat-page">
       {llmError && (
@@ -269,6 +275,7 @@ export const Chat = () => {
           onStop={handleStop}
         />
       </div>
+      <MemeLoading loadingSignal={loading} safemod={!dmMode} />
     </div>
   );
 };
