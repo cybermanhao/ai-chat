@@ -116,8 +116,7 @@ export const chatStoreDefinition = (set, get) => ({
         const chat = get().chats.find((c) => c.id === id);
         if (!chat)
             return;
-        const messages = await chatStorage.loadMessages(id);
-        const data = { chat, messages };
+        // const messages = await chatStorage.loadMessages(id); // 移除未使用变量，消除 warning
         // 导出逻辑建议由 UI 层实现
     },
     switchChat: async (chatId) => {

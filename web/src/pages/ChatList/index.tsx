@@ -3,6 +3,7 @@ import { Modal, Input, Button, List, message } from 'antd';
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import scrollIntoView from 'scroll-into-view-if-needed';
+import { useStore } from 'zustand';
 import { useChatStore } from '@/store/chatStore';
 import ChatItem from './components/ChatItem';
 import DeleteConfirmModal from './components/DeleteConfirmModal';
@@ -11,13 +12,11 @@ import './styles.less';
 const ChatList: React.FC = () => {
   const navigate = useNavigate();  
   const { chatId: currentChatId } = useParams<{ chatId: string }>();
-  const { 
-    chats: chatList, 
-    createChat,
-    deleteChat, 
-    renameChat,
-    setCurrentId: switchChat
-  } = useChatStore();
+  const chatList = useStore(useChatStore, state => state.chats);
+  const createChat = useStore(useChatStore, state => state.createChat);
+  const deleteChat = useStore(useChatStore, state => state.deleteChat);
+  const renameChat = useStore(useChatStore, state => state.renameChat);
+  const switchChat = useStore(useChatStore, state => state.setCurrentId);
   const [isRenameModalVisible, setIsRenameModalVisible] = useState(false);
   const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
   const [newTitle, setNewTitle] = useState('');

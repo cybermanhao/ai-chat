@@ -1,5 +1,5 @@
 // 消息工厂：创建不同类型的消息对象，适用于多端同构
-import type { MessageRole, MessageStatus, ChatMessage, UserMessage, AssistantMessage, ToolMessage, SystemMessage, ClientNoticeMessage } from '../types/chat';
+import type { MessageStatus, UserMessage, AssistantMessage, SystemMessage, ClientNoticeMessage } from '../types/chat';
 
 // 纯函数工厂，兼容多端 store
 export function createUserMessage(content: string, status?: MessageStatus, extra: Partial<UserMessage> = {}): UserMessage {

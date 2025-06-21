@@ -1,6 +1,6 @@
 // engine/service/chatStorage.ts
 // 多端同构聊天存储服务，适用于多端 store
-import type { ChatInfo, ChatMessage, ChatData, AssistantMessage } from '../types/chat';
+import type { ChatInfo, ChatMessage, ChatData } from '../types/chat';
 import type { StorageLike } from '../utils/storage';
 
 export class ChatStorageService {

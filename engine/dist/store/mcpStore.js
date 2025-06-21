@@ -1,4 +1,4 @@
-export const mcpStoreDefinition = (set, get) => ({
+export const mcpStoreDefinition = (set) => ({
     servers: [],
     activeServerId: undefined,
     messages: [],
@@ -53,5 +53,23 @@ export const mcpStoreDefinition = (set, get) => ({
     },
     setCurrentModel: (modelName) => {
         set({ currentModel: modelName });
+    },
+    connectServer: async (id) => {
+        // 仅前端 mock，实际后端未接入
+        set((state) => ({
+            servers: state.servers.map(server => server.id === id
+                ? { ...server, isConnected: true, error: undefined, tools: [] }
+                : server),
+            activeServerId: id,
+            isLoading: false
+        }));
+    },
+    disconnectServer: (id) => {
+        set((state) => ({
+            servers: state.servers.map(server => server.id === id
+                ? { ...server, isConnected: false }
+                : server),
+            isLoading: false
+        }));
     },
 });

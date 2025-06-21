@@ -1,7 +1,8 @@
-import { Form, Switch, Select, Button, Divider, Input, Tooltip } from 'antd';
+import { Form, Switch, Select, Button, Divider, Input, Tooltip, Card } from 'antd';
 import { QuestionCircleOutlined } from '@ant-design/icons';
 import { useThemeStore } from '@/store/themeStore';
 import { useLLMConfig } from '@/hooks/useLLMConfig';
+import { useMemo } from 'react';
 import './styles.less';
 
 const Settings = () => {
@@ -34,11 +35,24 @@ const Settings = () => {
       });
   };
 
+  // 检查当前 activeLLM 是否为 deepseek，否则报错卡片
+  const llmError = useMemo(() => {
+    if (activeLLM && activeLLM.id !== 'deepseek') {
+      return (
+        <Card type="inner" title="仅支持 DeepSeek" style={{ marginBottom: 16 }}>
+          当前仅支持 DeepSeek LLM，选择其他 LLM 时无法正常调用。
+        </Card>
+      );
+    }
+    return null;
+  }, [activeLLM]);
+
   return (
     <div className="settings-page">
       <div className="settings-header">
         <h2>设置</h2>
       </div>
+      {llmError}
       <div className="settings-content">
         <Form 
           layout="vertical" 

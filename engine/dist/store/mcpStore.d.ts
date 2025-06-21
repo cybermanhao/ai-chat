@@ -30,8 +30,10 @@ export interface MCPState {
     updateLastMessage: (content: string) => void;
     clearMessages: () => void;
     setCurrentModel: (modelName: string) => void;
+    connectServer: (id: string) => void;
+    disconnectServer: (id: string) => void;
 }
-export declare const mcpStoreDefinition: (set: any, get: any) => {
+export declare const mcpStoreDefinition: (set: any) => {
     servers: never[];
     activeServerId: undefined;
     messages: never[];
@@ -45,5 +47,7 @@ export declare const mcpStoreDefinition: (set: any, get: any) => {
     updateLastMessage: (content: string) => void;
     clearMessages: () => void;
     setCurrentModel: (modelName: string) => void;
+    connectServer: (id: string) => Promise<void>;
+    disconnectServer: (id: string) => void;
 };
 //# sourceMappingURL=mcpStore.d.ts.map

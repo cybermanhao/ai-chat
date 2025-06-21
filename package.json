@@ -10,16 +10,16 @@
     "mcp-server"
   ],
   "scripts": {
-    "web:dev": "vite --config web/vite.config.ts",
-    "web:build": "tsc -b web && vite build --config web/vite.config.ts",
-    "web:lint": "eslint web",
-    "web:preview": "vite preview --config web/vite.config.ts",
-    "web:test": "vitest --config web/vitest.config.ts",
-    "web:test:coverage": "vitest run --coverage --config web/vitest.config.ts",
-    "web:test:ui": "vitest --ui --config web/vitest.config.ts",
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev:web": "vite --config web/vite.config.ts",
+    "build:web": "tsc -b web && vite build --config web/vite.config.ts",
+    "lint:web": "eslint web",
+    "preview:web": "vite preview --config web/vite.config.ts",
+    "test:web": "cd web && vitest --config vitest.config.ts",
+    "test:web:coverage": "cd web && vitest run --coverage --config vitest.config.ts",
+    "test:web:ui": "cd web && vitest --ui --config vitest.config.ts",
+    "test": "pnpm run test:engine && pnpm run test:web",
     "build:engine": "tsc -b engine",
-    "test:engine": "vitest run engine/tests"
+    "test:engine": "pnpm dlx vitest run engine/tests"
   },
   "author": "",
   "license": "ISC",

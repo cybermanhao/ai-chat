@@ -1,5 +1,6 @@
 import { PlusOutlined } from '@ant-design/icons';
 import { List, Button, Modal } from 'antd';
+import { useStore } from 'zustand';
 import { useRoleStore } from '@/store/roleStore';
 import type { AIRole } from '@/store/roleStore';
 import { useState } from 'react';
@@ -8,7 +9,12 @@ import { RoleForm } from './components/RoleForm';
 import './styles.less';
 
 const RoleList: React.FC = () => {
-  const {roles, selectedRole, setSelectedRole, addRole, deleteRole, updateRole } = useRoleStore();
+  const roles = useStore(useRoleStore, state => state.roles);
+  const selectedRole = useStore(useRoleStore, state => state.selectedRole);
+  const setSelectedRole = useStore(useRoleStore, state => state.setSelectedRole);
+  const addRole = useStore(useRoleStore, state => state.addRole);
+  const deleteRole = useStore(useRoleStore, state => state.deleteRole);
+  const updateRole = useStore(useRoleStore, state => state.updateRole);
   const [modalVisible, setModalVisible] = useState(false);
   const [editingRole, setEditingRole] = useState<AIRole | null>(null);
 

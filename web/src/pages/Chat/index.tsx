@@ -6,6 +6,8 @@ import { useModelConfig } from '@/hooks/useModelConfig';
 import MessageList from './components/MessageList';
 import InputSender from './components/InputSender';
 import ChatHeader from './components/ChatHeader';
+import { Card } from 'antd';
+import WebLLMService from '@/services/llmService';
 
 import { createMessage } from '@engine/utils/messageFactory';
 import { handleResponseStream } from '@/utils/streamHandler';
@@ -13,32 +15,35 @@ import { useChatStore } from '@/store/chatStore';
 import { useChatMessages } from '@/hooks/useChatMessages';
 import { handleLLMError } from '@/utils/errorHandler';
 import { useChatRuntimeStore } from '@/store/chatRuntimeStore';
+import { useStore } from 'zustand';
 import type { StreamChunk, RuntimeMessage } from '@/types/chat';
 import type { AssistantMessage } from '@/types/chat';
 import type { CompletionResult } from '@/utils/streamHandler';
 import './styles.less';
 
-// 在组件外部创建单例 llmService 实例
+// 实例化 llmService
 const llmService = new WebLLMService();
 
 export const Chat = () => {
   const [inputValue, setInputValue] = useState('');
-  const { activeLLM, currentConfig, updateLLMConfig } = useLLMConfig();
+  const { activeLLM, currentConfig } = useLLMConfig();
   const { config } = useModelConfig();
   const { chatId: urlChatId } = useParams<{ chatId: string }>();
   const abortControllerRef = useRef<AbortController | null>(null);
   const messageListRef = useRef<HTMLDivElement>(null);
+  const [llmError, setLlmError] = useState<string | null>(null);
 
   // 获取消息运行时状态更新函数
-  const updateMessageContent = useChatRuntimeStore(state => state.updateMessageContent);
+  const updateMessageContent = useStore(useChatRuntimeStore, state => state.updateMessageContent);
 
   const {
     setCurrentId,
     getCurrentChat,
     saveChat,
     loadChat,
-  } = useChatStore();
-    // 使用增强的消息管理Hook
+  } = useStore(useChatStore);
+
+  // 使用增强的消息管理Hook
   const {
     messages,
     isGenerating,
@@ -50,7 +55,7 @@ export const Chat = () => {
     // handleAbort
   } = useChatMessages(urlChatId || null);
 
-  const isDisabled = !urlChatId || !activeLLM || !currentConfig?.model || !currentConfig?.apiKey;
+  const isDisabled = !urlChatId || !activeLLM || !currentConfig?.models || !currentConfig?.apiKey;
 
   // 当切换聊天时，清空输入框、加载消息并更新当前聊天ID
   // 防止死循环：只在新建/切换对话时分配一次默认模型
@@ -98,7 +103,7 @@ export const Chat = () => {
     setInputValue(value);
   };  const handleSend = async () => {
     if (!inputValue.trim() || !urlChatId) return;
-
+    setLlmError(null);
     try {
       // 创建用户消息
       const userMessage = createMessage.user(inputValue.trim()) as RuntimeMessage;
@@ -116,6 +121,11 @@ export const Chat = () => {
         
         addMessage(assistantMessage);
         
+        // 检查 LLM 支持
+        if (activeLLM.id !== 'deepseek') {
+          throw new Error(`当前仅支持 DeepSeek，${activeLLM.name} 暂未实现`);
+        }
+
         // 构建完整的消息列表，包括系统提示词
         const currentMessages = [...messages, userMessage];
         const systemMessage = createMessage.system(config.systemPrompt) as RuntimeMessage;
@@ -200,7 +210,8 @@ export const Chat = () => {
           }
         );
       } catch (err) {
-        console.error('Generate failed:', err);
+        setLlmError(err instanceof Error ? err.message : String(err));
+        setIsGenerating(false);
         
         // 使用错误处理器生成适当的客户端提示消息
         const errorNotice = handleLLMError(err);
@@ -255,8 +266,14 @@ export const Chat = () => {
   
   return (
     <div className="chat-page">
+      {llmError && (
+        <Card type="inner" style={{ marginBottom: 16, borderColor: '#ff4d4f' }}>
+          {llmError}
+        </Card>
+      )}
       <ChatHeader title={chat?.title} />
-      <div className="chat-content">        <MessageList 
+      <div className="chat-content">
+        <MessageList 
           messages={messages}
           isGenerating={isGenerating}
           ref={messageListRef}
@@ -269,11 +286,6 @@ export const Chat = () => {
           onSend={handleSend}
           onStop={handleStop}
         />
-        {isDisabled && (
-          <div style={{ color: 'var(--error-color)', marginTop: 8, textAlign: 'center' }}>
-            {disabledReason}
-          </div>
-        )}
       </div>
     </div>
   );

@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { List, Button, Modal, Form, Input, Collapse, message } from 'antd';
 import { PlusOutlined, ApiOutlined, DisconnectOutlined } from '@ant-design/icons';
+import { useStore } from 'zustand';
 import { useMCPStore } from '@/store/mcpStore';
+import type { MCPServer } from '@engine/store/mcpStore';
 import './styles.less';
 
 const { Panel } = Collapse;
@@ -12,17 +14,14 @@ interface ServerFormData {
 }
 
 const Mcp = () => {
-  // 明确 state 类型，消除隐式 any
-  const servers = useMCPStore((state: { servers: import('@engine/store/mcpStore').MCPServer[] }) => state.servers) as import('@engine/store/mcpStore').MCPServer[];
-  const { 
-    activeServerId,
-    isLoading,
-    addServer,
-    removeServer,
-    connectServer,
-    disconnectServer,
-    setActiveServer,
-  } = useMCPStore();
+  const servers = useStore(useMCPStore, state => state.servers) as MCPServer[];
+  const activeServerId = useStore(useMCPStore, state => state.activeServerId);
+  const isLoading = useStore(useMCPStore, state => state.isLoading);
+  const addServer = useStore(useMCPStore, state => state.addServer);
+  const removeServer = useStore(useMCPStore, state => state.removeServer);
+  const connectServer = useStore(useMCPStore, state => state.connectServer);
+  const disconnectServer = useStore(useMCPStore, state => state.disconnectServer);
+  const setActiveServer = useStore(useMCPStore, state => state.setActiveServer);
 
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [form] = Form.useForm<ServerFormData>();
@@ -45,9 +44,6 @@ const Mcp = () => {
       await connectServer(serverId);
     }
   };
-
-  // 明确 server/tool 类型，消除 unknown 报错
-  const server = servers.find(s => s.id === activeServerId) as import('@engine/store/mcpStore').MCPServer | undefined;
 
   return (
     <div className="mcp-page">
@@ -112,8 +108,7 @@ const Mcp = () => {
                     <List
                       size="small"
                       dataSource={server.tools}
-                      renderItem={(tool: import('@engine/store/mcpStore').Tool, toolIndex: number) => {
-                        // tool 类型断言
+                      renderItem={(_tool: import('@engine/store/mcpStore').Tool, toolIndex: number) => {
                         const toolData = server.tools?.[toolIndex];
                         return (
                           <List.Item>

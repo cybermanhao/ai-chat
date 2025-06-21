@@ -3,7 +3,9 @@ import { UserOutlined, RobotOutlined, DownOutlined, RightOutlined, LoadingOutlin
 import type { MessageRole } from '@engine/types/chat';
 import { Button, Tooltip } from 'antd';
 import { markdownToHtml, copyToClipboard } from '@/utils/markdown';
-import { useChatRuntimeStore } from '@engine/store/chatRuntimeStore';
+import { useStore } from 'zustand';
+import { useChatRuntimeStore } from '@/store/chatRuntimeStore';
+import type { ChatRuntimeState } from '@/store/chatRuntimeStore';
 import './styles.less';
 
 export type MessageStatus = 'connecting' | 'thinking' | 'generating' | 'stable' | 'done' | 'error';
@@ -35,7 +37,7 @@ const MessageCard: React.FC<MessageCardProps> = ({
   errorCode
 }) => {
   // 修正 useChatRuntimeStore 用法，直接使用 web 端 store，类型自动推断
-  const runtimeMessage = useChatRuntimeStore((state: import('@/store/chatRuntimeStore').ChatRuntimeState) => state.runtimeMessages[id]);
+  const runtimeMessage = useStore(useChatRuntimeStore, (state: ChatRuntimeState) => state.runtimeMessages[id]);
   const [showReasoning, setShowReasoning] = useState(true);
   const [showToolOutput, setShowToolOutput] = useState(true);
   const [showThoughts, setShowThoughts] = useState(true);

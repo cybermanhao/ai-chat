@@ -1,5 +1,58 @@
 # 聊天流程与数据存储文档
 
+## 开发计划任务列表
+
+1. **持续优化多端同构与类型复用**
+   - 检查 engine 目录下类型、store、service、hooks 的复用情况，确保 web 端与其它端最大化共享逻辑。
+   - 新增/变更业务逻辑时，优先在 engine 层实现并导出。
+
+2. **全局 useStore 响应式用法一致性排查与修正**
+   - 检查 web 端所有页面、hooks、组件，确保均通过 useStore(useXXXStore, selector) 获取/操作状态。
+   - 避免直接调用 store 实例。
+   - 如有遗漏，补充修正并补充测试。
+
+3. **业务 store 统一 engine/storeDefinition + zustand-pub 绑定**
+   - 定期检查 chatStore、roleStore、mcpStore、chatRuntimeStore 的绑定方式，防止回退为旧写法。
+   - 新增业务 store 时，按最佳实践实现。
+
+4. **UI/端专属 store 规范与多端复用评估**
+   - pluginStore、themeStore 等如需多端复用，迁移到 engine/store。
+   - 仅 UI/端专属状态可用 create+persist。
+
+5. **MCP 系统后端联动与多端同步（预研/待定）**
+   - MCP store、页面与后端/多端联动方案设计与实现。
+   - 关注 engine/store/mcpStore.ts 及相关服务层。
+
+6. **自动化测试与类型/运行时错误修复**
+   - 持续完善自动化测试，确保 web 端主流程无类型和运行时错误。
+   - 新增/变更功能时补充测试用例。
+
+7. **文档同步与最佳实践沉淀**
+   - 持续补充/更新 chat-flow.md、multi-platform-architecture.md、engine-migration-guide.md 等文档。
+   - 明确多端同构、数据流、MCP 系统现状与最佳实践。
+
+8. **新需求/优化项跟踪**
+   - 跟踪 pluginStore/themeStore 多端复用、MCP 后端联动等新需求。
+   - 及时补充迁移和优化。
+
+---
+
+## 0. 多端同构 store 绑定最佳实践
+
+- 所有核心业务 store（chatStore、roleStore、mcpStore、chatRuntimeStore）均采用 engine/storeDefinition + zustand-pub 绑定：
+  - 纯逻辑 storeDefinition 统一放在 engine/store 下，供 web、api、electron、miniprogram 等多端直接 import。
+  - web 端通过 zustand-pub 绑定 engine 层 storeDefinition，导出 useXXXStore，保证多端同构、类型安全、最大复用。
+  - 页面、hooks、组件全部通过 useStore(useXXXStore, selector) 响应式获取和操作状态，避免直接调用 store 实例。
+- UI/端专属 store（如 themeStore、pluginStore）可用 create + persist，若需多端复用可迁移到 engine/store。
+- 所有数据流、状态管理、持久化均以 store 为中心，storage 仅在 stable 状态时写入，避免性能浪费。
+
+## 0.1 MCP 系统说明
+
+- 当前 MCP（多模型控制/插件）系统尚未实装，仅有部分前端交互和 store 结构，后端与实际模型服务尚未接入。
+- 相关页面和 store 仅供 UI 体验和前端交互测试，后续如需联动后端或多端同步，可在 engine/store/mcpStore.ts 及相关服务层补充实现。
+
+---
+
 ## 1. 页面初始化阶段
 
 ### 1.1 页面加载
@@ -202,3 +255,52 @@ graph TD
 
 4. Markdown 渲染
    - 所有 markdownToHtml 渲染均使用 dangerouslySetInnerHTML，防止 HTML 以字符串显示，详见 [renderer.md](./renderer.md)
+
+---
+
+## 开发计划任务列表
+
+1. **pluginStore/themeStore 多端复用与迁移**
+   - 检查 pluginStore、themeStore 是否有多端复用需求
+   - 如有必要，迁移到 engine/store，统一 storeDefinition + zustand-pub 绑定
+   - 迁移步骤：
+     1. 将原有 web/src/store 下的 pluginStore、themeStore 逻辑迁移到 engine/store 下，按 storeDefinition 规范实现纯逻辑部分。
+     2. 在 web/src/store 下仅保留 usePluginStore/useThemeStore，使用 zustand-pub 绑定 engine 层 storeDefinition 并导出。
+     3. 检查类型定义，确保 engine/store 下类型可被多端直接 import。
+     4. 如需持久化，仅在 web 端 useStore 层加 persist，engine 层保持纯净。
+     5. 页面/hooks/组件全部通过 useStore(usePluginStore, selector) 或 useStore(useThemeStore, selector) 响应式获取和操作状态，避免直接调用 store 实例。
+   - 迁移注意事项：
+     - 保证 engine/store 下无端专属依赖，类型和逻辑可被多端直接 import。
+     - 避免在 engine 层引入 web 端 UI/持久化相关依赖。
+     - 迁移后统一在文档和代码注释中说明调用方式。
+   - 多端复用调用示例：
+     ```typescript
+     // web 端
+     import { usePluginStore } from '@/store/pluginStore';
+     const plugins = useStore(usePluginStore, s => s.plugins);
+     // electron/miniprogram 端
+     import { pluginStoreDefinition } from 'engine/store/pluginStore';
+     // 结合各端状态管理方案绑定
+     ```
+   - 保持 web 端 useStore(useXXXStore, selector) 响应式用法
+
+2. **自动化测试完善**
+   - 覆盖所有核心 store、hooks、页面的单元测试和集成测试
+   - 补充遗漏的测试用例，保证类型安全和数据流正确性
+
+3. **MCP 系统后端联动与多端同步**
+   - 设计 MCP store 与后端服务的联动机制
+   - 实现多端（web、electron、miniprogram 等）状态同步方案
+   - 逐步接入实际模型服务
+
+4. **LLM 选择与错误处理优化**
+   - 持续完善 LLM 选择功能，支持更多模型类型
+   - 优化非 deepseek LLM 报错卡片的交互体验
+
+5. **文档与最佳实践沉淀**
+   - 持续补充和完善 chat-flow.md、engine-migration-guide.md 等文档
+   - 总结多端同构 store 绑定、数据流、持久化等最佳实践
+
+6. **新需求跟踪与架构优化**
+   - 跟踪 pluginStore/themeStore 多端复用、MCP 后端联动等新需求
+   - 及时补充迁移和优化，保持架构一致性和可扩展性

@@ -21,7 +21,7 @@ export interface ChatRuntimeState {
   clearAllRuntimeStates: () => void;
 }
 
-export const useChatRuntimeStore = (set: any, get: any) => ({
+export const useChatRuntimeStore = (set: any, _get?: any) => ({
   isGenerating: false,
   abortController: null,
   runtimeMessages: {},

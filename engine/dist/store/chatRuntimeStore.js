@@ -1,4 +1,4 @@
-export const useChatRuntimeStore = (set, get) => ({
+export const useChatRuntimeStore = (set, _get) => ({
     isGenerating: false,
     abortController: null,
     runtimeMessages: {},

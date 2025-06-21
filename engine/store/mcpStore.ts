@@ -35,9 +35,11 @@ export interface MCPState {
   updateLastMessage: (content: string) => void;
   clearMessages: () => void;
   setCurrentModel: (modelName: string) => void;
+  connectServer: (id: string) => void;
+  disconnectServer: (id: string) => void;
 }
 
-export const mcpStoreDefinition = (set: any, get: any) => ({
+export const mcpStoreDefinition = (set: any) => ({
   servers: [],
   activeServerId: undefined,
   messages: [],
@@ -102,5 +104,28 @@ export const mcpStoreDefinition = (set: any, get: any) => ({
 
   setCurrentModel: (modelName: string) => {
     set({ currentModel: modelName });
+  },
+
+  connectServer: async (id: string) => {
+    // 仅前端 mock，实际后端未接入
+    set((state: MCPState) => ({
+      servers: state.servers.map(server =>
+        server.id === id
+          ? { ...server, isConnected: true, error: undefined, tools: [] }
+          : server
+      ),
+      activeServerId: id,
+      isLoading: false
+    }));
+  },
+  disconnectServer: (id: string) => {
+    set((state: MCPState) => ({
+      servers: state.servers.map(server =>
+        server.id === id
+          ? { ...server, isConnected: false }
+          : server
+      ),
+      isLoading: false
+    }));
   },
 });

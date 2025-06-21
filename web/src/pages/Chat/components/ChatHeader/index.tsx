@@ -1,6 +1,7 @@
 import React from 'react';
 import { Select } from 'antd';
 import { useNavigate } from 'react-router-dom';
+import { useStore } from 'zustand';
 import { useChatStore } from '@/store/chatStore';
 import './styles.less';
 
@@ -10,7 +11,9 @@ interface ChatHeaderProps {
 
 const ChatHeader: React.FC<ChatHeaderProps> = ({ title }) => {
   const navigate = useNavigate();
-  const { currentId: currentChatId, chats: chatList, setCurrentId } = useChatStore();
+  const currentChatId = useStore(useChatStore, state => state.currentId);
+  const chatList = useStore(useChatStore, state => state.chats);
+  const setCurrentId = useStore(useChatStore, state => state.setCurrentId);
 
   const handleChatChange = (newChatId: string) => {
     setCurrentId(newChatId);

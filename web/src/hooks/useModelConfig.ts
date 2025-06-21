@@ -1,79 +1,51 @@
 // web/src/hooks/useModelConfig.ts
 // 请在 web 端实现 useModelConfig，勿直接复用 engine/hooks/useModelConfig
 // 示例：实际应根据 web 端全局状态或配置实现
-import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
-import { STORAGE_KEYS } from '@/config/storage';
+import { useModelConfigStore } from './useModelConfigStore';
+import { useStore } from 'zustand';
+import { useCallback } from 'react';
+import { message } from 'antd';
 import type { ModelConfig } from '@engine/types/model';
 
-const defaultModelConfig: ModelConfig = {
-  temperature: 0.7,
-  maxTokens: 2048,
-  contextBalance: 0.5,
-  systemPrompt: '',
-  multiToolsEnabled: false,
-  enabledTools: [],
-};
-
-interface ModelConfigPersistState {
-  config: ModelConfig;
-  setConfig: (config: Partial<ModelConfig>) => void;
-}
-
-export const useModelConfigStore = create<ModelConfigPersistState>(
-  persist(
-    (set) => ({
-      config: defaultModelConfig,
-      setConfig: (config) => set((state) => ({ config: { ...state.config, ...config } })),
-    }),
-    {
-      name: STORAGE_KEYS.MODEL_CONFIG,
-    }
-  )
-);
-
 export function useModelConfig() {
-  const { config, loading, setConfig, setLoading } = useModelConfigStore();
+  const config = useStore(useModelConfigStore, (state) => state.config);
+  const setConfig = useStore(useModelConfigStore, (state) => state.setConfig);
 
-  const updateConfigWithLoading = useCallback(async (
-    key: ModelLoadingKey,
-    updateValue: ConfigUpdateValue
+  const updateConfig = useCallback(async (
+    key: keyof ModelConfig,
+    updateValue: Partial<ModelConfig>
   ) => {
-    setLoading(key, true);
     try {
       setConfig(updateValue);
       return true;
     } catch {
       message.error(`Failed to update ${key}`);
       return false;
-    } finally {
-      setLoading(key, false);
     }
-  }, [setConfig, setLoading]);
+  }, [setConfig]);
 
   const updateTemperature = useCallback(async (value: number) => {
-    return updateConfigWithLoading('temperature', { temperature: value });
-  }, [updateConfigWithLoading]);
+    return updateConfig('temperature', { temperature: value });
+  }, [updateConfig]);
 
   const updateContextBalance = useCallback(async (value: number) => {
-    return updateConfigWithLoading('contextBalance', { contextBalance: value });
-  }, [updateConfigWithLoading]);
+    return updateConfig('contextBalance', { contextBalance: value });
+  }, [updateConfig]);
 
   const updateSystemPrompt = useCallback(async (value: string) => {
-    return updateConfigWithLoading('systemPrompt', { systemPrompt: value });
-  }, [updateConfigWithLoading]);
+    return updateConfig('systemPrompt', { systemPrompt: value });
+  }, [updateConfig]);
 
   const toggleMultiTools = useCallback(async (enabled: boolean) => {
-    return updateConfigWithLoading('multiTools', { multiToolsEnabled: enabled });
-  }, [updateConfigWithLoading]);
+    return updateConfig('multiToolsEnabled', { multiToolsEnabled: enabled });
+  }, [updateConfig]);
 
   const updateEnabledTools = useCallback(async (tools: string[]) => {
-    return updateConfigWithLoading('enabledTools', { enabledTools: tools });
-  }, [updateConfigWithLoading]);
+    return updateConfig('enabledTools', { enabledTools: tools });
+  }, [updateConfig]);
 
   return {
     config,
-    loading,
     updateTemperature,
     updateContextBalance,
     updateSystemPrompt,
