@@ -69,13 +69,9 @@ export const Chat = () => {
   }, [urlChatId, setCurrentId, loadChat]);
   // 自动保存聊天内容
   useEffect(() => {
-    console.log('Saving messages:', messages.length);
+
     if (messages.length > 0) {
-      console.log('Messages to save:', messages.map(m => ({
-        role: m.role,
-        content: m.content.slice(0, 50) + '...',
-        reasoning: 'reasoning_content' in m ? (m as AssistantMessage).reasoning_content?.slice(0, 50) + '...' : undefined
-      })));
+
       saveChat();
     }
   }, [messages, saveChat]);
@@ -107,7 +103,7 @@ export const Chat = () => {
     try {
       // 创建用户消息
       const userMessage = createMessage.user(inputValue.trim()) as RuntimeMessage;
-      console.log('Created user message:', userMessage);
+
       
       addMessage(userMessage);
       setInputValue('');
@@ -117,7 +113,7 @@ export const Chat = () => {
         setIsGenerating(true);
         // 创建助手消息
         const assistantMessage = createMessage.assistant('') as RuntimeMessage;
-        console.log('Created assistant message:', assistantMessage);
+
         
         addMessage(assistantMessage);
         
@@ -143,15 +139,7 @@ export const Chat = () => {
         // 处理流式响应
         await handleResponseStream(
           stream,          async (chunk: StreamChunk) => {
-            console.log('Received chunk:', {
-              content: chunk.content.slice(0, 50) + '...',
-              reasoning_content: chunk.reasoning_content ? chunk.reasoning_content.slice(0, 50) + '...' : undefined,
-              tool_content: chunk.tool_content ? chunk.tool_content.slice(0, 50) + '...' : undefined,
-              observation_content: chunk.observation_content ? chunk.observation_content.slice(0, 50) + '...' : undefined,
-              thought_content: chunk.thought_content ? chunk.thought_content.slice(0, 50) + '...' : undefined,
-              status: chunk.status
-            });
-            
+
             // 更新消息内容和状态
             updateLastMessage({
               content: chunk.content,
@@ -178,13 +166,7 @@ export const Chat = () => {
             scrollToBottom();
           },
           async (result: CompletionResult) => {
-            console.log('Stream completed:', {
-              content: result.content.slice(0, 50) + '...',
-              reasoning_content: result.reasoning_content ? result.reasoning_content.slice(0, 50) + '...' : undefined,
-              tool_content: result.tool_content ? result.tool_content.slice(0, 50) + '...' : undefined,
-              observation_content: result.observation_content ? result.observation_content.slice(0, 50) + '...' : undefined,
-              thought_content: result.thought_content ? result.thought_content.slice(0, 50) + '...' : undefined
-            });
+
               // 更新最终内容和状态
             updateLastMessage({
               content: result.content,

@@ -84,18 +84,7 @@ export class ChatStorageService {
   }
   // 保存聊天数据
   saveChatData(chatId: string, data: ChatData): void {
-    console.log('Saving chat data:', { 
-      chatId, 
-      messageCount: data.messages.length,
-      messages: data.messages.map(m => ({ 
-        role: m.role,
-        content: m.content.slice(0, 50) + '...',
-        reasoning: 'reasoning_content' in m ? (m as AssistantMessage).reasoning_content?.slice(0, 50) + '...' : undefined,
-        tool: 'tool_content' in m ? (m as AssistantMessage).tool_content?.slice(0, 50) + '...' : undefined,
-        observation: 'observation_content' in m ? (m as AssistantMessage).observation_content?.slice(0, 50) + '...' : undefined,
-        thought: 'thought_content' in m ? (m as AssistantMessage).thought_content?.slice(0, 50) + '...' : undefined
-      }))
-    });
+
     persistData(STORAGE_KEYS.CHAT_DATA_PREFIX + chatId, data, this.storage);
   }
 

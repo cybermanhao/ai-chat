@@ -77,7 +77,7 @@ const ChatList: React.FC = () => {
   };
   const handleExport = (id: string) => {
     message.info('导出功能开发中');
-    console.log(`Exporting chat with ID: ${id}`);
+
   };
   const confirmRename = () => {
     if (selectedChatId && newTitle) {
