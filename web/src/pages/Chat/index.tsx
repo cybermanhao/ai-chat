@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useLLMConfig } from '@/hooks/useLLMConfig';
 import { useModelConfig } from '@/hooks/useModelConfig';
 import MessageList from './components/MessageList';
@@ -20,6 +20,8 @@ import type { CompletionResult } from '@/utils/streamHandler';
 import GlobalLoading from '@/components/GlobalLoading';
 import MemeLoading from '@/components/memeLoading';
 import { useThemeStore } from '@/store/themeStore';
+import { ChatStorageService } from '@/services/chatStorage';
+import { getStorage } from '@/utils/storage';
 import './styles.less';
 
 // 实例化 llmService
@@ -30,6 +32,7 @@ export const Chat = () => {
   const { activeLLM, currentConfig } = useLLMConfig();
   const { config } = useModelConfig();
   const { chatId: urlChatId } = useParams<{ chatId: string }>();
+  const navigate = useNavigate();
   const abortControllerRef = useRef<AbortController | null>(null);
   const messageListRef = useRef<HTMLDivElement>(null);
   const [llmError, setLlmError] = useState<string | null>(null);
@@ -251,6 +254,15 @@ export const Chat = () => {
 
   const chat = getCurrentChat();
   
+  // 打开项目时自动跳转到本地上次聊天
+  useEffect(() => {
+    const chatStorage = new ChatStorageService(getStorage());
+    const lastChatId = chatStorage.getCurrentChatId();
+    if (!urlChatId && lastChatId) {
+      navigate(`/chat/${lastChatId}`, { replace: true });
+    }
+  }, [urlChatId, navigate]);
+
   // 渲染部分
   return (
     <div className="chat-page">

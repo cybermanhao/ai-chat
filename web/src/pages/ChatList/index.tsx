@@ -5,6 +5,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import scrollIntoView from 'scroll-into-view-if-needed';
 import { useStore } from 'zustand';
 import { useChatStore } from '@/store/chatStore';
+import { useChatList } from '@/hooks/useChatList';
 import ChatItem from './components/ChatItem';
 import DeleteConfirmModal from './components/DeleteConfirmModal';
 import './styles.less';
@@ -12,8 +13,8 @@ import './styles.less';
 const ChatList: React.FC = () => {
   const navigate = useNavigate();  
   const { chatId: currentChatId } = useParams<{ chatId: string }>();
-  const chatList = useStore(useChatStore, state => state.chats);
-  const createChat = useStore(useChatStore, state => state.createChat);
+  // 使用 useChatList 以确保持久化和 currentId 逻辑一致
+  const { chatList, currentChatId: persistedChatId, setActiveChat, addChat } = useChatList();
   const deleteChat = useStore(useChatStore, state => state.deleteChat);
   const renameChat = useStore(useChatStore, state => state.renameChat);
   const switchChat = useStore(useChatStore, state => state.setCurrentId);
@@ -21,6 +22,7 @@ const ChatList: React.FC = () => {
   const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
   const [newTitle, setNewTitle] = useState('');
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
+  const [initLoading, setInitLoading] = useState(true);
 
   // 创建一个 ref 对象来存储活动聊天项的引用
   const activeChatRef = useRef<HTMLDivElement>(null);
@@ -35,8 +37,29 @@ const ChatList: React.FC = () => {
     }
   }, [currentChatId, activeChatRef]);
 
+  // 自动加载聊天列表并跳转到上次聊天或新建
+  useEffect(() => {
+    if (initLoading) {
+      if (!chatList || chatList.length === 0) {
+        // 无聊天，自动新建
+        (async () => {
+          const id = await addChat('新对话');
+          setActiveChat(id);
+          navigate(`/chat/${id}`);
+          setInitLoading(false);
+        })();
+      } else if (!currentChatId && persistedChatId) {
+        // 有聊天但未选中，跳转到上次聊天
+        navigate(`/chat/${persistedChatId}`);
+        setInitLoading(false);
+      } else {
+        setInitLoading(false);
+      }
+    }
+  }, [initLoading, chatList, currentChatId, persistedChatId, addChat, setActiveChat, navigate]);
+
   const handleNewChat = async () => {
-    const id = await createChat();
+    const id = await addChat('新对话');
     navigate(`/chat/${id}`);
   };
 
@@ -75,9 +98,8 @@ const ChatList: React.FC = () => {
       setSelectedChatId(null);
     }
   };
-  const handleExport = (id: string) => {
+  const handleExport = () => {
     message.info('导出功能开发中');
-
   };
   const confirmRename = () => {
     if (selectedChatId && newTitle) {
@@ -90,6 +112,8 @@ const ChatList: React.FC = () => {
 
   return (
     <div className="chat-list">
+      {/* 全局加载遮罩 */}
+      {initLoading && <div className="chat-list-init-loading">加载中...</div>}
       <div className="chat-list-header">
         <Button 
           type="primary" 
@@ -99,11 +123,11 @@ const ChatList: React.FC = () => {
           新建对话
         </Button>
       </div>
-      
       <List
         className="chat-list-content"
         dataSource={chatList}
-        locale={{ emptyText: '暂无对话，点击上方按钮创建新对话' }}        renderItem={chat => (
+        locale={{ emptyText: '暂无对话，点击上方按钮创建新对话' }}
+        renderItem={chat => (
           <div ref={chat.id === currentChatId ? activeChatRef : null}>
             <ChatItem
               key={chat.id}
@@ -116,7 +140,8 @@ const ChatList: React.FC = () => {
             />
           </div>
         )}
-      />      <Modal
+      />
+      <Modal
         title="重命名对话"
         open={isRenameModalVisible}
         onOk={confirmRename}
