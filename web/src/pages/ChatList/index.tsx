@@ -8,6 +8,7 @@ import { useChatStore } from '@/store/chatStore';
 import { useChatList } from '@/hooks/useChatList';
 import ChatItem from './components/ChatItem';
 import DeleteConfirmModal from './components/DeleteConfirmModal';
+import MemeLoading from '@/components/memeLoading';
 import './styles.less';
 
 const ChatList: React.FC = () => {
@@ -33,7 +34,7 @@ const ChatList: React.FC = () => {
         scrollMode: 'if-needed',
         behavior: 'smooth',
         block: 'nearest'
-      });
+      })
     }
   }, [currentChatId, activeChatRef]);
 
@@ -113,7 +114,7 @@ const ChatList: React.FC = () => {
   return (
     <div className="chat-list">
       {/* 全局加载遮罩 */}
-      {initLoading && <div className="chat-list-init-loading">加载中...</div>}
+      {initLoading && <div className="chat-list-init-loading"><MemeLoading loadingSignal={true} safemod={false} /></div>}
       <div className="chat-list-header">
         <Button 
           type="primary" 
@@ -125,7 +126,7 @@ const ChatList: React.FC = () => {
       </div>
       <List
         className="chat-list-content"
-        dataSource={chatList}
+        dataSource={initLoading ? [] : chatList}
         locale={{ emptyText: '暂无对话，点击上方按钮创建新对话' }}
         renderItem={chat => (
           <div ref={chat.id === currentChatId ? activeChatRef : null}>

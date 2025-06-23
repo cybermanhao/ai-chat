@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from 'react';
+import { useCallback } from 'react';
 import { useStore } from 'zustand';
 import { useChatStore } from '@/store/chatStore';
 import { getStorage } from '@/utils/storage';
@@ -16,23 +16,6 @@ export function useChatMessages(chatId: string) {
   // isGenerating 需由外部状态管理（如 zustand 或父组件），此处仅占位
   const isGenerating = false;
   const setIsGenerating = () => {};
-
-  // 聊天切换或刷新时，主动从本地存储加载消息到 store，避免页面无消息
-  useEffect(() => {
-    if (!chatId) return;
-    // 只在 store 为空时才加载，避免死循环
-    if (!messages || messages.length === 0) {
-      const chatData = chatStorage.getChatData(chatId);
-      if (chatData?.messages) {
-        // 兼容本地老数据（无 status 字段）和新数据（有 status 字段）
-        const runtimeMessages = chatData.messages.map(msg => {
-          if ('status' in msg) return msg;
-          return { ...msg, status: 'stable' as ChatMessage['status'] };
-        });
-        useChatStore.getState().setMessages(runtimeMessages as ChatMessage[]);
-      }
-    }
-  }, [chatId, messages]);
 
   // 允许所有消息类型通过 addMessage
   const addMessage = useCallback((msg: ChatMessage) => {
