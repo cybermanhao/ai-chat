@@ -1,9 +1,10 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 import { useStore } from 'zustand';
 import { useChatStore } from '@/store/chatStore';
 import { getStorage } from '@/utils/storage';
 import { ChatStorageService } from '@engine/service/chatStorage';
 import type { ChatMessage } from '@/types/chat';
+import { MessageManager } from '@engine/utils/messageManager';
 
 // web 层持久化服务实例
 const chatStorage = new ChatStorageService(getStorage());
@@ -14,10 +15,28 @@ export function useChatMessages(chatId: string) {
   const messages = useStore(useChatStore, s => s.messages);
   // isGenerating 需由外部状态管理（如 zustand 或父组件），此处仅占位
   const isGenerating = false;
-  const setIsGenerating = (_v: boolean) => {};
+  const setIsGenerating = () => {};
 
-  // 只允许 user/assistant/system 消息通过 addMessage
+  // 聊天切换或刷新时，主动从本地存储加载消息到 store，避免页面无消息
+  useEffect(() => {
+    if (!chatId) return;
+    // 只在 store 为空时才加载，避免死循环
+    if (!messages || messages.length === 0) {
+      const chatData = chatStorage.getChatData(chatId);
+      if (chatData?.messages) {
+        // 兼容本地老数据（无 status 字段）和新数据（有 status 字段）
+        const runtimeMessages = chatData.messages.map(msg => {
+          if ('status' in msg) return msg;
+          return { ...msg, status: 'stable' as ChatMessage['status'] };
+        });
+        useChatStore.getState().setMessages(runtimeMessages as ChatMessage[]);
+      }
+    }
+  }, [chatId, messages]);
+
+  // 允许所有消息类型通过 addMessage
   const addMessage = useCallback((msg: ChatMessage) => {
+    // chatStore 的 addMessage 只支持 user/assistant/system，其他类型直接 setMessages
     if (msg.role === 'user' || msg.role === 'assistant' || msg.role === 'system') {
       useChatStore.getState().addMessage({
         role: msg.role,
@@ -25,6 +44,10 @@ export function useChatMessages(chatId: string) {
         status: msg.status,
         name: (msg as { name?: string }).name
       });
+    } else {
+      // 其它类型直接拼接到 messages
+      const msgs = useChatStore.getState().messages;
+      useChatStore.getState().setMessages([...msgs, msg]);
     }
   }, []);
 
@@ -33,15 +56,52 @@ export function useChatMessages(chatId: string) {
     const msgs = useChatStore.getState().messages;
     if (msgs.length > 0) {
       const last = msgs[msgs.length - 1];
-      if (last.role === 'user' || last.role === 'assistant' || last.role === 'system') {
-        const patched = { ...last, ...update };
-        useChatStore.getState().setMessages([
-          ...msgs.slice(0, -1),
-          patched
-        ] as ChatMessage[]);
+      // 允许所有类型消息被 patch
+      const patched = { ...last, ...update };
+      const newMessages = [...msgs.slice(0, -1), patched] as ChatMessage[];
+      useChatStore.getState().setMessages(newMessages);
+      // 仅在消息状态为 stable 时写入本地存储
+      if (update.status === 'stable' && chatId) {
+        const chatData = chatStorage.getChatData(chatId);
+        // 使用 MessageManager 过滤可持久化消息
+        // 只持久化 user/assistant/system/tool 类型，去除 status 字段
+        const chatMessages = MessageManager.filterForPersist(newMessages)
+          .map((msg: ChatMessage) => {
+            if (msg.role === 'user' || msg.role === 'assistant' || msg.role === 'system' || msg.role === 'tool') {
+              // eslint-disable-next-line @typescript-eslint/no-unused-vars
+              const { status, ...chatMessage } = msg;
+              return chatMessage;
+            }
+            return msg;
+          });
+        // 完整默认 ChatSetting
+        const defaultSettings = {
+          modelIndex: 0,
+          systemPrompt: '',
+          enableTools: [],
+          temperature: 1,
+          top_p: 1,
+          presence_penalty: 0,
+          frequency_penalty: 0,
+          enableWebSearch: false,
+          contextLength: 4096,
+          parallelToolCalls: false
+        };
+        chatStorage.saveChatData(chatId, {
+          info: chatData?.info || {
+            id: chatId,
+            title: '新对话',
+            createTime: Date.now(),
+            updateTime: Date.now(),
+            messageCount: chatMessages.length
+          },
+          messages: chatMessages,
+          settings: chatData?.settings || defaultSettings,
+          updateTime: Date.now()
+        });
       }
     }
-  }, []);
+  }, [chatId]);
 
   // 移除 useEffect 自动持久化，避免死循环
 
