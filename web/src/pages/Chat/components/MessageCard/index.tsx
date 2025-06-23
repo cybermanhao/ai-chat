@@ -166,11 +166,7 @@ const MessageCard: React.FC<MessageCardProps> = ({
             </Button>
             {showReasoning && (
               <div className="reasoning-content">
-                {useMarkdown ? (
-                  <div className="markdown-body" dangerouslySetInnerHTML={{ __html: markdownToHtml(currentReasoningContent) }} />
-                ) : (
-                  currentReasoningContent
-                )}
+                {currentReasoningContent}
               </div>
             )}
           </div>
