@@ -1,6 +1,7 @@
 import type { ChatInfo, ChatMessage, ChatData, AssistantMessage } from '@/types/chat'
 import { persistData, loadPersistedData, type Storage } from '@/utils/storage'
 import { STORAGE_KEYS } from '@/config/storage'
+import { defaultChatSetting } from '@engine/config/defaultChatSetting'
 
 /**
  * 聊天数据存储服务
@@ -40,22 +41,16 @@ export class ChatStorageService {
         messageCount: messages.length,
       },
       messages: [],
-      settings: {
-        modelIndex: 0,
-        systemPrompt: '',
-        enableTools: [],
-        temperature: 0.7,
-        enableWebSearch: false,
-        contextLength: 2000,
-        parallelToolCalls: false
-      },
+      settings: defaultChatSetting,
       updateTime: Date.now()
-    }
-    data.messages = messages
-    data.updateTime = Date.now()
-    data.info.messageCount = messages.length
-    data.info.updateTime = Date.now()
-    this.saveChatData(chatId, data)
+    };
+    // 优先已有 settings
+    data.settings = existingData?.settings || defaultChatSetting;
+    data.messages = messages;
+    data.updateTime = Date.now();
+    data.info.messageCount = messages.length;
+    data.info.updateTime = Date.now();
+    this.saveChatData(chatId, data);
   }
 
   // 更新聊天信息

@@ -5,6 +5,7 @@ import type { ChatMessage, RuntimeMessage } from '../types/chat';
 import { getCurrentStream } from '../service/llmService';
 import { ChatStorageService } from '../service/chatStorage';
 import { defaultStorage } from '../utils/storage';
+import { defaultChatSetting } from '../config/defaultChatSetting';
 
 // 创建全局共享的存储服务实例
 const chatStorage = new ChatStorageService(defaultStorage);
@@ -50,15 +51,7 @@ export const useChatMessages = (
             messageCount: currentMessages.length
           },
           messages: currentMessages,
-          settings: {
-            modelIndex: 0,
-            systemPrompt: '',
-            enableTools: [],
-            temperature: 0.7,
-            enableWebSearch: false,
-            contextLength: 2000,
-            parallelToolCalls: false
-          },
+          settings: chatStorage.getChatData(safeChatId)?.settings || defaultChatSetting,
           updateTime: Date.now()
         });
       }
@@ -84,15 +77,7 @@ export const useChatMessages = (
             messageCount: chatMessages.length
           },
           messages: chatMessages,
-          settings: chatData?.settings || {
-            modelIndex: 0,
-            systemPrompt: '',
-            enableTools: [],
-            temperature: 0.7,
-            enableWebSearch: false,
-            contextLength: 2000,
-            parallelToolCalls: false
-          },
+          settings: chatData?.settings || defaultChatSetting,
           updateTime: Date.now()
         });
       }
@@ -147,15 +132,7 @@ export const useChatMessages = (
               messageCount: chatMessages.length
             },
             messages: chatMessages,
-            settings: chatData?.settings || {
-              modelIndex: 0,
-              systemPrompt: '',
-              enableTools: [],
-              temperature: 0.7,
-              enableWebSearch: false,
-              contextLength: 2000,
-              parallelToolCalls: false
-            },
+            settings: chatData?.settings || defaultChatSetting,
             updateTime: Date.now()
           });
         }
@@ -183,15 +160,7 @@ export const useChatMessages = (
           messageCount: chatMessages.length
         },
         messages: chatMessages,
-        settings: chatData?.settings || {
-          modelIndex: 0,
-          systemPrompt: '',
-          enableTools: [],
-          temperature: 0.7,
-          enableWebSearch: false,
-          contextLength: 2000,
-          parallelToolCalls: false
-        },
+        settings: chatData?.settings || defaultChatSetting,
         updateTime: Date.now()
       });
       return newMessages;
@@ -211,15 +180,7 @@ export const useChatMessages = (
         messageCount: 0
       },
       messages: [],
-      settings: chatData?.settings || {
-        modelIndex: 0,
-        systemPrompt: '',
-        enableTools: [],
-        temperature: 0.7,
-        enableWebSearch: false,
-        contextLength: 2000,
-        parallelToolCalls: false
-      },
+      settings: chatData?.settings || defaultChatSetting,
       updateTime: Date.now()
     });
   }, [safeChatId]);

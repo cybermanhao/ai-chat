@@ -5,6 +5,7 @@ import { getStorage } from '@/utils/storage';
 import { ChatStorageService } from '@engine/service/chatStorage';
 import type { ChatMessage } from '@/types/chat';
 import { MessageManager } from '@engine/utils/messageManager';
+import { defaultChatSetting } from '@/config/defaultChatSetting';
 
 // web 层持久化服务实例
 const chatStorage = new ChatStorageService(getStorage());
@@ -58,18 +59,6 @@ export function useChatMessages(chatId: string) {
             return msg;
           });
         // 完整默认 ChatSetting
-        const defaultSettings = {
-          modelIndex: 0,
-          systemPrompt: '',
-          enableTools: [],
-          temperature: 1,
-          top_p: 1,
-          presence_penalty: 0,
-          frequency_penalty: 0,
-          enableWebSearch: false,
-          contextLength: 4096,
-          parallelToolCalls: false
-        };
         chatStorage.saveChatData(chatId, {
           info: chatData?.info || {
             id: chatId,
@@ -79,7 +68,7 @@ export function useChatMessages(chatId: string) {
             messageCount: chatMessages.length
           },
           messages: chatMessages,
-          settings: chatData?.settings || defaultSettings,
+          settings: chatData?.settings || defaultChatSetting,
           updateTime: Date.now()
         });
       }

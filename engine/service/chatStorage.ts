@@ -2,6 +2,7 @@
 // 多端同构聊天存储服务，适用于多端 store
 import type { ChatInfo, ChatMessage, ChatData } from '../types/chat';
 import type { StorageLike } from '../utils/storage';
+import { defaultChatSetting } from '../config/defaultChatSetting';
 
 export class ChatStorageService {
   private storage: StorageLike;
@@ -50,17 +51,11 @@ export class ChatStorageService {
         messageCount: messages.length,
       },
       messages: [],
-      settings: {
-        modelIndex: 0,
-        systemPrompt: '',
-        enableTools: [],
-        temperature: 0.7,
-        enableWebSearch: false,
-        contextLength: 2000,
-        parallelToolCalls: false
-      },
+      settings: defaultChatSetting,
       updateTime: Date.now()
     };
+    // 优先已有 settings
+    data.settings = existingData?.settings || defaultChatSetting;
     data.messages = messages;
     data.updateTime = Date.now();
     data.info.messageCount = messages.length;
