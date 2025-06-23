@@ -51,7 +51,7 @@ const ClientNoticeCard: React.FC<ClientNoticeCardProps> = ({
   };
 
   return (
-    <div className={`client-notice-card notice-${noticeType}`}>  
+    <div className={`client-notice-card notice-${noticeType}`}>
       <div className="notice-header">
         <div className="notice-icon">{getNoticeIcon()}</div>
         <div className="notice-title">{getNoticeTitle()}</div>

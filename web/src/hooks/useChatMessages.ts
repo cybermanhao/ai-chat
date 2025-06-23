@@ -1,35 +1,57 @@
-import { useEffect } from 'react';
-import { useChatMessages as useEngineChatMessages } from '@engine/hooks/useChatMessages';
+import { useCallback } from 'react';
+import { useStore } from 'zustand';
+import { useChatStore } from '@/store/chatStore';
 import { getStorage } from '@/utils/storage';
 import { ChatStorageService } from '@engine/service/chatStorage';
-import type { RuntimeMessage, ChatMessage } from '@/types/chat';
+import type { ChatMessage } from '@/types/chat';
 
 // web 层持久化服务实例
 const chatStorage = new ChatStorageService(getStorage());
 
 // 包裹 engine 层 hook，监听 stable 状态写入
 export function useChatMessages(chatId: string) {
-  const result = useEngineChatMessages(chatId);
-  const { messages } = result;
+  // 响应式获取当前聊天的消息
+  const messages = useStore(useChatStore, s => s.messages);
+  // isGenerating 需由外部状态管理（如 zustand 或父组件），此处仅占位
+  const isGenerating = false;
+  const setIsGenerating = (_v: boolean) => {};
 
-  useEffect(() => {
-    if (!chatId || !messages?.length) return;
-    const last = messages[messages.length - 1];
-    // 仅在最后一条消息为 stable 时写入
-    if (last.status === 'stable') {
-      // 只持久化标准 ChatMessage 类型（排除 client-notice 且去除 status 字段）
-      const pureMessages: ChatMessage[] = messages
-        .filter((msg: RuntimeMessage) => msg.role !== 'client-notice')
-        .map((msg) => {
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
-          const { status, ...rest } = msg;
-          return rest as ChatMessage;
-        });
-      chatStorage.saveMessages(chatId, pureMessages);
+  // 只允许 user/assistant/system 消息通过 addMessage
+  const addMessage = useCallback((msg: ChatMessage) => {
+    if (msg.role === 'user' || msg.role === 'assistant' || msg.role === 'system') {
+      useChatStore.getState().addMessage({
+        role: msg.role,
+        content: msg.content,
+        status: msg.status,
+        name: (msg as { name?: string }).name
+      });
     }
-  }, [chatId, messages]);
+  }, []);
 
-  return result;
+  // updateLastMessage 只 patch user/assistant/system，setMessages 时断言为 ChatMessage[]
+  const updateLastMessage = useCallback((update: Partial<ChatMessage>) => {
+    const msgs = useChatStore.getState().messages;
+    if (msgs.length > 0) {
+      const last = msgs[msgs.length - 1];
+      if (last.role === 'user' || last.role === 'assistant' || last.role === 'system') {
+        const patched = { ...last, ...update };
+        useChatStore.getState().setMessages([
+          ...msgs.slice(0, -1),
+          patched
+        ] as ChatMessage[]);
+      }
+    }
+  }, []);
+
+  // 移除 useEffect 自动持久化，避免死循环
+
+  return {
+    messages,
+    isGenerating,
+    setIsGenerating,
+    addMessage,
+    updateLastMessage
+  };
 }
 
 // 兼容原有导出

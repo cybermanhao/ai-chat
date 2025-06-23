@@ -70,4 +70,13 @@ export const createMessage = {
   })
 };
 
+/**
+ * 【集成建议】
+ * - 消息创建后，持久化/请求/导出等场景请配合 MessageManager 使用：
+ *   - MessageManager.filterForLLM(messages) 组织 LLM 请求上下文
+ *   - MessageManager.filterForPersist(messages) 组织本地持久化内容
+ *   - MessageManager.save(storage, chatId, messages) 统一持久化
+ *   - MessageManager.load(storage, chatId) 统一加载
+ */
+
 export {}; // 确保本文件为模块

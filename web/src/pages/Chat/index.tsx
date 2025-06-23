@@ -77,13 +77,11 @@ export const Chat = () => {
     }
   }, [urlChatId, setCurrentId, loadChat]);
   // 自动保存聊天内容
-  useEffect(() => {
-
-    if (messages.length > 0) {
-
-      saveChat();
-    }
-  }, [messages, saveChat]);
+  // useEffect(() => {
+  //   if (messages.length > 0) {
+  //     saveChat();
+  //   }
+  // }, [messages, saveChat]);
 
   // 页面挂载时，优先从本地存储同步 chatData 到 zust道
   useEffect(() => {
@@ -109,41 +107,34 @@ export const Chat = () => {
   // 监听消息变化自动滚动
   useEffect(() => {
     scrollToBottom();
-  }, [messages, scrollToBottom]);
+  }, [messages.length, scrollToBottom]);
 
   const handleInputChange = (value: string) => {
     setInputValue(value);
-  };  const handleSend = async () => {
+  };
+
+  // 发送消息时显式保存
+  const handleSend = async () => {
     if (!inputValue.trim() || !urlChatId) return;
     setLlmError(null);
     try {
-      // 创建用户消息
       const userMessage = createMessage.user(inputValue.trim()) as RuntimeMessage;
-
-      
       addMessage(userMessage);
       setInputValue('');
       scrollToBottom();
-
+      saveChat();
       try {
         setIsGenerating(true);
-        // 创建助手消息
         const assistantMessage = createMessage.assistant('') as RuntimeMessage;
-
-        
         addMessage(assistantMessage);
-        
-        // 检查 LLM 支持
+        saveChat();
         if (activeLLM.id !== 'deepseek') {
           throw new Error(`当前仅支持 DeepSeek，${activeLLM.name} 暂未实现`);
         }
-
-        // 构建完整的消息列表，包括系统提示词
-        const currentMessages = [...messages, userMessage];
+        // 用局部变量追踪最新消息，避免闭包问题
+        let currentMessages = [...messages, userMessage, assistantMessage];
         const systemMessage = createMessage.system(config.systemPrompt) as RuntimeMessage;
         const fullMessages = [systemMessage, ...currentMessages];
-        
-        // 发送请求
         abortControllerRef.current = new AbortController();
         const stream = await llmService.generate(
           fullMessages,
@@ -151,12 +142,9 @@ export const Chat = () => {
           { ...currentConfig, model: currentConfig.userModel || '', temperature: config.temperature, maxTokens: config.maxTokens, systemPrompt: config.systemPrompt },
           abortControllerRef.current.signal
         );
-        
-        // 处理流式响应
         await handleResponseStream(
-          stream,          async (chunk: StreamChunk) => {
-
-            // 更新消息内容和状态
+          stream,
+          async (chunk: StreamChunk) => {
             updateLastMessage({
               content: chunk.content,
               reasoning_content: chunk.reasoning_content,
@@ -165,9 +153,8 @@ export const Chat = () => {
               thought_content: chunk.thought_content,
               status: chunk.status || 'generating'
             });
-            
-            // 确保运行时状态也保存特定内容
-            const lastMessage = messages[messages.length - 1];
+            // 用最新 closure
+            const lastMessage = currentMessages[currentMessages.length - 1];
             if (lastMessage && lastMessage.id) {
               updateMessageContent({
                 messageId: lastMessage.id,
@@ -178,12 +165,9 @@ export const Chat = () => {
                 thought_content: chunk.thought_content,
               });
             }
-            
             scrollToBottom();
           },
           async (result: CompletionResult) => {
-
-              // 更新最终内容和状态
             updateLastMessage({
               content: result.content,
               reasoning_content: result.reasoning_content,
@@ -192,8 +176,7 @@ export const Chat = () => {
               thought_content: result.thought_content,
               status: 'stable'
             });
-              // 确保运行时状态也保存所有内容
-            const lastMessage = messages[messages.length - 1];
+            const lastMessage = currentMessages[currentMessages.length - 1];
             if (lastMessage && lastMessage.id) {
               updateMessageContent({
                 messageId: lastMessage.id,
@@ -205,16 +188,14 @@ export const Chat = () => {
               });
             }
             scrollToBottom();
+            saveChat();
           }
         );
       } catch (err) {
         setLlmError(err instanceof Error ? err.message : String(err));
         setIsGenerating(false);
-        
-        // 使用错误处理器生成适当的客户端提示消息
         const errorNotice = handleLLMError(err);
-        
-        // 先移除"生成中"的消息
+        // 用最新 closure
         const lastMessage = messages[messages.length - 1];
         if (lastMessage && lastMessage.role === 'assistant' && lastMessage.status !== 'stable') {
           addMessage({
@@ -223,9 +204,8 @@ export const Chat = () => {
             status: 'done'
           });
         }
-        
-        // 添加错误提示消息
         addMessage(errorNotice);
+        saveChat();
       } finally {
         setIsGenerating(false);
         abortControllerRef.current = null;
@@ -233,29 +213,31 @@ export const Chat = () => {
     } catch (error) {
       console.error('Send message failed:', error);
     }
-  };  const handleStop = () => {
+  };
+
+  // 停止流式响应时也保存
+  const handleStop = () => {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
       abortControllerRef.current = null;
       setIsGenerating(false);
-        const lastMessage = messages[messages.length - 1];
+      // 用最新 closure
+      const lastMessage = messages[messages.length - 1];
       if (lastMessage && lastMessage.id) {
-        // 只更新状态为done
         updateLastMessage({
           content: lastMessage.content,
           status: 'done'
         });
-        
-        // 同步运行时状态，但保留现有的reasoning_content
-        if (lastMessage.role === 'assistant') {          // 使用类型断言访问助手消息特有的属性
+        if (lastMessage.role === 'assistant') {
           const assistantMessage = lastMessage as { reasoning_content?: string };
           const reasoning = assistantMessage.reasoning_content;
           updateMessageContent({
-  messageId: lastMessage.id,
-  content: lastMessage.content,
-  reasoning_content: reasoning
-});
+            messageId: lastMessage.id,
+            content: lastMessage.content,
+            reasoning_content: reasoning
+          });
         }
+        saveChat();
       }
     }
   };
