@@ -1,5 +1,6 @@
 // engine/store/mcpStore.ts
 // 多端同构 MCP store 纯逻辑定义
+
 export interface Tool {
   name: string;
   description: string;
@@ -39,7 +40,40 @@ export interface MCPState {
   disconnectServer: (id: string) => void;
 }
 
-export const mcpStoreDefinition = (set: any) => ({
+// 通用 fetch 工具列表方法，适配多端与多种返回结构
+async function fetchMcpTools(url: string): Promise<{ data: Tool[]; error?: string }> {
+  try {
+    // 兼容 /tools、/listTools、/list-tools 等多种路径
+    const candidates = [
+      `${url}/tools`,
+      `${url}/listTools`,
+      `${url}/list-tools`
+    ];
+    let lastError = '';
+    for (const endpoint of candidates) {
+      try {
+        const res = await fetch(endpoint, { headers: { 'Content-Type': 'application/json' } });
+        if (!res.ok) {
+          lastError = `HTTP ${res.status}`;
+          continue;
+        }
+        const json = await res.json();
+        // 兼容 { tools }, { data }, 直接数组三种格式
+        const data = json.tools || json.data || (Array.isArray(json) ? json : []);
+        if (Array.isArray(data) && data.length >= 0) {
+          return { data, error: json.error };
+        }
+      } catch (e: any) {
+        lastError = e.message;
+      }
+    }
+    return { data: [], error: lastError || 'No valid MCP tools endpoint found' };
+  } catch (e: any) {
+    return { data: [], error: e.message };
+  }
+}
+
+export const mcpStoreDefinition = (set: any, get: any) => ({
   servers: [],
   activeServerId: undefined,
   messages: [],
@@ -107,12 +141,26 @@ export const mcpStoreDefinition = (set: any) => ({
   },
 
   connectServer: async (id: string) => {
-    // 仅前端 mock，实际后端未接入
+    set((state: MCPState) => ({ isLoading: true }));
+    const server = get().servers.find((s: MCPServer) => s.id === id);
+    if (!server) return;
+    const { data, error } = await fetchMcpTools(server.url);
+    if (error) {
+      set((state: MCPState) => ({
+        servers: state.servers.map(s =>
+          s.id === id
+            ? { ...s, isConnected: false, error, tools: [] }
+            : s
+        ),
+        isLoading: false
+      }));
+      return;
+    }
     set((state: MCPState) => ({
-      servers: state.servers.map(server =>
-        server.id === id
-          ? { ...server, isConnected: true, error: undefined, tools: [] }
-          : server
+      servers: state.servers.map(s =>
+        s.id === id
+          ? { ...s, isConnected: true, error: undefined, tools: data || [] }
+          : s
       ),
       activeServerId: id,
       isLoading: false
