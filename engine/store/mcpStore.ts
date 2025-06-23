@@ -40,34 +40,22 @@ export interface MCPState {
   disconnectServer: (id: string) => void;
 }
 
-// 通用 fetch 工具列表方法，适配多端与多种返回结构
+// 通用 fetch 工具列表方法，仅保留协议层/后端适配（不再尝试多种HTTP路径）
 async function fetchMcpTools(url: string): Promise<{ data: Tool[]; error?: string }> {
+  return { data: [], error: 'HTTP工具列表接口已废弃，请使用协议层 getMcpToolsByProtocol' };
+}
+
+// engine层 MCP工具列表协议层实现（Node/Electron等支持进程的环境）
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
+
+export async function getMcpToolsByProtocol(serverCommand: string = "node", serverArgs: string[] = ["server.js"]): Promise<{ data: any[]; error?: string }> {
   try {
-    // 兼容 /tools、/listTools、/list-tools 等多种路径
-    const candidates = [
-      `${url}/tools`,
-      `${url}/listTools`,
-      `${url}/list-tools`
-    ];
-    let lastError = '';
-    for (const endpoint of candidates) {
-      try {
-        const res = await fetch(endpoint, { headers: { 'Content-Type': 'application/json' } });
-        if (!res.ok) {
-          lastError = `HTTP ${res.status}`;
-          continue;
-        }
-        const json = await res.json();
-        // 兼容 { tools }, { data }, 直接数组三种格式
-        const data = json.tools || json.data || (Array.isArray(json) ? json : []);
-        if (Array.isArray(data) && data.length >= 0) {
-          return { data, error: json.error };
-        }
-      } catch (e: any) {
-        lastError = e.message;
-      }
-    }
-    return { data: [], error: lastError || 'No valid MCP tools endpoint found' };
+    const mcp = new Client({ name: "mcp-client", version: "1.0.0" });
+    const transport = new StdioClientTransport({ command: serverCommand, args: serverArgs });
+    await mcp.connect(transport);
+    const tools = await mcp.listTools();
+    return { data: tools };
   } catch (e: any) {
     return { data: [], error: e.message };
   }
