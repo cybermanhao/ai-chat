@@ -111,11 +111,34 @@ const Mcp = () => {
                   ) : null
                 }
                 title={server.name}
-                description={server.url}
+                description={
+                  <>
+                    <span>{server.url}</span>
+                    {server.error && (
+                      <span style={{ color: '#ff4d4f', marginLeft: 8 }}>
+                        连接失败：{server.error}）
+                      </span>
+                    )}
+                  </>
+                }
               />
+              {/* 连接失败时的额外提示和断开按钮 */}
               {server.error && (
-                <div className="error-message" style={{ color: '#ff4d4f', marginTop: 4 }}>
+                <div style={{ color: '#ff4d4f', marginTop: 4, display: 'flex', alignItems: 'center', gap: 8 }}>
                   连接失败：{server.error}
+                  {server.isConnected && (
+                    <Button
+                      size="small"
+                      icon={<DisconnectOutlined />}
+                      onClick={e => {
+                        e.stopPropagation();
+                        disconnectServer(server.id);
+                      }}
+                      style={{ marginLeft: 8 }}
+                    >
+                      断开连接
+                    </Button>
+                  )}
                 </div>
               )}
               {server.isConnected && server.tools.length > 0 && (

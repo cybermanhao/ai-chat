@@ -27,7 +27,7 @@ const ToolManagerModal: React.FC<ToolManagerModalProps> = ({ open, onClose, them
       onCancel={onClose}
       footer={null}
       width={900}
-      bodyStyle={{ minHeight: 480 }}
+      styles={{ body: { minHeight: 480 } }}
     >
       <div style={{ display: 'flex', gap: 32 }}>
         {/* 左侧：server-tool 二级列表 */}
