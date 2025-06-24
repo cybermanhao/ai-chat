@@ -2,3 +2,7 @@ node_modules
 build/
 dist/
 engine/dist
+# TypeScript build cache
+*.tsbuildinfo
+# VSCode workspace cache
+.vscode/
