@@ -39,8 +39,8 @@ export interface MCPState {
 }
 
 // engine层 MCP工具列表协议层实现（Node/Electron等支持进程的环境）
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
+// import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+// import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 
 export const mcpStoreDefinition = (set: any, get: any) => ({
   servers: [],

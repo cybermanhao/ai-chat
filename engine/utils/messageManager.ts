@@ -1,4 +1,4 @@
-import type { ChatMessage, MessageRole } from '../types/chat';
+import type { ChatMessage } from '../types/chat';
 
 /**
  * 消息管理器：负责消息的过滤、转换、持久化等逻辑

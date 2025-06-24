@@ -1,0 +1,312 @@
+[
+  {
+    "desc": "公司客户列表页",
+    "uri": "client-list.html",
+    "ap": "fu_company_customer_menu"
+  },
+  {
+    "desc": "联系人列表页",
+    "uri": "linkman-list.html",
+    "ap": "fu_linkman_menu"
+  },
+  {
+    "desc": "联系记录列表页",
+    "uri": "client-touch.html",
+    "ap": "fu_call_log_show"
+  },
+  {
+    "desc": "任务管理列表页",
+    "uri": "task-management.html",
+    "ap": "fu_task_management_menu"
+  },
+  {
+    "desc": "项目管理列表页",
+    "uri": "project-management.html",
+    "ap": "fu_project_management_menu"
+  },
+  {
+    "desc": "商机列表页",
+    "uri": "attendance-record.html",
+    "ap": "fu_business_menu"
+  },
+  {
+    "desc": "报表中心",
+    "uri": "report-center.html",
+    "ap": "fu_report_center"
+  },
+  {
+    "desc": "信息日志",
+    "uri": "InfoLogger/index.html",
+    "ap": "fu_information_log_menu"
+  },
+  {
+    "desc": "公告列表页",
+    "uri": "notice-management.html",
+    "ap": "fu_notice_management"
+  },
+  {
+    "desc": "展会中心",
+    "uri": "exhibition-center.html",
+    "ap": "fu_exhibition_center_menu"
+  },
+  {
+    "desc": "回收站",
+    "uri": "recycle_bin.html",
+    "ap": "fu_recycle_bin_menu"
+  },
+  {
+    "desc": "便签",
+    "uri": "note.html",
+    "ap": "fu_crm_note_menu"
+  },
+  {
+    "desc": "总结",
+    "uri": "sumUp.html",
+    "ap": "fu_crm_sumup_menu"
+  },
+  {
+    "desc": "邀请和登记记录",
+    "uri": "visitor-registration.html|invite",
+    "ap": "fn_invite_reg_menu"
+  },
+  {
+    "desc": "销售计划列表",
+    "uri": "ProjectMarket/sales-contract.html?page=plan&",
+    "ap": "fu_crm_sales_plan_menu"
+  },
+  {
+    "desc": "业务员提成列表",
+    "uri": "ProjectMarket/sales-contract.html?page=commission&",
+    "ap": "fu_crm_project_royalty"
+  },
+  {
+    "desc": "提成和佣金管理列表",
+    "uri": "ProjectMarket/sales-contract.html?page=commissionManage&",
+    "ap": "fu_crm_commission_manage"
+  },
+  {
+    "desc": "展商参展管理列表",
+    "uri": "ProjectMarket/sales-contract.html?page=exManage&top=1&",
+    "ap": "fu_crm_exhibitor_servebooth_manager_head_menu"
+  },
+  {
+    "desc": "销售合同单列表",
+    "uri": "ProjectMarket/sales-contract.html?page=contract&",
+    "ap": "fu_crm_project_contract"
+  },
+  {
+    "desc": "销售订单列表",
+    "uri": "ProjectMarket/sales-contract.html?page=order&",
+    "ap": "fu_crm_project_sales_order"
+  },
+  {
+    "desc": "收款单列表",
+    "uri": "ProjectMarket/sales-contract.html?page=receipt&",
+    "ap": "fu_crm_project_receipt"
+  },
+  {
+    "desc": "收款结算明细列表",
+    "uri": "ProjectMarket/sales-contract.html?page=receiptSettlement&",
+    "ap": "fu_crm_receipt_settlement_detail"
+  },
+  {
+    "desc": "发票申请单列表",
+    "uri": "ProjectMarket/sales-contract.html?page=invoice&",
+    "ap": "fu_crm_project_invoice"
+  },
+  {
+    "desc": "采购订单列表",
+    "uri": "ProjectMarket/sales-contract.html?page=CGOrder&",
+    "ap": "fu_crm_project_buy_order"
+  },
+  {
+    "desc": "付款单列表",
+    "uri": "ProjectMarket/sales-contract.html?page=payment&",
+    "ap": "fu_crm_project_payment"
+  },
+  {
+    "desc": "系统设置",
+    "uri": "system_set.html",
+    "ap": "fu_crm_system_set"
+  },
+  {
+    "desc": "界面字段显示及必输",
+    "uri": "field-set.html",
+    "ap": "fu_crm_field_set"
+  },
+  {
+    "desc": "自定义版块内容",
+    "uri": "custom-page.html",
+    "ap": "fu_crm_custom_page"
+  },
+  {
+    "desc": "部门和职员设置",
+    "uri": "StaffSetting/index.html",
+    "ap": "fu_crm_employee_set"
+  },
+  {
+    "desc": "部门设置",
+    "uri": "BranchSetting/index.html",
+    "ap": "fu_crm_branch_set"
+  },
+  {
+    "desc": "团队管理",
+    "uri": "team_member_group.html",
+    "ap": "fu_crm_team_member_group"
+  },
+  {
+    "desc": "提成相关设置",
+    "uri": "CommissionSetting/index.html",
+    "ap": "fu_crm_commission_set"
+  },
+  {
+    "desc": "规则设置",
+    "uri": "rule_set.html",
+    "ap": "fu_crm_rule_set"
+  },
+  {
+    "desc": "产品服务设置",
+    "uri": "vipMemberManager/ProdFee.html",
+    "ap": "fu_crm_product_serve_set"
+  },
+  {
+    "desc": "导出模板设置",
+    "uri": "system_set_tpl.html",
+    "ap": "fu_crm_export_template_set"
+  },
+  {
+    "desc": "选项编码设置",
+    "uri": "OptionSettings/index.html",
+    "ap": "fu_crm_sys_code_set"
+  },
+  {
+    "desc": "邮箱及短信设置",
+    "uri": "msgSet.html",
+    "ap": "fu_crm_msgset"
+  },
+  {
+    "desc": "系统插件下载",
+    "uri": "system-plugin.html",
+    "ap": "fu_crm_sys_plug"
+  },
+  {
+    "desc": "会员管理",
+    "uri": "member_manager.html",
+    "ap": "fu_vip_member_management_crm"
+  },
+  {
+    "desc": "积分管理",
+    "uri": "score_manager.html",
+    "ap": "fu_crm_integral_management"
+  },
+  {
+    "desc": "公司客户详情页",
+    "uri": "info-window.html",
+    "ap": "$isAllowOpen,clientId,#teamId"
+  },
+  {
+    "desc": "联系人详情页",
+    "uri": "linkman-info.html",
+    "ap": "$isAllowOpen,clientId,#teamId"
+  },
+  {
+    "desc": "联系记录详情页",
+    "uri": "client-touch-info.html",
+    "ap": "fu_call_log_show"
+  },
+  {
+    "desc": "任务详情页",
+    "uri": "task-management-info.html",
+    "ap": "fu_task_management_menu"
+  },
+  {
+    "desc": "商机详情页",
+    "uri": "business_details.html",
+    "ap": "fu_business_menu"
+  },
+  {
+    "desc": "项目详情页",
+    "uri": "project-details.html",
+    "ap": "fu_project_management_menu"
+  },
+  {
+    "desc": "销售资料",
+    "uri": "$genLinkAddress,'ExhibitEdit',2",
+    "ap": "fu_crm_project_sales_data"
+  },
+  {
+    "desc": "项目定价",
+    "uri": "$genLinkAddress,'SalesPricing'",
+    "ap": "fu_crm_project_sales_pricing"
+  },
+  {
+    "desc": "展位类型",
+    "uri": "$genLinkAddress,'BoothType'",
+    "ap": "fu_crm_project_booth_type"
+  },
+  {
+    "desc": "商旅信息",
+    "uri": "$genLinkAddress,'Travel'",
+    "ap": "fu_crm_project_business_travel_info"
+  },
+  {
+    "desc": "动态展位图",
+    "uri": "$genLinkAddress,'ExhibitionCenter',2",
+    "ap": "fu_crm_project_booth_map"
+  },
+  {
+    "desc": "展会行程",
+    "uri": "$genLinkAddress,'ExhibitEdit',3",
+    "ap": "fu_crm_project_exhibition_tour"
+  },
+  {
+    "desc": "销售政策",
+    "uri": "$genLinkAddress,'ExhibitEdit',1",
+    "ap": "fu_crm_project_sales_policy"
+  },
+  {
+    "desc": "项目财务汇总",
+    "uri": "$genLinkAddress,'ProjectMarket','summary'",
+    "ap": "fu_crm_project_sales_collect"
+  },
+  {
+    "desc": "展会测评",
+    "uri": "$genLinkAddress,'ExhibitEdit',4",
+    "ap": "fu_crm_project_exhibition_evaluating"
+  },
+  {
+    "desc": "提成计算",
+    "uri": "$genLinkAddress,'ExhibitEdit',10",
+    "ap": "fu_crm_commission_data"
+  },
+  {
+    "desc": "项目积分设置",
+    "uri": "projectScoreSetting",
+    "ap": "fu_crm_project_integral_set,fu_crm_integral_management"
+  },
+  {
+    "desc": "会员访问日志",
+    "uri": "genLinkAddress('MemberVisitLog')",
+    "ap": "fu_crm_user_visit_log"
+  },
+  {
+    "desc": "市场任务",
+    "uri": "",
+    "ap": "fu_crm_project_market_task"
+  },
+  {
+    "desc": "销售任务",
+    "uri": "",
+    "ap": "fu_crm_project_sales_task"
+  },
+  {
+    "desc": "售后任务",
+    "uri": "",
+    "ap": "fu_crm_project_sales_after_task"
+  },
+  {
+    "desc": "展商参展申请",
+    "uri": "$genLinkAddress,'RegisterRecord','exhibitor'",
+    "ap": "fn_trader_menu"
+  }
+]

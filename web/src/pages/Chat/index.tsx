@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useLLMConfig } from '@/hooks/useLLMConfig';
 import { useModelConfig } from '@/hooks/useModelConfig';
@@ -15,9 +15,7 @@ import { handleLLMError } from '@/utils/errorHandler';
 import { useChatRuntimeStore } from '@/store/chatRuntimeStore';
 import { useStore } from 'zustand';
 import type { StreamChunk, RuntimeMessage } from '@/types/chat';
-import type { AssistantMessage } from '@/types/chat';
 import type { CompletionResult } from '@/utils/streamHandler';
-import GlobalLoading from '@/components/GlobalLoading';
 import MemeLoading from '@/components/memeLoading';
 import { useThemeStore } from '@/store/themeStore';
 import { ChatStorageService } from '@/services/chatStorage';
