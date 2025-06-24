@@ -12,17 +12,19 @@ import { handleResponseStream } from '@/utils/streamHandler';
 import { useChatStore } from '@/store/chatStore';
 import { useChatMessages } from '@/hooks/useChatMessages';
 import { handleLLMError } from '@/utils/errorHandler';
-import { useChatRuntimeStore } from '@/store/chatRuntimeStore';
 import { useStore } from 'zustand';
-import type { StreamChunk, RuntimeMessage } from '@/types/chat';
-import type { CompletionResult } from '@/utils/streamHandler';
-import MemeLoading from '@/components/memeLoading';
+import { useChatRuntimeStore as useChatRuntimeStoreHook } from '@/store/chatRuntimeStore';
 import { useThemeStore } from '@/store/themeStore';
 import { ChatStorageService } from '@/services/chatStorage';
 import { getStorage } from '@/utils/storage';
-import { useMCPStore } from '@/store/mcpStore';
+import { useMCPStore, getMCPServiceById } from '@/store/mcpStore';
 import { buildLLMRequestPayload } from '@/utils/llmConfig';
+import { useToolCallHandler } from '@/hooks/useToolCallHandler';
+import { useLLMStreamHandler } from '@/hooks/useLLMStreamHandler';
 import './styles.less';
+import type { StreamChunk, RuntimeMessage } from '@/types/chat';
+import type { CompletionResult } from '@/utils/streamHandler';
+import MemeLoading from '@/components/memeLoading';
 
 // 实例化 llmService，使用 Web 端继承后的 LLMService
 const llmService = new WebLLMService();
@@ -41,7 +43,25 @@ export const Chat = () => {
   const { servers, activeServerId } = useMCPStore();
 
   // 获取消息运行时状态更新函数
-  const updateMessageContent = useStore(useChatRuntimeStore, state => state.updateMessageContent);
+  const updateMessageContentRaw = useStore(useChatRuntimeStoreHook, state => state.updateMessageContent);
+  // updateMessageContent 需要 Partial<RuntimeMessage> & { messageId: string }, 但实际 store 只接受 content: string 必填
+  // 包装一层，保证 content 字段始终为 string
+  const updateMessageContentSafe = (params: Partial<RuntimeMessage> & { messageId: string }) => {
+    const { messageId } = params;
+    const content = params.content ?? '';
+    const reasoning_content = 'reasoning_content' in params ? params.reasoning_content : undefined;
+    const tool_content = 'tool_content' in params ? params.tool_content : undefined;
+    const observation_content = 'observation_content' in params ? params.observation_content : undefined;
+    const thought_content = 'thought_content' in params ? params.thought_content : undefined;
+    updateMessageContentRaw({
+      messageId,
+      content,
+      reasoning_content,
+      tool_content,
+      observation_content,
+      thought_content
+    });
+  };
 
   const {
     setCurrentId,
@@ -125,7 +145,7 @@ export const Chat = () => {
       scrollToBottom();
       saveChat();
       try {
-        setIsGenerating();
+        setIsGenerating(true);
         const assistantMessage = createMessage.assistant('') as RuntimeMessage;
         addMessage(assistantMessage);
         saveChat();
@@ -165,58 +185,30 @@ export const Chat = () => {
           payload,
           abortControllerRef.current.signal
         );
+        // 替换 handleResponseStream 的 onChunk 回调：
         await handleResponseStream(
           stream,
-          async (chunk: StreamChunk) => {
-            updateLastMessage({
-              content: chunk.content,
-              reasoning_content: chunk.reasoning_content,
-              tool_content: chunk.tool_content,
-              observation_content: chunk.observation_content,
-              thought_content: chunk.thought_content,
-              status: chunk.status || 'generating'
-            });
-            // 用最新 closure
-            const lastMessage = currentMessages[currentMessages.length - 1];
-            if (lastMessage && lastMessage.id) {
-              updateMessageContent({
-                messageId: lastMessage.id,
-                content: chunk.content,
-                reasoning_content: chunk.reasoning_content,
-                tool_content: chunk.tool_content,
-                observation_content: chunk.observation_content,
-                thought_content: chunk.thought_content,
-              });
-            }
-            scrollToBottom();
-          },
+          (chunk: StreamChunk) => handleLLMStream(chunk, currentMessages),
           async (result: CompletionResult) => {
-            updateLastMessage({
-              content: result.content,
-              reasoning_content: result.reasoning_content,
-              tool_content: result.tool_content,
-              observation_content: result.observation_content,
-              thought_content: result.thought_content,
-              status: 'stable'
-            });
-            const lastMessage = currentMessages[currentMessages.length - 1];
-            if (lastMessage && lastMessage.id) {
-              updateMessageContent({
-                messageId: lastMessage.id,
+            patchMessage({
+              updateLastMessage,
+              currentMessages,
+              patch: {
                 content: result.content,
                 reasoning_content: result.reasoning_content,
                 tool_content: result.tool_content,
                 observation_content: result.observation_content,
                 thought_content: result.thought_content,
-              });
-            }
+              },
+              status: 'stable'
+            });
             scrollToBottom();
             saveChat();
           }
         );
       } catch (err) {
         setLlmError(err instanceof Error ? err.message : String(err));
-        setIsGenerating();
+        setIsGenerating(false);
         const errorNotice = handleLLMError(err);
         // 用最新 closure
         const lastMessage = messages[messages.length - 1];
@@ -230,7 +222,7 @@ export const Chat = () => {
         addMessage(errorNotice);
         saveChat();
       } finally {
-        setIsGenerating();
+        setIsGenerating(false);
         abortControllerRef.current = null;
       }
     } catch (error) {
@@ -243,7 +235,7 @@ export const Chat = () => {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
       abortControllerRef.current = null;
-      setIsGenerating();
+      setIsGenerating(false);
       // 用最新 closure
       const lastMessage = messages[messages.length - 1];
       if (lastMessage && lastMessage.id) {
@@ -254,7 +246,7 @@ export const Chat = () => {
         if (lastMessage.role === 'assistant') {
           const assistantMessage = lastMessage as { reasoning_content?: string };
           const reasoning = assistantMessage.reasoning_content;
-          updateMessageContent({
+          updateMessageContentSafe({
             messageId: lastMessage.id,
             content: lastMessage.content,
             reasoning_content: reasoning
@@ -275,6 +267,32 @@ export const Chat = () => {
       navigate(`/chat/${lastChatId}`, { replace: true });
     }
   }, [urlChatId, navigate]);
+
+  const mcpServiceInstance = activeServerId ? getMCPServiceById(activeServerId) : undefined;
+  const handleToolCall = useToolCallHandler(addMessage, updateLastMessage, mcpServiceInstance);
+  const handleLLMStream = useLLMStreamHandler(updateLastMessage, updateMessageContentSafe, handleToolCall);
+
+  // 工具函数：统一 patch 消消息
+  function patchMessage({
+    updateLastMessage,
+    currentMessages,
+    patch,
+    status
+  }: {
+    updateLastMessage: (patch: Partial<RuntimeMessage>) => void;
+    currentMessages: RuntimeMessage[];
+    patch: Partial<RuntimeMessage>;
+    status: RuntimeMessage['status'];
+  }) {
+    updateLastMessage({ ...patch, status });
+    const lastMessage = currentMessages[currentMessages.length - 1];
+    if (lastMessage && lastMessage.id) {
+      updateMessageContentSafe({
+        messageId: lastMessage.id,
+        ...patch
+      });
+    }
+  }
 
   // 渲染部分
   return (

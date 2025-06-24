@@ -70,3 +70,42 @@ messages.push({ role: 'user', content: result.content });
 - 工具调用流程分层清晰，参数兜底集中在请求体拼接。
 - SDK 屏蔽协议细节，开发者只需关注对话流和工具调用入口。
 - UI 可灵活渲染 MCP 调用过程，提升用户体验。
+
+<!-- 新增：2025-06-24 MCP工具调用通用状态流转与前端集成实践 -->
+
+## MCP工具调用通用状态流转与前端集成实践（2025-06-24）
+
+### 1. engine 层通用方法封装
+- 在 `engine/service/mcpService.ts` 增加 `callToolWithStatus` 方法，实现 MCP 工具调用的 loading/done/error 状态流转和回调。
+- 该方法用于前端统一处理工具调用的 UI 响应，便于 web 层直接复用。
+- 方法签名：
+  ```ts
+  export async function callToolWithStatus({
+    mcp,
+    name,
+    args = {},
+    onStatusChange,
+  }: {
+    mcp: MCPService;
+    name: string;
+    args?: Record<string, any>;
+    onStatusChange: (status: 'loading' | 'done' | 'error', payload: any) => void;
+  })
+  ```
+- 典型用法：
+  - `onStatusChange('loading', { name, args })` → UI 插入 loading 消消息
+  - `onStatusChange('done', { name, args, result })` → UI 展示结果
+  - `onStatusChange('error', { name, args, error })` → UI 展示错误
+
+### 2. web 层 re-export
+- 在 `web/src/services/mcpService.ts` re-export 了 `callToolWithStatus`，web 现在可直接 import 使用。
+- 这样 web 只需 `import { callToolWithStatus } from '@/services/mcpService'` 即可。
+
+### 3. 参考文档与最佳实践
+- 该方法与本文件第3、4、5节流程完全兼容，支持对话流插入 loading/结果/错误等组件。
+- 推荐在解析 tool_call 后直接调用 callToolWithStatus，实现 UI 响应和多轮交互。
+- 相关代码与架构建议详见：
+  - [MCP工具调用全流程开发文档](./mcp-tool-call-workflow.md)
+  - [MCP协议与TypeScriptSDK指南](./mcp.md)
+
+---

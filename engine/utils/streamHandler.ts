@@ -1,4 +1,4 @@
-import type { StreamChunk, MessageStatus } from '../types/chat';
+import type { StreamChunk, MessageStatus, ToolCallContent } from '../types/chat';
 import type { ExtendedChatCompletionChunk } from '../types/openai-extended';
 
 export interface CompletionResult {
@@ -16,7 +16,7 @@ export async function handleResponseStream(
 ) {
   let content = '';
   let reasoning_content = '';
-  let tool_content = '';
+  let tool_content: string | ToolCallContent | undefined = undefined;
   let observation_content = '';
   let thought_content = '';
   const status: MessageStatus = 'generating';
@@ -29,7 +29,18 @@ export async function handleResponseStream(
         reasoning_content += delta.reasoning_content;
       }
       if (delta.tool_content !== null && delta.tool_content !== undefined && delta.tool_content !== 'null') {
-        tool_content += delta.tool_content;
+        // 尝试解析 tool_content 为对象
+        try {
+          const parsed = typeof delta.tool_content === 'string' ? JSON.parse(delta.tool_content) : delta.tool_content;
+          if (parsed && typeof parsed === 'object' && parsed.name) {
+            tool_content = parsed;
+          } else {
+            tool_content = delta.tool_content;
+          }
+        } catch {
+          // 兜底为原始字符串
+          tool_content = delta.tool_content;
+        }
       }
       if (delta.observation_content !== null && delta.observation_content !== undefined && delta.observation_content !== 'null') {
         observation_content += delta.observation_content;
@@ -43,7 +54,7 @@ export async function handleResponseStream(
       onChunk?.({
         content,
         reasoning_content: reasoning_content || undefined,
-        tool_content: tool_content || undefined,
+        tool_content: tool_content as any, // 兼容 web 层类型
         observation_content: observation_content || undefined,
         thought_content: thought_content || undefined,
         status
@@ -51,13 +62,12 @@ export async function handleResponseStream(
     }
     content = content.replace(/null/g, '');
     reasoning_content = reasoning_content.replace(/null/g, '');
-    tool_content = tool_content.replace(/null/g, '');
     observation_content = observation_content.replace(/null/g, '');
     thought_content = thought_content.replace(/null/g, '');
     onDone?.({
       content,
       reasoning_content: reasoning_content || undefined,
-      tool_content: tool_content || undefined,
+      tool_content: tool_content as any, // 兼容 web 层类型
       observation_content: observation_content || undefined,
       thought_content: thought_content || undefined
     });

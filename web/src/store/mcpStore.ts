@@ -40,6 +40,9 @@ function loadServersFromStorage(): { servers: MCPServer[]; activeServerId?: stri
   return { servers: [], activeServerId: undefined };
 }
 
+// MCPService 实例池，key 为 serverId
+const mcpServiceMap: Record<string, MCPService> = {};
+
 export const useMCPStore = create<MCPStoreState>((set, get) => {
   // 初始化时从本地存储加载
   const { servers: initialServers, activeServerId: initialActive } = loadServersFromStorage();
@@ -68,6 +71,11 @@ export const useMCPStore = create<MCPStoreState>((set, get) => {
       set(state => {
         const servers = state.servers.filter(s => s.id !== id);
         const activeServerId = state.activeServerId === id ? undefined : state.activeServerId;
+        // 移除 MCPService 实例
+        if (mcpServiceMap[id]) {
+          mcpServiceMap[id].disconnect?.();
+          delete mcpServiceMap[id];
+        }
         saveServersToStorage(servers, activeServerId);
         return { servers, activeServerId };
       });
@@ -82,12 +90,16 @@ export const useMCPStore = create<MCPStoreState>((set, get) => {
       const server = get().servers.find(s => s.id === id);
       if (!server) return;
       try {
-        const mcp = new MCPService(server.url, 'STREAMABLE_HTTP');
+        // 只在首次连接时 new 实例
+        if (!mcpServiceMap[id]) {
+          mcpServiceMap[id] = new MCPService(server.url, 'STREAMABLE_HTTP');
+        }
+        const mcp = mcpServiceMap[id];
         const { data, error } = await mcp.listTools();
         let tools: Tool[] = [];
         if (Array.isArray(data)) {
           tools = data;
-        } // 只保留数组分支
+        }
         set(state => {
           const servers = state.servers.map(s =>
             s.id === id && !error
@@ -105,6 +117,11 @@ export const useMCPStore = create<MCPStoreState>((set, get) => {
               ? { ...s, isConnected: false, loading: false, error: e instanceof Error ? e.message : String(e), tools: [] }
               : s
           );
+          // 连接失败时移除实例
+          if (mcpServiceMap[id]) {
+            mcpServiceMap[id].disconnect?.();
+            delete mcpServiceMap[id];
+          }
           saveServersToStorage(servers, undefined);
           return { servers, activeServerId: undefined, isLoading: false };
         });
@@ -116,6 +133,11 @@ export const useMCPStore = create<MCPStoreState>((set, get) => {
           s.id === id ? { ...s, isConnected: false, tools: [] } : s
         );
         const activeServerId = state.activeServerId === id ? undefined : state.activeServerId;
+        // 断开时移除实例
+        if (mcpServiceMap[id]) {
+          mcpServiceMap[id].disconnect?.();
+          delete mcpServiceMap[id];
+        }
         saveServersToStorage(servers, activeServerId);
         return { servers, activeServerId };
       });
@@ -128,3 +150,8 @@ export const useMCPStore = create<MCPStoreState>((set, get) => {
     },
   };
 });
+
+// 提供安全获取 MCPService 实例的方法
+export function getMCPServiceById(id: string): MCPService | undefined {
+  return mcpServiceMap[id];
+}

@@ -1,9 +1,9 @@
-import { useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { useStore } from 'zustand';
 import { useChatStore } from '@/store/chatStore';
 import { getStorage } from '@/utils/storage';
 import { ChatStorageService } from '@engine/service/chatStorage';
-import type { ChatMessage } from '@/types/chat';
+import type { ChatMessage, RuntimeMessage } from '@/types/chat';
 import { MessageManager } from '@engine/utils/messageManager';
 import { defaultChatSetting } from '@/config/defaultChatSetting';
 
@@ -13,10 +13,14 @@ const chatStorage = new ChatStorageService(getStorage());
 // 包裹 engine 层 hook，监听 stable 状态写入
 export function useChatMessages(chatId: string) {
   // 响应式获取当前聊天的消息
-  const messages = useStore(useChatStore, s => s.messages);
-  // isGenerating 需由外部状态管理（如 zustand 或父组件），此处仅占位
-  const isGenerating = false;
-  const setIsGenerating = () => {};
+  const rawMessages = useStore(useChatStore, s => s.messages);
+  // 保证 messages 始终为 RuntimeMessage[]
+  const messages: RuntimeMessage[] = rawMessages.map(msg => ({
+    ...msg,
+    status: msg.status ?? 'stable',
+  }));
+  // Use real state for isGenerating
+  const [isGenerating, setIsGenerating] = useState(false);
 
   // 允许所有消息类型通过 addMessage
   const addMessage = useCallback((msg: ChatMessage) => {

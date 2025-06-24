@@ -1,0 +1,172 @@
+# MCP 工具调用（callTool）前端响应架构
+
+本指南梳理了 DeepSeek/MCP 工具链前端集成的最佳实践，涵盖 ToolCallMessage 消息流插入、MCP 工具调用流程、UI 响应、代码结构建议等，适用于现代 LLM 工具链前端架构。
+
+---
+
+## 1. ToolCallMessage 组件设计
+
+ToolCallMessage 是一种特殊的“消息”，与 user/assistant 消息一样插入到 messages 列表中。
+
+- `role` 字段为 `"tool"` 或 `"function"`
+- `status` 字段为 `"loading" | "done" | "error"`
+- 渲染时，MessageList 根据 role/status 渲染不同样式
+
+**组件示例：**
+
+```tsx
+import React from 'react';
+
+interface ToolCallMessageProps {
+  toolName: string;
+  status: 'loading' | 'done' | 'error';
+  result?: string;
+  error?: string;
+  args?: object;
+}
+
+const ToolCallMessage: React.FC<ToolCallMessageProps> = ({ toolName, status, result, error, args }) => {
+  if (status === 'loading') {
+    return <div className="tool-message tool-loading">正在调用工具 <b>{toolName}</b>... <span className="loading-dot">⏳</span></div>;
+  }
+  if (status === 'error') {
+    return <div className="tool-message tool-error">工具 <b>{toolName}</b> 调用失败：{error}</div>;
+  }
+  return (
+    <div className="tool-message tool-done">
+      <div>工具 <b>{toolName}</b> 调用成功：</div>
+      {args && <pre className="tool-args">{JSON.stringify(args, null, 2)}</pre>}
+      <div className="tool-result">{result}</div>
+    </div>
+  );
+};
+
+export default ToolCallMessage;
+```
+
+---
+
+## 2. 消息结构与插入方式
+
+每次工具调用都在 messages 列表中插入一条 role 为 `"tool"` 的消息，结构建议如下：
+
+```ts
+{
+  id: 'tool-xxx',
+  role: 'tool',
+  toolName: 'weather',
+  status: 'loading' | 'done' | 'error',
+  args: { city: '温州' },
+  result: '温州今日晴 32°C',
+  error: '参数缺失'
+}
+```
+
+**MessageList 渲染示例：**
+
+```tsx
+import ToolCallMessage from './ToolCallMessage';
+
+function MessageList({ messages }) {
+  return (
+    <div>
+      {messages.map(msg => {
+        if (msg.role === 'tool') {
+          return (
+            <ToolCallMessage
+              key={msg.id}
+              toolName={msg.toolName}
+              status={msg.status}
+              result={msg.result}
+              error={msg.error}
+              args={msg.args}
+            />
+          );
+        }
+        // 其它 user/assistant 消息
+        return <ChatMessage key={msg.id} {...msg} />;
+      })}
+    </div>
+  );
+}
+```
+
+---
+
+## 3. 工具调用处理流程
+
+1. **监听大模型响应，检测 tool_call**
+   - 在 LLM 流式响应（如 SSE/chunk）中，监听 `tool_calls` 字段，解析 tool name 和 arguments。
+   - 解析后，插入一条 status 为 `"loading"` 的 tool 消息。
+
+   ```ts
+   if (chunk.choices?.[0]?.delta?.tool_calls) {
+     const toolCall = chunk.choices[0].delta.tool_calls[0];
+     const toolName = toolCall.function.name;
+     const toolArgs = toolCall.function.arguments ? JSON.parse(toolCall.function.arguments) : {};
+     // 进入工具调用流程
+   }
+   ```
+
+2. **触发 MCP 工具调用**
+   - 调用 MCP SDK 的 `callTool` 方法，传入 name 和 arguments。
+   - 工具调用成功后，更新该消息为 status `"done"` 并填充 result。
+   - 调用失败时，更新为 status `"error"` 并填充 error。
+
+   ```ts
+   // 渲染 loading 组件
+   addMessage({ role: 'tool', toolName, status: 'loading', args: toolArgs });
+   try {
+     const result = await mcp.callTool({ name: toolName, arguments: toolArgs });
+     updateMessage({ id, status: 'done', result: result.content });
+     sendToLLM({ role: 'user', content: result.content });
+   } catch (error) {
+     updateMessage({ id, status: 'error', error: error.message });
+     sendToLLM({ role: 'user', content: `Tool ${toolName} failed: ${error.message}` });
+   }
+   ```
+
+---
+
+## 4. 对话流渲染建议
+
+- **工具调用 Loading**：插入“正在调用工具...”消息，带 loading 动画。
+- **工具调用结果**：调用成功后，替换/追加“工具结果”消息，展示返回内容。
+- **错误处理**：调用失败时，渲染错误提示，并同步返回给大模型。
+
+**UI 组件建议：**
+- ToolCallMessage：渲染工具调用过程（loading/结果/错误），可高亮参数、结果。
+- MessageList 组件自动识别 role/status 渲染不同样式。
+
+---
+
+## 5. 代码结构建议
+
+- `index.tsx`：主流程，监听 LLM 响应，调度工具调用
+- `ToolCallMessage.tsx`：渲染工具调用过程
+- `mcpService.ts`：封装 mcp.callTool 逻辑
+- `buildLLMRequestPayload.ts`：拼接 LLM 请求体，集中参数兜底
+
+---
+
+## 6. UI 响应片段示例
+
+```tsx
+<MessageList>
+  {/* ...历史消息... */}
+  <ToolCallMessage status="loading" toolName="weather" />
+  {/* ...调用完成后... */}
+  <ToolCallMessage status="done" toolName="weather" result="温州今日晴 32°C" />
+  {/* ...错误时... */}
+  <ToolCallMessage status="error" toolName="weather" error="参数缺失" />
+</MessageList>
+```
+
+---
+
+## 7. 总结
+
+- 监听大模型 tool_call → 解析 name/args → 渲染 loading → mcp.callTool → 渲染结果/错误 → 继续推送给大模型
+- UI 组件分离，主流程清晰，易于维护和扩展
+
+如需具体代码实现、reducer/hook 示例或组件样式建议，可继续提问！

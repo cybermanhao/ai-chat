@@ -53,11 +53,14 @@ export type ClientNoticeMessage = BaseMessage & {
 // 聊天消息联合类型
 export type ChatMessage = SystemMessage | UserMessage | AssistantMessage | ToolMessage | ClientNoticeMessage;
 
+// 类型声明
+export interface ToolCallContent { name: string; arguments?: string; }
+
 // 流式响应块
 export interface StreamChunk {
   content: string;
   reasoning_content?: string;
-  tool_content?: string;
+  tool_content?: string | ToolCallContent;
   observation_content?: string;
   thought_content?: string;
   error?: string;
