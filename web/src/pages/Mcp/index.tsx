@@ -94,11 +94,18 @@ const Mcp = () => {
               ]}
             >
               <List.Item.Meta
+                avatar={
+                  server.isConnected ? (
+                    <span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: '50%', background: '#52c41a', marginRight: 8 }} />
+                  ) : server.error ? (
+                    <span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: '50%', background: '#ff4d4f', marginRight: 8 }} />
+                  ) : null
+                }
                 title={server.name}
                 description={server.url}
               />
               {server.error && (
-                <div className="error-message">
+                <div className="error-message" style={{ color: '#ff4d4f', marginTop: 4 }}>
                   连接失败：{server.error}
                 </div>
               )}

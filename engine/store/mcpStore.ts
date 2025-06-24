@@ -1,10 +1,7 @@
 // engine/store/mcpStore.ts
 // 多端同构 MCP store 纯逻辑定义
 
-export interface Tool {
-  name: string;
-  description: string;
-}
+import { MCPService, Tool } from '../service/mcpService';
 
 export interface MCPServer {
   id: string;
@@ -36,12 +33,13 @@ export interface MCPState {
   updateLastMessage: (content: string) => void;
   clearMessages: () => void;
   setCurrentModel: (modelName: string) => void;
-  connectServer: (id: string) => void;
+  connectServer: (id: string) => Promise<void>;
   disconnectServer: (id: string) => void;
 }
 
 // 通用 fetch 工具列表方法，仅保留协议层/后端适配（不再尝试多种HTTP路径）
 async function fetchMcpTools(url: string): Promise<{ data: Tool[]; error?: string }> {
+  console.log('[MCPStore] fetchMcpTools 已废弃');
   return { data: [], error: 'HTTP工具列表接口已废弃，请使用协议层 getMcpToolsByProtocol' };
 }
 
@@ -50,13 +48,24 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 
 export async function getMcpToolsByProtocol(serverCommand: string = "node", serverArgs: string[] = ["server.js"]): Promise<{ data: any[]; error?: string }> {
+  console.log(`[MCPStore] getMcpToolsByProtocol 开始执行, 命令: ${serverCommand}, 参数:`, serverArgs);
   try {
     const mcp = new Client({ name: "mcp-client", version: "1.0.0" });
+    console.log('[MCPStore] 已创建 MCP 客户端');
     const transport = new StdioClientTransport({ command: serverCommand, args: serverArgs });
+    console.log('[MCPStore] 已创建 STDIO 传输');
     await mcp.connect(transport);
-    const tools = await mcp.listTools();
+    console.log('[MCPStore] 已连接到服务器');
+    const rawTools = await mcp.listTools();
+    const tools = Object.entries(rawTools).map(([name, info]: [string, any]) => ({
+      name,
+      title: info.title || name,
+      description: info.description || ''
+    }));
+    console.log('[MCPStore] 已获取工具列表:', tools);
     return { data: tools };
   } catch (e: any) {
+    console.error('[MCPStore] getMcpToolsByProtocol 失败:', e);
     return { data: [], error: e.message };
   }
 }
@@ -129,31 +138,50 @@ export const mcpStoreDefinition = (set: any, get: any) => ({
   },
 
   connectServer: async (id: string) => {
-    set((state: MCPState) => ({ isLoading: true }));
-    const server = get().servers.find((s: MCPServer) => s.id === id);
-    if (!server) return;
-    const { data, error } = await fetchMcpTools(server.url);
-    if (error) {
+    const state = get();
+    const server = state.servers.find((s: MCPServer) => s.id === id);
+    if (!server) {
+      console.error(`[MCPStore] 找不到服务器 ID: ${id}`);
+      return;
+    }
+
+    console.log(`[MCPStore] 开始连接服务器 ${server.name} (${server.url})`);
+    set({ isLoading: true });
+
+    try {
+      const mcpService = new MCPService(server.url, "STREAMABLE_HTTP");
+      console.log('[MCPStore] MCPService 实例已创建');
+      
+      const { data: tools, error } = await mcpService.listTools();
+      if (error) {
+        console.error('[MCPStore] 获取工具列表失败:', error);
+        set((state: MCPState) => ({
+          servers: state.servers.map(s =>
+            s.id === id ? { ...s, error, isConnected: false } : s
+          ),
+          isLoading: false
+        }));
+        return;
+      }
+
+      console.log(`[MCPStore] 成功获取工具列表, 数量: ${tools.length}, 工具:`, tools);
       set((state: MCPState) => ({
         servers: state.servers.map(s =>
-          s.id === id
-            ? { ...s, isConnected: false, error, tools: [] }
-            : s
+          s.id === id ? { ...s, tools, isConnected: true, error: undefined } : s
         ),
         isLoading: false
       }));
-      return;
+    } catch (e: any) {
+      console.error('[MCPStore] 连接服务器失败:', e);
+      set((state: MCPState) => ({
+        servers: state.servers.map(s =>
+          s.id === id ? { ...s, error: e.message, isConnected: false } : s
+        ),
+        isLoading: false
+      }));
     }
-    set((state: MCPState) => ({
-      servers: state.servers.map(s =>
-        s.id === id
-          ? { ...s, isConnected: true, error: undefined, tools: data || [] }
-          : s
-      ),
-      activeServerId: id,
-      isLoading: false
-    }));
   },
+
   disconnectServer: (id: string) => {
     set((state: MCPState) => ({
       servers: state.servers.map(server =>

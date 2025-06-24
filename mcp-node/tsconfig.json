@@ -1,0 +1,26 @@
+{  "compilerOptions": {
+    "target": "ES2022",    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "outDir": "dist",
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "allowJs": true,
+    "forceConsistentCasingInFileNames": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "composite": true,
+    "declaration": true,
+    "rootDir": "src",
+    "baseUrl": "..",    "paths": {
+      "@engine/*": ["../engine/*"]
+    }
+  },
+  "include": [
+    "src/**/*"
+  ],
+  "references": [
+    {
+      "path": "../engine"
+    }
+  ]
+}

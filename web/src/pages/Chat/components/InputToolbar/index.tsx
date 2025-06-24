@@ -32,7 +32,7 @@ interface InputToolbarProps {
 
 const InputToolbar: React.FC<InputToolbarProps> = () => {
   const { activeLLM, currentConfig, updateLLMConfig } = useLLMConfig();
-  const { config, updateTemperature, updateContextBalance, updateSystemPrompt, toggleMultiTools, updateEnabledTools } = useModelConfig();
+  const { config, updateTemperature, updateContextBalance, updateSystemPrompt } = useModelConfig();
 
   const [isSystemPromptOpen, setIsSystemPromptOpen] = useState(false);
   const [isToolsModalOpen, setIsToolsModalOpen] = useState(false);
@@ -58,17 +58,6 @@ const InputToolbar: React.FC<InputToolbarProps> = () => {
   const handleSystemPromptChange = useCallback((value: string) => {
     updateSystemPrompt(value);
   }, [updateSystemPrompt]);
-
-  const handleToolsToggle = useCallback((toolId: string, enabled: boolean) => {
-    // enabledTools 是 string[]
-    let newTools = config?.enabledTools ? [...config.enabledTools] : [];
-    if (enabled) {
-      if (!newTools.includes(toolId)) newTools.push(toolId);
-    } else {
-      newTools = newTools.filter(t => t !== toolId);
-    }
-    updateEnabledTools(newTools);
-  }, [config?.enabledTools, updateEnabledTools]);
 
   const handleMultiCallToggle = () => {
     setMultiCallEnabled(!multiCallEnabled);
@@ -196,10 +185,7 @@ const InputToolbar: React.FC<InputToolbarProps> = () => {
       
       <ToolsModal
         open={isToolsModalOpen}
-        // loading={configLoading.enabledTools}
-        enabledTools={config?.enabledTools ?? []}
         onClose={() => setIsToolsModalOpen(false)}
-        onToggle={handleToolsToggle}
       />
     </div>
   );

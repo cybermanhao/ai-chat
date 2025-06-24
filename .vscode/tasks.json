@@ -4,7 +4,7 @@
 		{
 			"type": "shell",
 			"label": "build:engine",
-			"command": "tsc -b engine",
+			"command": "pnpm tsc -b engine",
 			"problemMatcher": [
 				"$tsc"
 			],

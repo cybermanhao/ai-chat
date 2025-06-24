@@ -1,64 +1,39 @@
+import { MCPService } from '@engine/service/mcpService';
+
+// 移除多端口硬编码，统一由外部传入
 export interface MCPResponse<T = unknown> {
   data: T
   error?: string
 }
 
-class MCPService {
-  private baseUrl: string = ''
+export class MCPServiceAdapter {
+  private mcp: MCPService | null = null;
 
-  setBaseUrl(url: string) {
-    this.baseUrl = url.endsWith('/') ? url.slice(0, -1) : url
+  constructor(url: string, mode: 'STDIO' | 'SSE' | 'STREAMABLE_HTTP' = 'STREAMABLE_HTTP') {
+    this.mcp = new MCPService(url, mode);
   }
 
-  private async fetch<T>(resource: string, init?: RequestInit): Promise<MCPResponse<T>> {
-    try {
-      const response = await fetch(`${this.baseUrl}${resource}`, {
-        ...init,
-        headers: {
-          'Content-Type': 'application/json',
-          ...init?.headers,
-        },
-      })
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
-      }
-
-      const data = await response.json()
-      return { data }
-    } catch (error) {
-      return {
-        data: null as T,
-        error: error instanceof Error ? error.message : 'Unknown error occurred',
-      }
-    }
-  }
-
-  // 获取可用mcp工具列表
   async listTools(): Promise<MCPResponse<Array<{ name: string; description: string }>>> {
-    return this.fetch<Array<{ name: string; description: string }>>('/list-tools')
+    const { data, error } = await this.mcp!.listTools();
+    return { data, error };
   }
 
-  // 调用问候API
   async getGreeting(name: string): Promise<MCPResponse<string>> {
-    return this.fetch<string>(`/greeting/${encodeURIComponent(name)}`)
+    const { data, error } = await this.mcp!.callTool('greeting', { name });
+    return { data, error };
   }
 
-  // 调用翻译API
   async translate(text: string): Promise<MCPResponse<string>> {
-    return this.fetch<string>('/translate', {
-      method: 'POST',
-      body: JSON.stringify({ message: text }),
-    })
+    const { data, error } = await this.mcp!.callTool('translate', { message: text });
+    return { data, error };
   }
 
-  // 调用天气API
   async getWeather(cityCode: number): Promise<MCPResponse<string>> {
-    return this.fetch<string>('/weather', {
-      method: 'POST',
-      body: JSON.stringify({ city_code: cityCode }),
-    })
+    const { data, error } = await this.mcp!.callTool('weather', { city_code: cityCode });
+    return { data, error };
   }
 }
 
-export const mcpService = new MCPService()
+// 默认导出一个 Adapter 实例，实际端口/协议由外部传入
+export const mcpService = new MCPServiceAdapter('/mcp/streamable_http', 'STREAMABLE_HTTP');
+// 如需切换 SSE 或 STDIO，可实例化 new MCPServiceAdapter(url, mode)
