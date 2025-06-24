@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useLLMConfig } from '@/hooks/useLLMConfig';
 import { useModelConfig } from '@/hooks/useModelConfig';
@@ -6,7 +6,7 @@ import MessageList from './components/MessageList';
 import InputSender from './components/InputSender';
 import ChatHeader from './components/ChatHeader';
 import { Card } from 'antd';
-import { LLMService } from '@engine/service/llmService';
+import WebLLMService from '@/services/llmService';
 import { createMessage } from '@engine/utils/messageFactory';
 import { handleResponseStream } from '@/utils/streamHandler';
 import { useChatStore } from '@/store/chatStore';
@@ -15,18 +15,17 @@ import { handleLLMError } from '@/utils/errorHandler';
 import { useChatRuntimeStore } from '@/store/chatRuntimeStore';
 import { useStore } from 'zustand';
 import type { StreamChunk, RuntimeMessage } from '@/types/chat';
-import type { AssistantMessage } from '@/types/chat';
 import type { CompletionResult } from '@/utils/streamHandler';
-import GlobalLoading from '@/components/GlobalLoading';
 import MemeLoading from '@/components/memeLoading';
 import { useThemeStore } from '@/store/themeStore';
 import { ChatStorageService } from '@/services/chatStorage';
 import { getStorage } from '@/utils/storage';
 import { useMCPStore } from '@/store/mcpStore';
+import { buildLLMRequestPayload } from '@/utils/llmConfig';
 import './styles.less';
 
-// 实例化 llmService
-const llmService = new LLMService();
+// 实例化 llmService，使用 Web 端继承后的 LLMService
+const llmService = new WebLLMService();
 
 export const Chat = () => {
   const [inputValue, setInputValue] = useState('');
@@ -39,6 +38,7 @@ export const Chat = () => {
   const [llmError, setLlmError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const { dmMode } = useThemeStore();
+  const { servers, activeServerId } = useMCPStore();
 
   // 获取消息运行时状态更新函数
   const updateMessageContent = useStore(useChatRuntimeStore, state => state.updateMessageContent);
@@ -137,14 +137,28 @@ export const Chat = () => {
         const systemMessage = createMessage.system(config.systemPrompt) as RuntimeMessage;
         const fullMessages = [systemMessage, ...currentMessages];
         abortControllerRef.current = new AbortController();
-        const { buildLLMRequestPayload } = useMCPStore.getState();
+        // 获取当前激活的 MCP server
+        const activeServer = servers.find(s => s.id === activeServerId);
+        // 构造 LLMConfig，UI 配置优先
+        const llmConfig = {
+          model: currentConfig.userModel || '',
+          apiKey: currentConfig.apiKey,
+          apiUrl: activeLLM.baseUrl, // 用 baseUrl 作为 apiUrl
+        };
+        // 构造 extraOptions，UI 配置优先
+        const extraOptions = {
+          model: currentConfig.userModel || '',
+          temperature: config.temperature,
+          max_tokens: config.maxTokens,
+          systemPrompt: config.systemPrompt,
+          apiKey: currentConfig.apiKey,
+          apiUrl: activeLLM.baseUrl, // 用 baseUrl 作为 apiUrl
+        };
         const payload = buildLLMRequestPayload(
           fullMessages,
           {
-            model: currentConfig.userModel || '',
-            temperature: config.temperature,
-            max_tokens: config.maxTokens,
-            systemPrompt: config.systemPrompt,
+            server: activeServer ? { tools: activeServer.tools, llmConfig } : undefined,
+            extraOptions,
           }
         );
         const stream = await llmService.generate(

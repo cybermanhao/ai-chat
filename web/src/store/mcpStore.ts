@@ -2,13 +2,6 @@ import { create } from 'zustand';
 import { MCPService } from '../../../engine/service/mcpService';
 import type { Tool } from '@engine/service/mcpService';
 
-export interface LLMConfig {
-  model: string;
-  apiKey?: string;
-  apiUrl?: string;
-  [key: string]: string | number | boolean | object | undefined;
-}
-
 export interface MCPServer {
   id: string;
   name: string;
@@ -16,7 +9,6 @@ export interface MCPServer {
   isConnected: boolean;
   loading: boolean;
   tools: Tool[];
-  llmConfig?: LLMConfig;
   error?: string;
 }
 
@@ -24,18 +16,11 @@ interface MCPStoreState {
   servers: MCPServer[];
   activeServerId?: string;
   isLoading: boolean;
-  addServer: (name: string, url: string, llmConfig?: LLMConfig) => void;
+  addServer: (name: string, url: string) => void;
   removeServer: (id: string) => void;
   connectServer: (id: string) => Promise<void>;
   disconnectServer: (id: string) => void;
   setActiveServer: (id: string) => void;
-  setLLMConfig: (serverId: string, llmConfig: LLMConfig) => void;
-  updateLLMConfig: (serverId: string, partialConfig: Partial<LLMConfig>) => void;
-  getActiveLLMConfig: () => LLMConfig | undefined;
-  buildLLMRequestPayload: (
-    messages: { role: string; content: string }[],
-    extraOptions?: Record<string, unknown>
-  ) => Record<string, unknown>;
 }
 
 // 本地存储 key
@@ -62,7 +47,7 @@ export const useMCPStore = create<MCPStoreState>((set, get) => {
     servers: initialServers,
     activeServerId: initialActive,
     isLoading: false,
-    addServer: (name, url, llmConfig) => {
+    addServer: (name, url) => {
       set(state => {
         const servers: MCPServer[] = [
           ...state.servers,
@@ -73,7 +58,6 @@ export const useMCPStore = create<MCPStoreState>((set, get) => {
             isConnected: false,
             loading: false,
             tools: [],
-            llmConfig: llmConfig && llmConfig.model ? llmConfig : undefined,
           },
         ];
         saveServersToStorage(servers, state.activeServerId);
@@ -141,56 +125,6 @@ export const useMCPStore = create<MCPStoreState>((set, get) => {
         saveServersToStorage(state.servers, id);
         return { activeServerId: id };
       });
-    },
-    setLLMConfig: (serverId, llmConfig) => {
-      set(state => {
-        const servers = state.servers.map(s =>
-          s.id === serverId ? { ...s, llmConfig } : s
-        );
-        saveServersToStorage(servers, state.activeServerId);
-        return { servers };
-      });
-    },
-    updateLLMConfig: (serverId, partialConfig) => {
-      set(state => {
-        const servers = state.servers.map(s =>
-          s.id === serverId
-            ? { ...s, llmConfig: { ...s.llmConfig, ...partialConfig } as LLMConfig }
-            : s
-        );
-        saveServersToStorage(servers, state.activeServerId);
-        return { servers };
-      });
-    },
-    getActiveLLMConfig: () => {
-      const state = get();
-      const server = state.servers.find(s => s.id === state.activeServerId);
-      return server?.llmConfig;
-    },
-    buildLLMRequestPayload: (messages, extraOptions = {}) => {
-      const state = get();
-      const server = state.servers.find(s => s.id === state.activeServerId);
-      if (!server) throw new Error('No active server');
-      const llmConfig = server.llmConfig || { model: '' };
-      const tools = (server.tools || []).map(tool => ({
-        type: 'function',
-        function: {
-          name: tool.name,
-          description: tool.description,
-          parameters: "parameters" in tool && typeof (tool as { parameters?: object }).parameters === "object"
-            ? (tool as { parameters?: object }).parameters
-            : {},
-        },
-      }));
-      return {
-        model: llmConfig.model,
-        apiKey: llmConfig.apiKey,
-        apiUrl: llmConfig.apiUrl,
-        messages,
-        tools,
-        tool_choice: 'auto',
-        ...extraOptions,
-      };
     },
   };
 });
