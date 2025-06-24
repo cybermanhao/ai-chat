@@ -86,9 +86,11 @@ export class MCPService {
             console.log('[MCPService] 开始获取工具列表...');
             const toolsResponse = await this.mcp.listTools();
             console.log('[MCPService] 原始工具列表响应:', toolsResponse);
-            // 解析工具列表响应
-            const tools = [];
-            if (typeof toolsResponse === 'object' && toolsResponse !== null) {
+            // 兼容官方 SDK 返回 { tools: [...] } 或 { [name]: toolDef }
+            let tools = [];
+            if (toolsResponse && Array.isArray(toolsResponse.tools)) {
+                tools = toolsResponse.tools;
+            } else if (typeof toolsResponse === 'object' && toolsResponse !== null) {
                 for (const [name, info] of Object.entries(toolsResponse)) {
                     if (typeof info === 'object' && info !== null) {
                         tools.push({

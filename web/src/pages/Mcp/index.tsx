@@ -3,9 +3,8 @@ import { List, Button, Modal, Form, Input, Collapse, message } from 'antd';
 import { PlusOutlined, ApiOutlined, DisconnectOutlined } from '@ant-design/icons';
 import { useStore } from 'zustand';
 import { useMCPStore } from '@/store/mcpStore';
-import type { Tool } from '@engine/service/mcpService';
-import type { MCPServer } from '@engine/store/mcpStore';
 import './styles.less';
+import ToolManagerModal from '@/components/Modal/ToolManagerModal';
 
 const { Panel } = Collapse;
 
@@ -15,7 +14,7 @@ interface ServerFormData {
 }
 
 const Mcp = () => {
-  const servers = useStore(useMCPStore, state => state.servers) as unknown as MCPServer[];
+  const servers = useStore(useMCPStore, state => state.servers);
   const activeServerId = useStore(useMCPStore, state => state.activeServerId);
   const isLoading = useStore(useMCPStore, state => state.isLoading);
   const addServer = useStore(useMCPStore, state => state.addServer);
@@ -46,6 +45,8 @@ const Mcp = () => {
     }
   };
 
+  const [isToolModalVisible, setIsToolModalVisible] = useState(false);
+
   return (
     <div className="mcp-page">
       <div className="mcp-header">
@@ -57,6 +58,13 @@ const Mcp = () => {
         >
           添加服务器
         </Button>
+        <Button
+          style={{ marginLeft: 16 }}
+          icon={<ApiOutlined />}
+          onClick={() => setIsToolModalVisible(true)}
+        >
+          工具管理
+        </Button>
       </div>
 
       <div className="mcp-content">
@@ -64,7 +72,7 @@ const Mcp = () => {
           itemLayout="vertical"
           dataSource={servers}
           loading={isLoading}
-          renderItem={(server: import('@engine/store/mcpStore').MCPServer) => (
+          renderItem={(server) => (
             <List.Item
               key={server.id}
               className={`server-item ${activeServerId === server.id ? 'active' : ''}`}
@@ -116,7 +124,7 @@ const Mcp = () => {
                     <List
                       size="small"
                       dataSource={server.tools}
-                      renderItem={(_tool: Tool, toolIndex: number) => {
+                      renderItem={(_tool, toolIndex: number) => {
                         const toolData = server.tools?.[toolIndex];
                         return (
                           <List.Item>
@@ -168,6 +176,11 @@ const Mcp = () => {
           </Form.Item>
         </Form>
       </Modal>
+
+      <ToolManagerModal
+        open={isToolModalVisible}
+        onClose={() => setIsToolModalVisible(false)}
+      />
     </div>
   );
 };

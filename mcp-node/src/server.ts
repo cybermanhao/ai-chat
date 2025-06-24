@@ -1,6 +1,5 @@
 import { McpServer, ResourceTemplate } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { MCPService } from "@engine/service/mcpService"; 
 
 // 创建 MCP Server 实例
 type ServerInfo = {
@@ -94,6 +93,7 @@ mcpServer.registerTool(
 
 // 启动 Streamable HTTP 服务
 async function start() {
+  console.log("[DEBUG] MCP Server start() called");
   let StreamableHTTPServerTransport: any;
   try {
     ({ StreamableHTTPServerTransport } = await import("@modelcontextprotocol/sdk/server/streamableHttp.js"));
@@ -103,6 +103,7 @@ async function start() {
   }
   const transport = new StreamableHTTPServerTransport({
     port: 8000,
+    host: "127.0.0.1", // 强制监听 IPv4，便于排查
     path: "/mcp",
     cors: {
       origin: "http://localhost:3000",
@@ -122,38 +123,10 @@ async function start() {
       credentials: true
     }
   });
+  console.log("[DEBUG] Before mcpServer.connect");
   await mcpServer.connect(transport);
   console.log(`[${new Date().toISOString()}] MCP Server is running on http://localhost:8000/mcp`);
-
-  // 初始化 MCPService 客户端
-  const mcpService = new MCPService("http://localhost:8000/mcp", "STREAMABLE_HTTP");
-  await mcpService.connect();
-
-  // 测试各种功能
-  console.log(`[${new Date().toISOString()}] 开始测试 MCPService 功能...`);
-
-  // 1. 测试 listTools
-  const { data: tools, error } = await mcpService.listTools();
-  if (error) {
-    console.error(`[${new Date().toISOString()}] Failed to list tools:`, error);
-  } else {
-    console.log(`[${new Date().toISOString()}] Available tools:`, tools);
-  }
-
-  // 2. 测试 weather 工具
-  const { data: weatherData } = await mcpService.callTool("weather", { city_code: 101010100 });
-  console.log(`[${new Date().toISOString()}] Weather tool result:`, weatherData);
-
-  // 3. 测试 test 工具
-  const { data: testData } = await mcpService.callTool("test", {
-    params: { start: "2024-01-01", end: "2024-12-31" },
-    test1: "Hello",
-    test2: ["World", "MCP"],
-    test3: "Test"
-  });
-  console.log(`[${new Date().toISOString()}] Test tool result:`, testData);
-
-  console.log(`[${new Date().toISOString()}] MCPService 功能测试完成`);
+  await new Promise(() => {}); // 防止进程自动退出，保持服务常驻
 }
 
 start().catch(err => {
