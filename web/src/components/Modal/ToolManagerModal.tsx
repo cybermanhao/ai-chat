@@ -16,11 +16,10 @@ const ToolManagerModal: React.FC<ToolManagerModalProps> = ({ open, onClose, them
 
   // 工具开关切换逻辑，支持启用/禁用工具
   const handleToolSwitch = (serverId: string, tool: MCPTool, checked: boolean) => {
-    // 这里假设每个 server.tools 都是 MCPTool[]，直接在 store 里更新
     useMCPStore.setState(state => {
       const servers = state.servers.map(s => {
         if (s.id !== serverId) return s;
-        // 标记工具的 enabled 字段
+        // 只标记工具的 enabled 字段
         const tools = s.tools.map(t =>
           t.name === tool.name ? { ...t, enabled: checked } : t
         );

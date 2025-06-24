@@ -28,19 +28,24 @@ export function buildLLMRequestPayload(
   const model = (extraOptions.model as string) || server?.llmConfig?.model || '';
   const apiKey = (extraOptions.apiKey as string) || server?.llmConfig?.apiKey;
   const apiUrl = (extraOptions.apiUrl as string) || server?.llmConfig?.apiUrl;
-  // 只拼接 enabled !== false 的工具
+  // 只拼接 enabled !== false 的工具，并集中兜底 parameters 字段
   const tools = (server?.tools || [])
     .filter(tool => typeof (tool as { enabled?: boolean }).enabled !== 'boolean' || (tool as { enabled?: boolean }).enabled)
-    .map(tool => ({
-      type: 'function',
-      function: {
-        name: tool.name,
-        description: tool.description,
-        parameters: "parameters" in tool && typeof (tool as { parameters?: object }).parameters === "object"
-          ? (tool as { parameters?: object }).parameters
-          : {},
-      },
-    }));
+    .map(tool => {
+      let parameters: unknown = undefined;
+      if ('parameters' in tool && typeof (tool as { parameters?: unknown }).parameters === 'object' && (tool as { parameters?: unknown }).parameters !== null) {
+        parameters = (tool as { parameters?: unknown }).parameters;
+      }
+      const isValidSchema = parameters && typeof (parameters as { type?: unknown }).type === 'string' && (parameters as { type: string }).type === 'object';
+      return {
+        type: 'function',
+        function: {
+          name: tool.name,
+          description: tool.description,
+          parameters: isValidSchema ? parameters : { type: 'object', properties: {} },
+        },
+      };
+    });
   const payload: Record<string, unknown> = {
     model,
     apiKey,
