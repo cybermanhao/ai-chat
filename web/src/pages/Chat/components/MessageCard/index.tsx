@@ -1,9 +1,12 @@
 import React, { useState } from 'react';
-import { UserOutlined, RobotOutlined, DownOutlined, RightOutlined, LoadingOutlined, FormOutlined, CopyOutlined, InfoCircleOutlined, ExclamationCircleOutlined, WarningOutlined } from '@ant-design/icons';
-import type { MessageRole } from '@/types/chat';
+import { DownOutlined, RightOutlined, LoadingOutlined, FormOutlined, CopyOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
+import type { MessageRole } from '@engine/types/chat';
 import { Button, Tooltip } from 'antd';
 import { markdownToHtml, copyToClipboard } from '@/utils/markdown';
+import { useStore } from 'zustand';
 import { useChatRuntimeStore } from '@/store/chatRuntimeStore';
+import type { ChatRuntimeState } from '@/store/chatRuntimeStore';
+import AvatarIcon from '@/components/AvatarIcon';
 import './styles.less';
 
 export type MessageStatus = 'connecting' | 'thinking' | 'generating' | 'stable' | 'done' | 'error';
@@ -31,11 +34,11 @@ const MessageCard: React.FC<MessageCardProps> = ({
   observation_content,
   thought_content,
   status = 'stable',
-  isGenerating = false,
   noticeType = 'info',
   errorCode
 }) => {
-  const runtimeMessage = useChatRuntimeStore(state => state.runtimeMessages[id]);
+  // 修正 useChatRuntimeStore 用法，直接使用 web 端 store，类型自动推断
+  const runtimeMessage = useStore(useChatRuntimeStore, (state: ChatRuntimeState) => state.runtimeMessages[id]);
   const [showReasoning, setShowReasoning] = useState(true);
   const [showToolOutput, setShowToolOutput] = useState(true);
   const [showThoughts, setShowThoughts] = useState(true);
@@ -45,8 +48,8 @@ const MessageCard: React.FC<MessageCardProps> = ({
   const isUser = role === 'user';
   const isAssistant = role === 'assistant';
   const isClientNotice = role === 'client-notice';
-  const currentStatus = runtimeMessage?.status || status;
-  const isStreaming = currentStatus === 'generating' && isGenerating;
+  // 修正 status 取值，避免根状态类型报错
+  const currentStatus = runtimeMessage && 'status' in runtimeMessage ? runtimeMessage.status : status;
 
   // Get runtime content from store or props
   const runtimeContent = runtimeMessage ? {
@@ -68,7 +71,6 @@ const MessageCard: React.FC<MessageCardProps> = ({
   const currentThoughtContent = cleanContent(runtimeContent.thought_content || thought_content);
 
   // Status rendering
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const renderStatus = () => {
     if (isUser || currentStatus === 'stable' || currentStatus === 'done') return null;
       const statusMap: Record<MessageStatus, { text: string; icon: React.ReactNode; className: string }> = {
@@ -104,7 +106,8 @@ const MessageCard: React.FC<MessageCardProps> = ({
       }
     };
 
-    const statusInfo = statusMap[currentStatus];
+    // 明确 statusMap 索引类型，消除隐式 any
+    const statusInfo = statusMap[currentStatus as MessageStatus];
     if (!statusInfo) return null;
 
     return (
@@ -113,28 +116,40 @@ const MessageCard: React.FC<MessageCardProps> = ({
       </div>
     );
   };
-  // Get notice icon based on type
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const getNoticeIcon = () => {
-    if (!isClientNotice) return null;
-    
-    switch (noticeType) {
-      case 'error':
-        return <ExclamationCircleOutlined style={{ color: '#ff4d4f' }} />;
-      case 'warning':
-        return <WarningOutlined style={{ color: '#faad14' }} />;
-      case 'info':
-      default:
-        return <InfoCircleOutlined style={{ color: '#1677ff' }} />;
-    }
-  };
-
   const roleClass = isUser ? 'message-user' : isClientNotice ? 'message-notice' : 'message-assistant';
+
+  // 头像参数
+  let avatarProps = {};
+  if (isUser) {
+    avatarProps = {
+      provider: 'user',
+      backgroundColor: '#e6f7ff',
+      shape: 'circle',
+      size: 36,
+      src: undefined,
+    };
+  } else if (isAssistant) {
+    avatarProps = {
+      provider: 'chatgpt',
+      backgroundColor: '#f6ffed',
+      shape: 'circle',
+      size: 36,
+      src: undefined,
+    };
+  } else if (isClientNotice) {
+    avatarProps = {
+      provider: 'info',
+      backgroundColor: '#fffbe6',
+      shape: 'circle',
+      size: 36,
+      src: undefined,
+    };
+  }
 
   return (
     <div className={`message-card ${roleClass}`}>
       <div className="message-header">
-        {isUser ? <UserOutlined /> : isAssistant ? <RobotOutlined /> : <InfoCircleOutlined />}
+        <AvatarIcon {...avatarProps} />
         <div className="message-status">
           {renderStatus()}
         </div>
@@ -151,11 +166,7 @@ const MessageCard: React.FC<MessageCardProps> = ({
             </Button>
             {showReasoning && (
               <div className="reasoning-content">
-                {useMarkdown ? (
-                  <div className="markdown-body" dangerouslySetInnerHTML={{ __html: markdownToHtml(currentReasoningContent) }} />
-                ) : (
-                  currentReasoningContent
-                )}
+                {currentReasoningContent}
               </div>
             )}
           </div>

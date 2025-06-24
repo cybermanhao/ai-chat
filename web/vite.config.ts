@@ -7,11 +7,15 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 // https://vitejs.dev/config/
 export default defineConfig({
+  root: __dirname, // 让 Vite 以 web/ 目录为根目录，解决 index.html 入口问题
   plugins: [react()],
   resolve: {
-    alias: {
-      '@': path.resolve(__dirname, './src'),
-    },
+    alias: [
+      { find: '@', replacement: path.resolve(__dirname, './src') },
+      { find: '@engine', replacement: path.resolve(__dirname, '../engine') },
+      { find: 'node:stream', replacement: path.resolve(__dirname, './empty-module.js') },
+      { find: 'stream', replacement: path.resolve(__dirname, './empty-module.js') },
+    ],
   },
   css: {
     preprocessorOptions: {
@@ -37,3 +41,6 @@ export default defineConfig({
     },
   },
 })
+
+// public/avatar 目录下的图片可通过 /avatar/xxx.png 直接访问，无需特殊配置
+// 参考: https://vitejs.dev/guide/assets.html#the-public-directory

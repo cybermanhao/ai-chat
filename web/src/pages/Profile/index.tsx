@@ -1,4 +1,3 @@
-import React from 'react';
 import { Card, Avatar, Button, Descriptions } from 'antd';
 import { UserOutlined, EditOutlined } from '@ant-design/icons';
 import './styles.less';

@@ -6,12 +6,11 @@ import {
   DatabaseOutlined,
   AndroidOutlined
 } from '@ant-design/icons';
-import { Button, Divider, Slider, Select, Popover, Tooltip, message } from 'antd';
+import { Button, Divider, Slider, Select, Popover, Tooltip } from 'antd';
 import type { ButtonProps } from 'antd';
 import React, { useState, useCallback } from 'react';
 import { useLLMConfig } from '@/hooks/useLLMConfig';
 import { useModelConfig } from '@/hooks/useModelConfig';
-import { llms } from '@/utils/llms/llms';
 import SystemPromptModal from '@/components/Modal/SystemPromptModal';
 import ToolsModal from '@/components/Modal/ToolsModal';
 import './styles.less';
@@ -32,15 +31,8 @@ interface InputToolbarProps {
 }
 
 const InputToolbar: React.FC<InputToolbarProps> = () => {
-  const { activeLLM, currentConfig, selectLLM, updateLLMConfig } = useLLMConfig();
-  const { 
-    config, 
-    loading: configLoading,
-    updateTemperature,
-    updateContextBalance,
-    updateSystemPrompt,
-    updateEnabledTools
-  } = useModelConfig();
+  const { activeLLM, currentConfig, updateLLMConfig } = useLLMConfig();
+  const { config, updateTemperature, updateContextBalance, updateSystemPrompt } = useModelConfig();
 
   const [isSystemPromptOpen, setIsSystemPromptOpen] = useState(false);
   const [isToolsModalOpen, setIsToolsModalOpen] = useState(false);
@@ -51,49 +43,21 @@ const InputToolbar: React.FC<InputToolbarProps> = () => {
 
   const iconStyle = { fontSize: 18 };
   
-  const handleModelChange = useCallback((model: string) => {
-    if (activeLLM && !activeLLM.models.includes(model)) {
-      const targetLLM = llms.find(llm => llm.models.includes(model));
-      if (targetLLM) {
-        selectLLM(targetLLM.id);
-      }
-    }
-    updateLLMConfig({ model });
-  }, [activeLLM, selectLLM, updateLLMConfig]);
+  const handleModelChange = useCallback((value: string) => {
+    updateLLMConfig({ userModel: value });
+  }, [updateLLMConfig]);
 
-  const handleTemperatureChange = useCallback(async (value: number) => {
-    const success = await updateTemperature(value);
-    if (!success) {
-      message.error('Failed to update temperature');
-    }
+  const handleTemperatureChange = useCallback((value: number) => {
+    updateTemperature(value);
   }, [updateTemperature]);
 
-  const handleContextBalanceChange = useCallback(async (value: number) => {
-    const success = await updateContextBalance(value);
-    if (!success) {
-      message.error('Failed to update context balance');
-    }
+  const handleContextBalanceChange = useCallback((value: number) => {
+    updateContextBalance(value);
   }, [updateContextBalance]);
 
-  const handleSystemPromptChange = useCallback(async (value: string) => {
-    const success = await updateSystemPrompt(value);
-    if (success) {
-      setIsSystemPromptOpen(false);
-    } else {
-      message.error('Failed to update system prompt');
-    }
+  const handleSystemPromptChange = useCallback((value: string) => {
+    updateSystemPrompt(value);
   }, [updateSystemPrompt]);
-
-  const handleToolsToggle = useCallback(async (toolId: string, enabled: boolean) => {
-    const newEnabledTools = enabled 
-      ? [...config.enabledTools, toolId]
-      : config.enabledTools.filter(id => id !== toolId);
-    
-    const success = await updateEnabledTools(newEnabledTools);
-    if (!success) {
-      message.error('Failed to update tools');
-    }
-  }, [config.enabledTools, updateEnabledTools]);
 
   const handleMultiCallToggle = () => {
     setMultiCallEnabled(!multiCallEnabled);
@@ -103,10 +67,10 @@ const InputToolbar: React.FC<InputToolbarProps> = () => {
     <div className="input-toolbar">
       {/* 1. 模型选择 */}
       <Select
-        value={currentConfig?.model}
+        value={currentConfig?.userModel || ''}
         onChange={handleModelChange}
         style={{ width: 120 }}
-        loading={configLoading.model}
+        // loading={configLoading?.model}
         disabled={!activeLLM}
       >
         {activeLLM?.models.map(model => (
@@ -124,7 +88,7 @@ const InputToolbar: React.FC<InputToolbarProps> = () => {
           icon={<RobotOutlined style={iconStyle} />}
           onClick={() => setIsSystemPromptOpen(true)}
           type={(isSystemPromptOpen || isHoveringSystemPrompt) ? 'primary' : 'text'}
-          loading={configLoading.systemPrompt}
+          // loading={configLoading.systemPrompt}
           onMouseEnter={() => setIsHoveringSystemPrompt(true)}
           onMouseLeave={() => setIsHoveringSystemPrompt(false)}
         />
@@ -135,8 +99,8 @@ const InputToolbar: React.FC<InputToolbarProps> = () => {
         <Button
           icon={<ToolOutlined style={iconStyle} />}
           onClick={() => setIsToolsModalOpen(true)}
-          type={config.enabledTools.length > 0 ? 'primary' : 'text'}
-          loading={configLoading.enabledTools}
+          type={(config?.enabledTools?.length ?? 0) > 0 ? 'primary' : 'text'}
+          // loading={configLoading.enabledTools}
         />
       </Tooltip>
 
@@ -157,7 +121,7 @@ const InputToolbar: React.FC<InputToolbarProps> = () => {
             min={0}
             max={2}
             step={0.1}
-            value={config.temperature}
+            value={config?.temperature ?? 1}
             onChange={handleTemperatureChange}
             style={{ width: 200 }}
           />
@@ -171,7 +135,7 @@ const InputToolbar: React.FC<InputToolbarProps> = () => {
           <Button 
             icon={<FireOutlined style={iconStyle} />}
             type={showTemperature ? 'primary' : 'text'}
-            loading={configLoading.temperature}
+            // loading={configLoading.temperature}
           />
         </Tooltip>
       </Popover>
@@ -183,7 +147,7 @@ const InputToolbar: React.FC<InputToolbarProps> = () => {
             min={5}
             max={20}
             step={1}
-            value={config.contextBalance}
+            value={config?.contextBalance ?? 10}
             onChange={handleContextBalanceChange}
             style={{ width: 200 }}
           />
@@ -197,7 +161,7 @@ const InputToolbar: React.FC<InputToolbarProps> = () => {
           <Button 
             icon={<PicCenterOutlined style={iconStyle} />}
             type={showContextBalance ? 'primary' : 'text'}
-            loading={configLoading.contextBalance}
+            // loading={configLoading.contextBalance}
           />
         </Tooltip>
       </Popover>
@@ -215,16 +179,13 @@ const InputToolbar: React.FC<InputToolbarProps> = () => {
         open={isSystemPromptOpen}
         onCancel={() => setIsSystemPromptOpen(false)}
         onOk={handleSystemPromptChange}
-        value={config.systemPrompt}
-        loading={configLoading.systemPrompt}
+        value={config?.systemPrompt ?? ''}
+        // loading={configLoading.systemPrompt}
       />
       
       <ToolsModal
         open={isToolsModalOpen}
-        loading={configLoading.enabledTools}
-        enabledTools={config.enabledTools}
         onClose={() => setIsToolsModalOpen(false)}
-        onToggle={handleToolsToggle}
       />
     </div>
   );

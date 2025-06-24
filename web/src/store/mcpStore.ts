@@ -1,167 +1,92 @@
-import { create } from 'zustand'
-import { devtools } from 'zustand/middleware'
-import { message } from 'antd'
-import { mcpService } from '@/services/mcpService'
-import { config } from '@/config'
+import { create } from 'zustand';
+import { MCPService } from '../../../engine/service/mcpService';
+import type { Tool } from '@engine/service/mcpService';
+import type { MCPServer } from '@engine/store/mcpStore';
 
-interface Tool {
-  name: string
-  description: string
+interface MCPStoreState {
+  servers: MCPServer[];
+  activeServerId?: string;
+  isLoading: boolean;
+  addServer: (name: string, url: string) => void;
+  removeServer: (id: string) => void;
+  connectServer: (id: string) => Promise<void>;
+  disconnectServer: (id: string) => void;
+  setActiveServer: (id: string) => void;
 }
 
-interface MCPServer {
-  id: string
-  name: string
-  url: string
-  isConnected: boolean
-  tools: Tool[]
-  error?: string
-}
-
-interface Message {
-  role: 'user' | 'assistant' | 'system' | 'tool'
-  content: string
-  toolName?: string
-  toolArgs?: Record<string, unknown>
-}
-
-interface MCPState {
-  servers: MCPServer[]
-  activeServerId?: string
-  isLoading: boolean
-  messages: Message[]
-  currentModel: string
-
-  addServer: (name: string, url: string) => void
-  removeServer: (id: string) => void
-  updateServer: (id: string, data: Partial<MCPServer>) => void
-  connectServer: (id: string) => Promise<void>
-  disconnectServer: (id: string) => void
-  setActiveServer: (id: string) => void
-  addMessage: (message: Message) => void
-  updateLastMessage: (content: string) => void
-  clearMessages: () => void
-  setCurrentModel: (modelName: string) => void
-}
-
-export const useMCPStore = create<MCPState>()(
-  devtools(
-    (set, get) => ({
-      servers: [],
-      activeServerId: undefined,
-      messages: [],
-      isLoading: false,
-      currentModel: config.defaultModelName,
-
-      addServer: (name: string, url: string) => {
-        const id = Math.random().toString(36).substring(7)
-        set((state) => ({
-          servers: [...state.servers, { 
-            id,
-            name, 
-            url,
-            isConnected: false,
-            tools: [],
-          }]
-        }))
-      },
-
-      removeServer: (id: string) => {
-        set((state) => ({
-          servers: state.servers.filter(server => server.id !== id),
-          activeServerId: state.activeServerId === id ? undefined : state.activeServerId,
-        }))
-      },
-
-      updateServer: (id: string, data: Partial<MCPServer>) => {
-        set((state) => ({
-          servers: state.servers.map(server => 
-            server.id === id ? { ...server, ...data } : server
-          )
-        }))
-      },      connectServer: async (id: string) => {
-        const state = get()
-        const server = state.servers.find(s => s.id === id)
-        if (!server) return
-
-        set((state) => ({
-          isLoading: true,
-          servers: state.servers.map(server =>
-            server.id === id ? { ...server, error: undefined } : server
-          )
-        }))
-
-        try {
-          mcpService.setBaseUrl(server.url)
-          const tools = await mcpService.listTools()
-          
-          if (tools.error) throw new Error(tools.error)
-
-          set((state) => ({
-            servers: state.servers.map(server =>
-              server.id === id ? {
-                ...server,
-                isConnected: true,
-                tools: tools.data || [],
-                error: undefined,
-              } : server
-            )
-          }))
-        } catch (error) {
-          message.error(error instanceof Error ? error.message : 'Failed to connect to MCP server')
-          set((state) => ({
-            servers: state.servers.map(server =>
-              server.id === id ? {
-                ...server,
-                isConnected: false,
-                error: error instanceof Error ? error.message : 'Failed to connect to MCP server',
-              } : server
-            )
-          }))
-        } finally {
-          set({ isLoading: false })
-        }
-      },
-
-      disconnectServer: (id: string) => {
-        set((state) => ({
-          servers: state.servers.map(server =>
-            server.id === id ? { ...server, isConnected: false, tools: [] } : server
-          )
-        }))
-      },
-
-      setActiveServer: (id: string) => {
-        set({ activeServerId: id })
-      },
-
-      addMessage: (message: Message) => {
-        set((state) => ({
-          messages: [...state.messages, message],
-        }))
-      },
-
-      updateLastMessage: (content: string) => {
-        set((state) => {
-          const messages = [...state.messages]
-          if (messages.length > 0) {
-            messages[messages.length - 1] = {
-              ...messages[messages.length - 1],
-              content,
-            }
-          }
-          return { messages }
-        })
-      },
-
-      clearMessages: () => {
-        set({ messages: [] })
-      },
-
-      setCurrentModel: (modelName: string) => {
-        set({ currentModel: modelName })
-      },
-    }),
-    { name: 'mcp-store' }
-  )
-)
+export const useMCPStore = create<MCPStoreState>((set, get) => ({
+  servers: [],
+  activeServerId: undefined,
+  isLoading: false,
+  addServer: (name, url) => {
+    set(state => ({
+      servers: [
+        ...state.servers,
+        {
+          id: `${Date.now()}-${Math.random()}`,
+          name,
+          url,
+          isConnected: false,
+          loading: false,
+          tools: [],
+        },
+      ],
+    }));
+  },
+  removeServer: (id) => {
+    set(state => ({
+      servers: state.servers.filter(s => s.id !== id),
+      activeServerId: state.activeServerId === id ? undefined : state.activeServerId,
+    }));
+  },
+  connectServer: async (id) => {
+    set({ isLoading: true });
+    set(state => ({
+      servers: state.servers.map(s =>
+        s.id === id ? { ...s, loading: true, error: undefined } : s
+      ),
+    }));
+    const server = get().servers.find(s => s.id === id);
+    if (!server) return;
+    try {
+      const mcp = new MCPService(server.url, 'STREAMABLE_HTTP');
+      const { data, error } = await mcp.listTools();
+      let tools: Tool[] = [];
+      if (Array.isArray(data)) {
+        tools = data;
+      } else if (data && typeof data === 'object' && Array.isArray((data as { tools?: Tool[] }).tools)) {
+        tools = (data as { tools: Tool[] }).tools;
+      }
+      set(state => ({
+        servers: state.servers.map(s =>
+          s.id === id && !error
+            ? { ...s, isConnected: true, loading: false, error: undefined, tools }
+            : { ...s, isConnected: false, loading: false }
+        ),
+        activeServerId: error ? undefined : id,
+        isLoading: false,
+      }));
+    } catch (e) {
+      set(state => ({
+        servers: state.servers.map(s =>
+          s.id === id
+            ? { ...s, isConnected: false, loading: false, error: e instanceof Error ? e.message : String(e), tools: [] }
+            : s
+        ),
+        activeServerId: undefined,
+        isLoading: false,
+      }));
+    }
+  },
+  disconnectServer: (id) => {
+    set(state => ({
+      servers: state.servers.map(s =>
+        s.id === id ? { ...s, isConnected: false, tools: [] } : s
+      ),
+      activeServerId: state.activeServerId === id ? undefined : state.activeServerId,
+    }));
+  },
+  setActiveServer: (id) => {
+    set({ activeServerId: id });
+  },
+}));

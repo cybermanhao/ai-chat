@@ -1,7 +1,10 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { List, Button, Modal, Form, Input, Collapse, message } from 'antd';
 import { PlusOutlined, ApiOutlined, DisconnectOutlined } from '@ant-design/icons';
+import { useStore } from 'zustand';
 import { useMCPStore } from '@/store/mcpStore';
+import type { Tool } from '@engine/service/mcpService';
+import type { MCPServer } from '@engine/store/mcpStore';
 import './styles.less';
 
 const { Panel } = Collapse;
@@ -12,16 +15,14 @@ interface ServerFormData {
 }
 
 const Mcp = () => {
-  const { 
-    servers,
-    activeServerId,
-    isLoading,
-    addServer,
-    removeServer,
-    connectServer,
-    disconnectServer,
-    setActiveServer,
-  } = useMCPStore();
+  const servers = useStore(useMCPStore, state => state.servers) as unknown as MCPServer[];
+  const activeServerId = useStore(useMCPStore, state => state.activeServerId);
+  const isLoading = useStore(useMCPStore, state => state.isLoading);
+  const addServer = useStore(useMCPStore, state => state.addServer);
+  const removeServer = useStore(useMCPStore, state => state.removeServer);
+  const connectServer = useStore(useMCPStore, state => state.connectServer);
+  const disconnectServer = useStore(useMCPStore, state => state.disconnectServer);
+  const setActiveServer = useStore(useMCPStore, state => state.setActiveServer);
 
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [form] = Form.useForm<ServerFormData>();
@@ -63,7 +64,7 @@ const Mcp = () => {
           itemLayout="vertical"
           dataSource={servers}
           loading={isLoading}
-          renderItem={(server) => (
+          renderItem={(server: import('@engine/store/mcpStore').MCPServer) => (
             <List.Item
               key={server.id}
               className={`server-item ${activeServerId === server.id ? 'active' : ''}`}
@@ -94,11 +95,18 @@ const Mcp = () => {
               ]}
             >
               <List.Item.Meta
+                avatar={
+                  server.isConnected ? (
+                    <span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: '50%', background: '#52c41a', marginRight: 8 }} />
+                  ) : server.error ? (
+                    <span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: '50%', background: '#ff4d4f', marginRight: 8 }} />
+                  ) : null
+                }
                 title={server.name}
                 description={server.url}
               />
               {server.error && (
-                <div className="error-message">
+                <div className="error-message" style={{ color: '#ff4d4f', marginTop: 4 }}>
                   连接失败：{server.error}
                 </div>
               )}
@@ -108,14 +116,17 @@ const Mcp = () => {
                     <List
                       size="small"
                       dataSource={server.tools}
-                      renderItem={(tool) => (
-                        <List.Item>
-                          <List.Item.Meta
-                            title={tool.name}
-                            description={tool.description}
-                          />
-                        </List.Item>
-                      )}
+                      renderItem={(_tool: Tool, toolIndex: number) => {
+                        const toolData = server.tools?.[toolIndex];
+                        return (
+                          <List.Item>
+                            <List.Item.Meta
+                              title={toolData?.name || ''}
+                              description={toolData?.description || ''}
+                            />
+                          </List.Item>
+                        );
+                      }}
                     />
                   </Panel>
                 </Collapse>

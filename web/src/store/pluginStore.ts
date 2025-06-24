@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { Plugin } from '@/types/plugin';
+import type { Plugin } from '@engine/types/plugin';
 import { ContentRendererManager } from '@/renderer';
 
 interface PluginState {

@@ -7,9 +7,8 @@ import json
 mcp = FastMCP(
     '测试mcp server',
     version="11.45.14",
-    host = "127.0.0.1",
-    port = 8000,
-    streamable_http_path = "/mcp"
+    host="127.0.0.1",
+    port=8000
 )
 
 @mcp.resource(

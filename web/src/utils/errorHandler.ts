@@ -61,3 +61,5 @@ export function handleLLMError(error: unknown): ClientNoticeMessage {
   
   return createMessage.clientNotice(message, type, code);
 }
+
+// 移除本地 errorHandler.ts，已迁移到 engine/utils/errorHandler.ts

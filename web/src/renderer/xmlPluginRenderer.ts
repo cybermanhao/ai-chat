@@ -1,4 +1,4 @@
-import { extractXmlContent, extractPluginContent, processPluginContent } from '@/utils/xml';
+import { extractXmlContent, extractPluginContent, processPluginContent } from '@engine/utils/xml';
 import type { ContentRenderer, RenderContext } from './types';
 
 export class XmlPluginRenderer implements ContentRenderer {
@@ -46,3 +46,5 @@ export class XmlPluginRenderer implements ContentRenderer {
     return processedContent;
   }
 }
+
+// 已从 engine/render/xmlPluginRenderer.ts 移动至 web/src/renderer/xmlPluginRenderer.ts，UI 渲染相关实现应只在 web 端维护。

@@ -33,40 +33,5 @@
     justify-content: space-between;
     background: var(--background-content);
   }
-
-  :global {
-    .markdown-body {
-      pre {
-        background: var(--code-bg);
-        border: 1px solid var(--border-color-split);
-      }
-
-      code {
-        background: var(--code-bg);
-        color: @text-color;
-      }
-
-      blockquote {
-        color: @text-color-secondary;
-        border-left-color: var(--border-color-base);
-      }
-
-      table {
-        th, td {
-          border-color: var(--border-color-split);
-        }
-        
-        th {
-          background: var(--table-header-bg);
-        }
-
-        tr:nth-child(2n) {
-          background: var(--table-row-hover-bg);
-        }
-      }
-    }
-
-
-  }
 }
 

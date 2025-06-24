@@ -1,6 +1,6 @@
 import { Button, Switch } from 'antd';
 import { DeleteOutlined, SettingOutlined } from '@ant-design/icons';
-import type { Plugin } from '@/types/plugin';
+import type { Plugin } from '@engine/types/plugin';
 import './styles.less';
 
 interface PluginCardProps {

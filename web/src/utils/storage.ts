@@ -1,39 +1,41 @@
-// 定义基础存储接口
-export interface Storage {
-  getItem(key: string): string | null
-  setItem(key: string, value: string): void
-  removeItem(key: string): void
+// web/src/utils/storage.ts
+// 兼容 engine/utils/storage 的导出
+
+export interface StorageLike {
+  getItem(key: string): string | null;
+  setItem(key: string, value: string): void;
+  removeItem(key: string): void;
 }
 
-// LocalStorage 实现
-export class LocalStorage implements Storage {
-  getItem(key: string): string | null {
-    return localStorage.getItem(key)
-  }
+const memoryData: Record<string, string> = {};
+export const memoryStorage: StorageLike = {
+  getItem(key) { return memoryData[key] || null; },
+  setItem(key, value) { memoryData[key] = value; },
+  removeItem(key) { delete memoryData[key]; },
+};
 
-  setItem(key: string, value: string): void {
-    localStorage.setItem(key, value)
+export function getStorage(): StorageLike {
+  if (typeof window !== 'undefined' && window.localStorage) {
+    return window.localStorage;
   }
-
-  removeItem(key: string): void {
-    localStorage.removeItem(key)
-  }
+  return memoryStorage;
 }
 
-// 默认使用 localStorage
-export const defaultStorage = new LocalStorage()
+export const defaultStorage = memoryStorage;
 
-// 通用的持久化助手函数
-export function persistData<T>(key: string, data: T, storage: Storage = defaultStorage): void {
-  storage.setItem(key, JSON.stringify(data))
+// 兼容原有 persistData/loadPersistedData
+export function persistData<T = any>(key: string, data: T, _storage?: StorageLike) {
+  (getStorage()).setItem(key, JSON.stringify(data));
 }
 
-export function loadPersistedData<T>(key: string, defaultValue: T, storage: Storage = defaultStorage): T {
-  const stored = storage.getItem(key)
-  if (!stored) return defaultValue
+export function loadPersistedData<T = any>(key: string, _defaultValue?: T, _storage?: StorageLike): T {
+  const raw = getStorage().getItem(key);
+  if (!raw) return _defaultValue as T;
   try {
-    return JSON.parse(stored) as T
+    return JSON.parse(raw) as T;
   } catch {
-    return defaultValue
+    return _defaultValue as T;
   }
 }
+
+export type Storage = StorageLike;

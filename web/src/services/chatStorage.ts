@@ -1,6 +1,7 @@
 import type { ChatInfo, ChatMessage, ChatData, AssistantMessage } from '@/types/chat'
 import { persistData, loadPersistedData, type Storage } from '@/utils/storage'
 import { STORAGE_KEYS } from '@/config/storage'
+import { defaultChatSetting } from '@engine/config/defaultChatSetting'
 
 /**
  * 聊天数据存储服务
@@ -40,22 +41,16 @@ export class ChatStorageService {
         messageCount: messages.length,
       },
       messages: [],
-      settings: {
-        modelIndex: 0,
-        systemPrompt: '',
-        enableTools: [],
-        temperature: 0.7,
-        enableWebSearch: false,
-        contextLength: 2000,
-        parallelToolCalls: false
-      },
+      settings: defaultChatSetting,
       updateTime: Date.now()
-    }
-    data.messages = messages
-    data.updateTime = Date.now()
-    data.info.messageCount = messages.length
-    data.info.updateTime = Date.now()
-    this.saveChatData(chatId, data)
+    };
+    // 优先已有 settings
+    data.settings = existingData?.settings || defaultChatSetting;
+    data.messages = messages;
+    data.updateTime = Date.now();
+    data.info.messageCount = messages.length;
+    data.info.updateTime = Date.now();
+    this.saveChatData(chatId, data);
   }
 
   // 更新聊天信息
@@ -84,18 +79,7 @@ export class ChatStorageService {
   }
   // 保存聊天数据
   saveChatData(chatId: string, data: ChatData): void {
-    console.log('Saving chat data:', { 
-      chatId, 
-      messageCount: data.messages.length,
-      messages: data.messages.map(m => ({ 
-        role: m.role,
-        content: m.content.slice(0, 50) + '...',
-        reasoning: 'reasoning_content' in m ? (m as AssistantMessage).reasoning_content?.slice(0, 50) + '...' : undefined,
-        tool: 'tool_content' in m ? (m as AssistantMessage).tool_content?.slice(0, 50) + '...' : undefined,
-        observation: 'observation_content' in m ? (m as AssistantMessage).observation_content?.slice(0, 50) + '...' : undefined,
-        thought: 'thought_content' in m ? (m as AssistantMessage).thought_content?.slice(0, 50) + '...' : undefined
-      }))
-    });
+
     persistData(STORAGE_KEYS.CHAT_DATA_PREFIX + chatId, data, this.storage);
   }
 

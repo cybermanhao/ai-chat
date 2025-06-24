@@ -65,6 +65,7 @@ const ChatItem: React.FC<ChatItemProps> = ({
           <div className="chat-item-description">
             {chat.messageCount}条消息 · {new Date(chat.updateTime).toLocaleString()}
           </div>
+          <div className="chat-item-id">{chat.id}</div>
         </div>
         <Dropdown 
           menu={{ items }} 
