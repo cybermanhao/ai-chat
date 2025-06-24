@@ -38,9 +38,6 @@ export interface MCPState {
   disconnectServer: (id: string) => void;
 }
 
-// engine层 MCP工具列表协议层实现（Node/Electron等支持进程的环境）
-// import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-// import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 
 export const mcpStoreDefinition = (set: any, get: any) => ({
   servers: [],
@@ -151,13 +148,20 @@ export const mcpStoreDefinition = (set: any, get: any) => ({
   },
 
   disconnectServer: (id: string) => {
-    set((state: MCPState) => ({
-      servers: state.servers.map(server =>
-        server.id === id
-          ? { ...server, isConnected: false }
-          : server
-      ),
-      isLoading: false
-    }));
+    set((state: MCPState) => {
+      const server = state.servers.find(s => s.id === id);
+      if (server && (server as any).client && typeof (server as any).client.close === 'function') {
+        // 调用 SDK Client 的 close 方法
+        (server as any).client.close();
+      }
+      return {
+        servers: state.servers.map(server =>
+          server.id === id
+            ? { ...server, isConnected: false }
+            : server
+        ),
+        isLoading: false
+      };
+    });
   },
 });

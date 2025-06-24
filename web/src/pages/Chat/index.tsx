@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useLLMConfig } from '@/hooks/useLLMConfig';
 import { useModelConfig } from '@/hooks/useModelConfig';
@@ -6,7 +6,7 @@ import MessageList from './components/MessageList';
 import InputSender from './components/InputSender';
 import ChatHeader from './components/ChatHeader';
 import { Card } from 'antd';
-import WebLLMService from '@/services/llmService';
+import { LLMService } from '@engine/service/llmService';
 import { createMessage } from '@engine/utils/messageFactory';
 import { handleResponseStream } from '@/utils/streamHandler';
 import { useChatStore } from '@/store/chatStore';
@@ -15,15 +15,18 @@ import { handleLLMError } from '@/utils/errorHandler';
 import { useChatRuntimeStore } from '@/store/chatRuntimeStore';
 import { useStore } from 'zustand';
 import type { StreamChunk, RuntimeMessage } from '@/types/chat';
+import type { AssistantMessage } from '@/types/chat';
 import type { CompletionResult } from '@/utils/streamHandler';
+import GlobalLoading from '@/components/GlobalLoading';
 import MemeLoading from '@/components/memeLoading';
 import { useThemeStore } from '@/store/themeStore';
 import { ChatStorageService } from '@/services/chatStorage';
 import { getStorage } from '@/utils/storage';
+import { useMCPStore } from '@/store/mcpStore';
 import './styles.less';
 
 // 实例化 llmService
-const llmService = new WebLLMService();
+const llmService = new LLMService();
 
 export const Chat = () => {
   const [inputValue, setInputValue] = useState('');
@@ -134,10 +137,18 @@ export const Chat = () => {
         const systemMessage = createMessage.system(config.systemPrompt) as RuntimeMessage;
         const fullMessages = [systemMessage, ...currentMessages];
         abortControllerRef.current = new AbortController();
-        const stream = await llmService.generate(
+        const { buildLLMRequestPayload } = useMCPStore.getState();
+        const payload = buildLLMRequestPayload(
           fullMessages,
-          config,
-          { ...currentConfig, model: currentConfig.userModel || '', temperature: config.temperature, maxTokens: config.maxTokens, systemPrompt: config.systemPrompt },
+          {
+            model: currentConfig.userModel || '',
+            temperature: config.temperature,
+            max_tokens: config.maxTokens,
+            systemPrompt: config.systemPrompt,
+          }
+        );
+        const stream = await llmService.generate(
+          payload,
           abortControllerRef.current.signal
         );
         await handleResponseStream(

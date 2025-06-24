@@ -99,22 +99,13 @@ export class MCPService {
       console.log('[MCPService] 开始获取工具列表...');
       const toolsResponse = await this.mcp.listTools();
       console.log('[MCPService] 原始工具列表响应:', toolsResponse);
-      
-      // 解析工具列表响应
-      const tools: Tool[] = [];
-      if (typeof toolsResponse === 'object' && toolsResponse !== null) {
-        for (const [name, info] of Object.entries(toolsResponse)) {
-          if (typeof info === 'object' && info !== null) {
-            tools.push({
-              name,
-              title: (info as any).title || name,
-              description: (info as any).description || '',
-              type: (info as any).type || 'unknown'
-            });
-          }
-        }
+      // 只处理数组或 { tools: Tool[] } 结构
+      let tools: Tool[] = [];
+      if (Array.isArray(toolsResponse)) {
+        tools = toolsResponse;
+      } else if (toolsResponse && Array.isArray(toolsResponse.tools)) {
+        tools = toolsResponse.tools;
       }
-      
       console.log('[MCPService] 处理后的工具列表:', tools);
       return { data: tools };
     } catch (e: any) {
@@ -140,10 +131,45 @@ export class MCPService {
     }
   }
 
+  // 列出所有 prompts
+  public async listPrompts() {
+    if (!this.connected) await this.connect();
+    return await this.mcp.listPrompts();
+  }
+
+  // 列出所有资源
+  public async listResources() {
+    if (!this.connected) await this.connect();
+    return await this.mcp.listResources();
+  }
+
+  // 列出所有资源模板
+  public async listResourceTemplates() {
+    if (!this.connected) await this.connect();
+    return await this.mcp.listResourceTemplates();
+  }
+
+  // 获取单个 prompt
+  public async getPrompt(name: string, args: Record<string, any> = {}) {
+    if (!this.connected) await this.connect();
+    return await this.mcp.getPrompt({ name, arguments: args });
+  }
+
+  // 读取单个资源
+  public async readResource(uri: string) {
+    if (!this.connected) await this.connect();
+    return await this.mcp.readResource({ uri });
+  }
+
   async disconnect() {
+    console.log('[MCPService] 开始断开连接...');
     if (this.transport && this.transport.disconnect) {
       await this.transport.disconnect();
     }
+    if (this.mcp && this.mcp.close) {
+      await this.mcp.close();
+    }
     this.connected = false;
+    console.log('[MCPService] 已断开连接');
   }
 }

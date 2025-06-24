@@ -76,6 +76,15 @@ async function main() {
   app.listen(PORT, HOST, () => {
     console.log(`Weather MCP Server running on http://${HOST}:${PORT}${MCP_PATH}`);
   });
+
+  // 捕获 SIGINT/SIGTERM 优雅关闭
+  const shutdown = async () => {
+    console.log(`[${new Date().toISOString()}] Weather MCP Server 开始断开/关闭...`);
+    // 这里只能简单输出日志，实际 transport/server 没有 disconnect 方法
+    process.exit(0);
+  };
+  process.on('SIGINT', shutdown);
+  process.on('SIGTERM', shutdown);
 }
 
 main().catch((error) => {

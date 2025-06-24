@@ -73,7 +73,7 @@ const Settings = () => {
           <Form.Item label="自动保存对话" name="autoSave">
             <Switch />
           </Form.Item>
-          <Form.Item label="DM模式（弹幕彩蛋）" name="dmMode">
+          <Form.Item label="DM模式" name="dmMode">
             <Switch checked={dmMode} onChange={setDMMode} />
           </Form.Item>
 

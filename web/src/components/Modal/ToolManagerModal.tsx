@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Modal, List, Switch, Divider } from 'antd';
 import { useMCPStore } from '@/store/mcpStore';
+import type { MCPTool } from '@/services/mcpService';
 import type { Tool } from '@engine/service/mcpService';
 
 interface ToolManagerModalProps {
@@ -11,7 +12,7 @@ interface ToolManagerModalProps {
 
 const ToolManagerModal: React.FC<ToolManagerModalProps> = ({ open, onClose, themeColor = 'var(--primary-color)' }) => {
   const { servers } = useMCPStore();
-  const [selectedTool, setSelectedTool] = useState<{serverId: string, tool: Tool} | null>(null);
+  const [selectedTool, setSelectedTool] = useState<{serverId: string, tool: MCPTool} | null>(null);
 
   // 工具开关切换逻辑（如需保存状态可扩展 store）
   // 参数未用，为避免 TS 报错，注释掉参数
@@ -33,46 +34,54 @@ const ToolManagerModal: React.FC<ToolManagerModalProps> = ({ open, onClose, them
         {/* 左侧：server-tool 二级列表 */}
         <div style={{ flex: 1, minWidth: 320, maxHeight: 500, overflowY: 'auto', borderRight: '1px solid #eee', paddingRight: 16 }}>
           {servers.length === 0 && <div style={{ color: '#888' }}>暂无服务器</div>}
-          {servers.map(server => (
-            <div key={server.id} style={{ marginBottom: 16 }}>
-              <div style={{ fontWeight: 500, marginBottom: 4 }}>{server.name}</div>
-              {server.tools && server.tools.length > 0 ? (
-                <List
-                  size="small"
-                  dataSource={server.tools}
-                  renderItem={(tool: Tool) => {
-                    const isActive = selectedTool?.tool.name === tool.name && selectedTool?.serverId === server.id;
-                    return (
-                      <List.Item
-                        style={{
-                          background: isActive ? themeColor + '20' : undefined, // 20为透明度
-                          border: isActive ? `1.5px solid ${themeColor}` : '1.5px solid transparent',
-                          color: isActive ? themeColor : undefined,
-                          cursor: 'pointer',
-                          borderRadius: 4,
-                          display: 'flex',
-                          alignItems: 'center',
-                          transition: 'all 0.2s',
-                        }}
-                        onClick={() => setSelectedTool({ serverId: server.id, tool })}
-                      >
-                        <span style={{ flex: 1 }}>{tool.name}</span>
-                        <Switch
-                          size="small"
-                          defaultChecked
-                          // 参数未用，handleToolSwitch 为空函数，避免 TS 报错
-                          onClick={() => handleToolSwitch()}
-                          style={{ marginLeft: 8 }}
-                        />
-                      </List.Item>
-                    );
-                  }}
-                />
-              ) : (
-                <div style={{ color: '#bbb', fontSize: 12, marginLeft: 8 }}>无工具</div>
-              )}
-            </div>
-          ))}
+          {servers.map(server => {
+            // 兼容 server.tools 既可能为数组，也可能为 { tools: Tool[] } 对象
+            let toolList: MCPTool[] = [];
+            if (Array.isArray(server.tools)) {
+              toolList = server.tools;
+            } else if (server.tools && typeof server.tools === 'object' && Array.isArray((server.tools as { tools?: Tool[] }).tools)) {
+              toolList = (server.tools as { tools: Tool[] }).tools;
+            }
+            return (
+              <div key={server.id} style={{ marginBottom: 16 }}>
+                <div style={{ fontWeight: 500, marginBottom: 4 }}>{server.name}</div>
+                {toolList.length > 0 ? (
+                  <List
+                    size="small"
+                    dataSource={toolList}
+                    renderItem={(tool: MCPTool) => {
+                      const isActive = selectedTool?.tool.name === tool.name && selectedTool?.serverId === server.id;
+                      return (
+                        <List.Item
+                          style={{
+                            background: isActive ? themeColor + '20' : undefined, // 20为透明度
+                            border: isActive ? `1.5px solid ${themeColor}` : '1.5px solid transparent',
+                            color: isActive ? themeColor : undefined,
+                            cursor: 'pointer',
+                            borderRadius: 4,
+                            display: 'flex',
+                            alignItems: 'center',
+                            transition: 'all 0.2s',
+                          }}
+                          onClick={() => setSelectedTool({ serverId: server.id, tool })}
+                        >
+                          <span style={{ flex: 1 }}>{tool.name}</span>
+                          <Switch
+                            size="small"
+                            defaultChecked
+                            onClick={() => handleToolSwitch()}
+                            style={{ marginLeft: 8 }}
+                          />
+                        </List.Item>
+                      );
+                    }}
+                  />
+                ) : (
+                  <div style={{ color: '#bbb', fontSize: 12, marginLeft: 8 }}>无工具</div>
+                )}
+              </div>
+            );
+          })}
         </div>
         {/* 右侧：工具 meta 信息 */}
         <div style={{ flex: 2, minWidth: 320, paddingLeft: 16 }}>

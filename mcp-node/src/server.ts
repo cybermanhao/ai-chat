@@ -1,5 +1,6 @@
 import { McpServer, ResourceTemplate } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
+import express, { Request, Response } from "express";
 
 // 创建 MCP Server 实例
 type ServerInfo = {
@@ -102,31 +103,45 @@ async function start() {
     StreamableHTTPServerTransport = mod.StreamableHTTPServerTransport;
   }
   const transport = new StreamableHTTPServerTransport({
-    port: 8000,
-    host: "127.0.0.1", // 强制监听 IPv4，便于排查
-    path: "/mcp",
-    cors: {
-      origin: "http://localhost:3000",
-      methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD", "PATCH"],
-      allowedHeaders: [
-        "Content-Type", 
-        "Authorization", 
-        "mcp-protocol-version", 
-        "mcp-session-id",
-        "Accept",
-        "Origin"
-      ],
-      exposedHeaders: [
-        "mcp-protocol-version",
-        "mcp-session-id"
-      ],
-      credentials: true
+    sessionIdGenerator: () => Date.now().toString(),
+  });
+  await mcpServer.connect(transport);
+
+  const app = express();
+  app.use(express.json());
+  app.use((req, res, next) => {
+    res.header("Access-Control-Allow-Origin", req.headers.origin || "*");
+    res.header("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
+    res.header("Access-Control-Allow-Headers", "Content-Type, Authorization, mcp-protocol-version, mcp-session-id, Accept, Origin");
+    res.header("Access-Control-Expose-Headers", "mcp-protocol-version, mcp-session-id");
+    res.header("Access-Control-Allow-Credentials", "true");
+    if (req.method === "OPTIONS") {
+      res.sendStatus(200);
+    } else {
+      next();
     }
   });
-  console.log("[DEBUG] Before mcpServer.connect");
-  await mcpServer.connect(transport);
-  console.log(`[${new Date().toISOString()}] MCP Server is running on http://localhost:8000/mcp`);
-  await new Promise(() => {}); // 防止进程自动退出，保持服务常驻
+  const MCP_PATH = "/mcp";
+  const PORT = 8000;
+  const HOST = "127.0.0.1";
+
+  app.post(MCP_PATH, async (req: Request, res: Response) => {
+    console.log(`[${new Date().toISOString()}] POST ${MCP_PATH}`);
+    await transport.handleRequest(req, res, req.body);
+    console.log(`[${new Date().toISOString()}] POST ${MCP_PATH} 响应已发送`);
+  });
+  app.get(MCP_PATH, async (req: Request, res: Response) => {
+    console.log(`[${new Date().toISOString()}] GET ${MCP_PATH}`);
+    await transport.handleRequest(req, res);
+    console.log(`[${new Date().toISOString()}] GET ${MCP_PATH} 响应已发送`);
+  });
+
+  app.listen(PORT, HOST, () => {
+    console.log(`MCP Server running on http://${HOST}:${PORT}${MCP_PATH}`);
+  });
+
+  // 阻止进程退出，兼容 Windows/Node 18+，用 setInterval 替代空 Promise
+  setInterval(() => {}, 1000);
 }
 
 start().catch(err => {

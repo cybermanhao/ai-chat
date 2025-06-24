@@ -1,8 +1,4 @@
 {
   "name": "mcp-node",
-  "type": "module",
-  "scripts": {
-    "start:weather": "ts-node --esm src/weather-server.ts",
-    "test:listtools": "ts-node --esm src/test-mcp-service.ts"
-  }
+  "type": "module"
 }

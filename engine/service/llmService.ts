@@ -65,21 +65,61 @@ export class LLMService {
     return result;
   }
 
+  // 兼容旧 generate 签名，自动转为新签名调用
   async generate(
-    messages: ChatMessage[],
-    modelConfig: ModelConfig,
-    llmConfig: LLMConfig,
+    messagesOrRequest: ChatMessage[] | Record<string, unknown>,
+    modelConfigOrSignal?: ModelConfig | AbortSignal,
+    llmConfig?: LLMConfig,
     signal?: AbortSignal
   ): Promise<Stream<ExtendedChatCompletionChunk>> {
-    const client = this.createClient(llmConfig);
+    // 新签名：generate(request, signal)
+    if (Array.isArray(messagesOrRequest) && modelConfigOrSignal && llmConfig) {
+      // 旧签名兼容：generate(messages, modelConfig, llmConfig, signal)
+      const messages = messagesOrRequest;
+      const modelConfig = modelConfigOrSignal as ModelConfig;
+      const request: Record<string, unknown> = {
+        model: llmConfig.model,
+        messages: this.formatMessages(messages),
+        temperature: modelConfig.temperature,
+        max_tokens: modelConfig.maxTokens,
+        stream: true,
+        ...(llmConfig.tools && { tools: llmConfig.tools }),
+        ...(llmConfig.parallelToolCalls && { tool_choice: 'auto' }),
+        baseUrl: llmConfig.baseUrl,
+        apiKey: llmConfig.apiKey,
+        systemPrompt: llmConfig.systemPrompt,
+      };
+      return this.generate(request, signal);
+    }
+    // 新签名实现
+    const request = messagesOrRequest as Record<string, unknown>;
+    const client = this.createClient({
+      baseUrl: (request.baseUrl || request.apiUrl || '') as string,
+      apiKey: (request.apiKey || '') as string,
+      model: (request.model || '') as string,
+      temperature: (request.temperature as number) ?? 0.7,
+      maxTokens: (request.max_tokens as number) ?? 2048,
+      systemPrompt: (request.systemPrompt as string) ?? '',
+    });
+    // tool_choice 只允许 'auto' | 'none' | { function: { name: string } }
+    let toolChoice: any = undefined;
+    if (request.tool_choice === 'auto' || request.tool_choice === 'none') {
+      toolChoice = request.tool_choice;
+    } else if (
+      typeof request.tool_choice === 'object' &&
+      request.tool_choice !== null &&
+      'function' in request.tool_choice
+    ) {
+      toolChoice = request.tool_choice;
+    }
     const params: ChatCompletionCreateParams = {
-      model: llmConfig.model,
-      messages: this.formatMessages(messages),
-      temperature: modelConfig.temperature,
-      max_tokens: modelConfig.maxTokens,
+      model: (request.model as string) || '',
+      messages: (request.messages as ChatCompletionMessageParam[]) || [],
+      temperature: typeof request.temperature === 'number' ? request.temperature : 0.7,
+      max_tokens: typeof request.max_tokens === 'number' ? request.max_tokens : 2048,
       stream: true,
-      ...(llmConfig.tools && { tools: llmConfig.tools }),
-      ...(llmConfig.parallelToolCalls && { tool_choice: 'auto' })
+      ...(Array.isArray(request.tools) ? { tools: request.tools } : {}),
+      ...(toolChoice !== undefined ? { tool_choice: toolChoice } : {}),
     };
     const abortController = new AbortController();
     currentStream = abortController;
@@ -90,7 +130,7 @@ export class LLMService {
         }
       }, 10000);
       const response = await client.chat.completions.create(params, {
-        signal: signal || abortController.signal
+        signal: (modelConfigOrSignal as AbortSignal) || abortController.signal
       }) as unknown as Stream<ExtendedChatCompletionChunk>;
       clearTimeout(timeoutId);
       return response;

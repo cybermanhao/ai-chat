@@ -1,4 +1,4 @@
-import type { ChatInfo, ChatMessage, ChatData } from '@/types/chat' // 只保留实际用到的类型
+import type { ChatInfo, ChatMessage, ChatData, AssistantMessage } from '@/types/chat'
 import { persistData, loadPersistedData, type Storage } from '@/utils/storage'
 import { STORAGE_KEYS } from '@/config/storage'
 import { defaultChatSetting } from '@engine/config/defaultChatSetting'

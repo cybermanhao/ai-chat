@@ -1,68 +1,70 @@
 import { create } from 'zustand';
 import { MCPService } from '../../../engine/service/mcpService';
 import type { Tool } from '@engine/service/mcpService';
-import type { MCPServer } from '@engine/store/mcpStore';
+
+export interface LLMConfig {
+  model: string;
+  apiKey?: string;
+  apiUrl?: string;
+  [key: string]: string | number | boolean | object | undefined;
+}
+
+export interface MCPServer {
+  id: string;
+  name: string;
+  url: string;
+  isConnected: boolean;
+  loading: boolean;
+  tools: Tool[];
+  llmConfig?: LLMConfig;
+  error?: string;
+}
 
 interface MCPStoreState {
   servers: MCPServer[];
   activeServerId?: string;
   isLoading: boolean;
-  addServer: (name: string, url: string) => void;
+  addServer: (name: string, url: string, llmConfig?: LLMConfig) => void;
   removeServer: (id: string) => void;
   connectServer: (id: string) => Promise<void>;
   disconnectServer: (id: string) => void;
   setActiveServer: (id: string) => void;
+  setLLMConfig: (serverId: string, llmConfig: LLMConfig) => void;
+  updateLLMConfig: (serverId: string, partialConfig: Partial<LLMConfig>) => void;
+  getActiveLLMConfig: () => LLMConfig | undefined;
+  buildLLMRequestPayload: (
+    messages: { role: string; content: string }[],
+    extraOptions?: Record<string, unknown>
+  ) => Record<string, unknown>;
 }
 
-// localStorage 持久化 key
-const STORAGE_KEY = 'zz-ai-chat-mcp-servers';
+// 本地存储 key
+const STORAGE_KEY = 'mcp_servers_v1';
 
-// 只持久化 servers（不含 tools/isConnected/loading）和 activeServerId
-function saveServersToLocalStorage(servers: MCPServer[], activeServerId?: string) {
-  if (typeof window === 'undefined') return;
-  // 只保存必要字段
-  const simpleServers = servers.map(s => ({
-    id: s.id,
-    name: s.name,
-    url: s.url,
-  }));
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ servers: simpleServers, activeServerId }));
-}
-
-function loadServersFromLocalStorage(): { servers: MCPServer[]; activeServerId?: string } {
-  if (typeof window === 'undefined') return { servers: [], activeServerId: undefined };
+function saveServersToStorage(servers: MCPServer[], activeServerId?: string) {
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return { servers: [], activeServerId: undefined };
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed.servers)) return { servers: [], activeServerId: undefined };
-    // 恢复为 MCPServer 结构，运行时字段默认
-    return {
-      servers: parsed.servers.map((s: { id: string; name: string; url: string }) => ({
-        id: s.id,
-        name: s.name,
-        url: s.url,
-        isConnected: false,
-        loading: false,
-        tools: [],
-      })),
-      activeServerId: parsed.activeServerId,
-    };
-  } catch {
-    return { servers: [], activeServerId: undefined };
-  }
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ servers, activeServerId }));
+  } catch { /* ignore */ }
+}
+
+function loadServersFromStorage(): { servers: MCPServer[]; activeServerId?: string } {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch { /* ignore */ }
+  return { servers: [], activeServerId: undefined };
 }
 
 export const useMCPStore = create<MCPStoreState>((set, get) => {
-  // 初始化时从 localStorage 读取 servers
-  const { servers: initialServers, activeServerId: initialActiveServerId } = loadServersFromLocalStorage();
+  // 初始化时从本地存储加载
+  const { servers: initialServers, activeServerId: initialActive } = loadServersFromStorage();
   return {
     servers: initialServers,
-    activeServerId: initialActiveServerId,
+    activeServerId: initialActive,
     isLoading: false,
-    addServer: (name, url) => {
+    addServer: (name, url, llmConfig) => {
       set(state => {
-        const newServers = [
+        const servers: MCPServer[] = [
           ...state.servers,
           {
             id: `${Date.now()}-${Math.random()}`,
@@ -71,18 +73,19 @@ export const useMCPStore = create<MCPStoreState>((set, get) => {
             isConnected: false,
             loading: false,
             tools: [],
+            llmConfig: llmConfig && llmConfig.model ? llmConfig : undefined,
           },
         ];
-        saveServersToLocalStorage(newServers, state.activeServerId);
-        return { servers: newServers };
+        saveServersToStorage(servers, state.activeServerId);
+        return { servers };
       });
     },
     removeServer: (id) => {
       set(state => {
-        const newServers = state.servers.filter(s => s.id !== id);
-        const newActive = state.activeServerId === id ? undefined : state.activeServerId;
-        saveServersToLocalStorage(newServers, newActive);
-        return { servers: newServers, activeServerId: newActive };
+        const servers = state.servers.filter(s => s.id !== id);
+        const activeServerId = state.activeServerId === id ? undefined : state.activeServerId;
+        saveServersToStorage(servers, activeServerId);
+        return { servers, activeServerId };
       });
     },
     connectServer: async (id) => {
@@ -100,54 +103,94 @@ export const useMCPStore = create<MCPStoreState>((set, get) => {
         let tools: Tool[] = [];
         if (Array.isArray(data)) {
           tools = data;
-        } else if (data && typeof data === 'object' && Array.isArray((data as { tools?: Tool[] }).tools)) {
-          tools = (data as { tools: Tool[] }).tools;
-        }
+        } // 只保留数组分支
         set(state => {
-          const newServers = state.servers.map(s =>
+          const servers = state.servers.map(s =>
             s.id === id && !error
               ? { ...s, isConnected: true, loading: false, error: undefined, tools }
               : { ...s, isConnected: false, loading: false }
           );
-          // 连接/断开不自动持久化（只持久化服务器列表）
-          return {
-            servers: newServers,
-            activeServerId: error ? undefined : id,
-            isLoading: false,
-          };
+          const activeServerId = error ? undefined : id;
+          saveServersToStorage(servers, activeServerId);
+          return { servers, activeServerId, isLoading: false };
         });
       } catch (e) {
         set(state => {
-          const newServers = state.servers.map(s =>
+          const servers = state.servers.map(s =>
             s.id === id
               ? { ...s, isConnected: false, loading: false, error: e instanceof Error ? e.message : String(e), tools: [] }
               : s
           );
-          return {
-            servers: newServers,
-            activeServerId: undefined,
-            isLoading: false,
-          };
+          saveServersToStorage(servers, undefined);
+          return { servers, activeServerId: undefined, isLoading: false };
         });
       }
     },
     disconnectServer: (id) => {
       set(state => {
-        const newServers = state.servers.map(s =>
+        const servers = state.servers.map(s =>
           s.id === id ? { ...s, isConnected: false, tools: [] } : s
         );
-        // 断开连接不自动持久化（只持久化服务器列表）
-        return {
-          servers: newServers,
-          activeServerId: state.activeServerId === id ? undefined : state.activeServerId,
-        };
+        const activeServerId = state.activeServerId === id ? undefined : state.activeServerId;
+        saveServersToStorage(servers, activeServerId);
+        return { servers, activeServerId };
       });
     },
     setActiveServer: (id) => {
       set(state => {
-        saveServersToLocalStorage(state.servers, id);
+        saveServersToStorage(state.servers, id);
         return { activeServerId: id };
       });
+    },
+    setLLMConfig: (serverId, llmConfig) => {
+      set(state => {
+        const servers = state.servers.map(s =>
+          s.id === serverId ? { ...s, llmConfig } : s
+        );
+        saveServersToStorage(servers, state.activeServerId);
+        return { servers };
+      });
+    },
+    updateLLMConfig: (serverId, partialConfig) => {
+      set(state => {
+        const servers = state.servers.map(s =>
+          s.id === serverId
+            ? { ...s, llmConfig: { ...s.llmConfig, ...partialConfig } as LLMConfig }
+            : s
+        );
+        saveServersToStorage(servers, state.activeServerId);
+        return { servers };
+      });
+    },
+    getActiveLLMConfig: () => {
+      const state = get();
+      const server = state.servers.find(s => s.id === state.activeServerId);
+      return server?.llmConfig;
+    },
+    buildLLMRequestPayload: (messages, extraOptions = {}) => {
+      const state = get();
+      const server = state.servers.find(s => s.id === state.activeServerId);
+      if (!server) throw new Error('No active server');
+      const llmConfig = server.llmConfig || { model: '' };
+      const tools = (server.tools || []).map(tool => ({
+        type: 'function',
+        function: {
+          name: tool.name,
+          description: tool.description,
+          parameters: "parameters" in tool && typeof (tool as { parameters?: object }).parameters === "object"
+            ? (tool as { parameters?: object }).parameters
+            : {},
+        },
+      }));
+      return {
+        model: llmConfig.model,
+        apiKey: llmConfig.apiKey,
+        apiUrl: llmConfig.apiUrl,
+        messages,
+        tools,
+        tool_choice: 'auto',
+        ...extraOptions,
+      };
     },
   };
 });
