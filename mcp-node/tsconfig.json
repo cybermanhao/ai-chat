@@ -11,8 +11,9 @@
     "composite": true,
     "declaration": true,
     "rootDir": "src",
-    "baseUrl": "..",    "paths": {
-      "@engine/*": ["../engine/*"]
+    "baseUrl": "..",    
+    "paths": {
+      "@engine/*": ["engine/*"]
     }
   },
   "include": [

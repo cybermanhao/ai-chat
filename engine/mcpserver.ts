@@ -1,19 +1,13 @@
 import { McpServer, ResourceTemplate } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { MCPService } from "@engine/service/mcpService"; 
+// 这里不再依赖 engine/service/mcpService，专注于 mcp-server 逻辑
 
 // 创建 MCP Server 实例
-type ServerInfo = {
-  name: string;
-  version: string;
-  description: string;
-};
-
 const mcpServer = new McpServer({
-  name: "node-mcp-server",
+  name: "engine-mcp-server",
   version: "1.0.0",
-  description: "Node 版 MCP Server 示例 (TypeScript)"
-} as ServerInfo);
+  description: "Engine 目录下的 MCP Server 示例 (TypeScript)"
+});
 
 // greeting 资源
 function greetingHandler(_uri: URL, variables: { [key: string]: string | string[] }, _extra: any) {
@@ -102,7 +96,7 @@ async function start() {
     StreamableHTTPServerTransport = mod.StreamableHTTPServerTransport;
   }
   const transport = new StreamableHTTPServerTransport({
-    port: 8000,
+    port: 8001,
     path: "/mcp",
     cors: {
       origin: "http://localhost:3000",
@@ -123,40 +117,10 @@ async function start() {
     }
   });
   await mcpServer.connect(transport);
-  console.log(`[${new Date().toISOString()}] MCP Server is running on http://localhost:8000/mcp`);
-
-  // 初始化 MCPService 客户端
-  const mcpService = new MCPService("http://localhost:8000/mcp", "STREAMABLE_HTTP");
-  await mcpService.connect();
-
-  // 测试各种功能
-  console.log(`[${new Date().toISOString()}] 开始测试 MCPService 功能...`);
-
-  // 1. 测试 listTools
-  const { data: tools, error } = await mcpService.listTools();
-  if (error) {
-    console.error(`[${new Date().toISOString()}] Failed to list tools:`, error);
-  } else {
-    console.log(`[${new Date().toISOString()}] Available tools:`, tools);
-  }
-
-  // 2. 测试 weather 工具
-  const { data: weatherData } = await mcpService.callTool("weather", { city_code: 101010100 });
-  console.log(`[${new Date().toISOString()}] Weather tool result:`, weatherData);
-
-  // 3. 测试 test 工具
-  const { data: testData } = await mcpService.callTool("test", {
-    params: { start: "2024-01-01", end: "2024-12-31" },
-    test1: "Hello",
-    test2: ["World", "MCP"],
-    test3: "Test"
-  });
-  console.log(`[${new Date().toISOString()}] Test tool result:`, testData);
-
-  console.log(`[${new Date().toISOString()}] MCPService 功能测试完成`);
+  console.log(`[${new Date().toISOString()}] Engine MCP Server is running on http://localhost:8001/mcp`);
 }
 
 start().catch(err => {
-  console.error(`[${new Date().toISOString()}] Failed to start server:`, err);
+  console.error(`[${new Date().toISOString()}] Failed to start engine mcp server:`, err);
   process.exit(1);
 });

@@ -1,16 +1,7 @@
 import { create } from 'zustand';
 import { MCPService } from '../../../engine/service/mcpService';
-
-export type Tool = { name: string; description: string };
-export interface MCPServer {
-  id: string;
-  name: string;
-  url: string;
-  isConnected: boolean;
-  loading: boolean;
-  error?: string;
-  tools: Tool[];
-}
+import type { Tool } from '@engine/service/mcpService';
+import type { MCPServer } from '@engine/store/mcpStore';
 
 interface MCPStoreState {
   servers: MCPServer[];

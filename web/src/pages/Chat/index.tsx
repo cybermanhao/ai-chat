@@ -124,7 +124,7 @@ export const Chat = () => {
       scrollToBottom();
       saveChat();
       try {
-        setIsGenerating(true);
+        setIsGenerating();
         const assistantMessage = createMessage.assistant('') as RuntimeMessage;
         addMessage(assistantMessage);
         saveChat();
@@ -132,7 +132,7 @@ export const Chat = () => {
           throw new Error(`当前仅支持 DeepSeek，${activeLLM.name} 暂未实现`);
         }
         // 用局部变量追踪最新消息，避免闭包问题
-        let currentMessages = [...messages, userMessage, assistantMessage];
+        const currentMessages = [...messages, userMessage, assistantMessage];
         const systemMessage = createMessage.system(config.systemPrompt) as RuntimeMessage;
         const fullMessages = [systemMessage, ...currentMessages];
         abortControllerRef.current = new AbortController();
@@ -193,7 +193,7 @@ export const Chat = () => {
         );
       } catch (err) {
         setLlmError(err instanceof Error ? err.message : String(err));
-        setIsGenerating(false);
+        setIsGenerating();
         const errorNotice = handleLLMError(err);
         // 用最新 closure
         const lastMessage = messages[messages.length - 1];
@@ -207,7 +207,7 @@ export const Chat = () => {
         addMessage(errorNotice);
         saveChat();
       } finally {
-        setIsGenerating(false);
+        setIsGenerating();
         abortControllerRef.current = null;
       }
     } catch (error) {
@@ -220,7 +220,7 @@ export const Chat = () => {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
       abortControllerRef.current = null;
-      setIsGenerating(false);
+      setIsGenerating();
       // 用最新 closure
       const lastMessage = messages[messages.length - 1];
       if (lastMessage && lastMessage.id) {

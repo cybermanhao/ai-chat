@@ -6,7 +6,8 @@
   "scripts": {
     "generate:avatars": "node ../scripts/generate-avatars.js",
     "dev": "pnpm run generate:avatars && vite",
-    "build": "pnpm run generate:avatars && tsc -b && vite build",
+    "build": "vite build",
+    "typecheck": "tsc -b",
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest",

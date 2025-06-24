@@ -3,6 +3,7 @@ import { List, Button, Modal, Form, Input, Collapse, message } from 'antd';
 import { PlusOutlined, ApiOutlined, DisconnectOutlined } from '@ant-design/icons';
 import { useStore } from 'zustand';
 import { useMCPStore } from '@/store/mcpStore';
+import type { Tool } from '@engine/service/mcpService';
 import type { MCPServer } from '@engine/store/mcpStore';
 import './styles.less';
 
@@ -14,7 +15,7 @@ interface ServerFormData {
 }
 
 const Mcp = () => {
-  const servers = useStore(useMCPStore, state => state.servers) as MCPServer[];
+  const servers = useStore(useMCPStore, state => state.servers) as unknown as MCPServer[];
   const activeServerId = useStore(useMCPStore, state => state.activeServerId);
   const isLoading = useStore(useMCPStore, state => state.isLoading);
   const addServer = useStore(useMCPStore, state => state.addServer);
@@ -115,7 +116,7 @@ const Mcp = () => {
                     <List
                       size="small"
                       dataSource={server.tools}
-                      renderItem={(_tool: import('@engine/store/mcpStore').Tool, toolIndex: number) => {
+                      renderItem={(_tool: Tool, toolIndex: number) => {
                         const toolData = server.tools?.[toolIndex];
                         return (
                           <List.Item>

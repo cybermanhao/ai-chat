@@ -1,22 +1,26 @@
-# MCP（Model Context Protocol）协议与 TypeScript SDK 中文指南
+# MCP 协议与 TypeScript SDK 中文指南 (MCP Protocol & TypeScript SDK Guide)
 
-## 概述
+## 概述 (Overview)
 
 Model Context Protocol（MCP，模型上下文协议）是一套为大模型应用提供上下文和工具能力的标准协议。它将“上下文提供”与“模型调用”解耦，允许你用统一的方式暴露数据、工具和交互模板，极大提升 LLM 应用的可扩展性和安全性。
 
+Model Context Protocol (MCP) is a standard protocol for providing context and tool capabilities to large model applications. It decouples "context provision" from "model invocation", allowing you to expose data, tools, and interaction templates in a unified way, greatly improving the scalability and security of LLM applications.
+
 本指南基于官方 TypeScript SDK，介绍如何快速构建 MCP Server/Client，如何注册资源、工具、Prompt，及常见场景代码示例。
+
+This guide is based on the official TypeScript SDK and introduces how to quickly build an MCP Server/Client, register resources, tools, prompts, and provides code examples for common scenarios.
 
 ---
 
-## 快速入门
+## 快速入门 (Quick Start)
 
-### 安装
+### 安装 (Installation)
 
 ```sh
 npm install @modelcontextprotocol/sdk
 ```
 
-### 创建一个简单的 MCP Server
+### 创建一个简单的 MCP Server (Create a Simple MCP Server)
 
 ```typescript
 import { McpServer, ResourceTemplate } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -50,13 +54,17 @@ await server.connect(transport);
 
 ---
 
-## 核心概念
+## 核心概念 (Core Concepts)
 
 ### Server
 McpServer 是协议的核心，负责连接管理、协议合规和消息路由。
 
+McpServer is the core of the protocol, responsible for connection management, protocol compliance, and message routing.
+
 ### Resource（资源）
 资源类似于 REST API 的 GET，用于暴露数据，不应有副作用。
+
+Resources are similar to REST API's GET, used to expose data, and should not have side effects.
 
 ```typescript
 server.registerResource(
@@ -68,6 +76,8 @@ server.registerResource(
 ```
 
 支持动态参数、智能补全：
+
+Supports dynamic parameters and intelligent completion:
 
 ```typescript
 server.registerResource(
@@ -81,6 +91,8 @@ server.registerResource(
 ### Tool（工具）
 工具类似 POST，允许 LLM 通过参数调用后端逻辑，可有副作用。
 
+Tools are similar to POST, allowing LLM to call backend logic through parameters, and may have side effects.
+
 ```typescript
 server.registerTool(
   "calculate-bmi",
@@ -91,6 +103,8 @@ server.registerTool(
 
 ### Prompt（交互模板）
 Prompt 用于定义 LLM 交互模式，支持参数补全。
+
+Prompt is used to define the LLM interaction mode and supports parameter completion.
 
 ```typescript
 import { completable } from "@modelcontextprotocol/sdk/server/completable.js";
@@ -104,7 +118,7 @@ server.registerPrompt(
 
 ---
 
-## 进阶用法
+## 进阶用法 (Advanced Usage)
 
 ### 资源/参数智能补全
 支持为资源模板参数、Prompt 参数提供动态补全建议。
@@ -117,7 +131,7 @@ server.registerPrompt(
 
 ---
 
-## 客户端用法
+## 客户端用法 (Client Usage)
 
 ```typescript
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
@@ -134,11 +148,13 @@ console.log(result);
 
 ---
 
-## 面向客户端开发者的 MCP 集成实践
+## 面向客户端开发者的 MCP 集成实践 (MCP Integration Practice for Client Developers)
 
 本节介绍如何开发一个可以与任意 MCP 服务器集成的 LLM 聊天机器人客户端。
 
-### 环境准备
+This section describes how to develop an LLM chatbot client that can integrate with any MCP server.
+
+### 环境准备 (Environment Setup)
 
 - Node.js 17+，npm 最新版
 - 安装依赖：
@@ -148,7 +164,7 @@ console.log(result);
   ```
 - 配置 .env 存储 API 密钥，并将 .env 加入 .gitignore
 
-### 客户端核心流程
+### 客户端核心流程 (Core Client Process)
 
 1. **初始化 MCP Client 并连接服务器**
    ```typescript
@@ -170,7 +186,7 @@ console.log(result);
 4. **交互式聊天循环**
    - 支持多轮对话和多次工具调用
 
-### 故障排查与建议
+### 故障排查与建议 (Troubleshooting and Recommendations)
 
 - 路径、API Key、依赖、响应慢等常见问题
 - 建议将所有工具调用和 LLM 响应处理包裹在 try-catch 中
@@ -178,9 +194,11 @@ console.log(result);
 
 更多详细代码和最佳实践请参考本项目的 tests 目录和官方 SDK 文档。
 
+For more detailed code and best practices, please refer to the tests directory of this project and the official SDK documentation.
+
 ---
 
-## 参考资料
+## 参考资料 (References)
 - [MCP 官方文档](https://modelcontextprotocol.org/)
 - [TypeScript SDK 仓库](https://github.com/modelcontextprotocol/sdk)
 - [OpenAI Function Calling 兼容](https://platform.openai.com/docs/guides/function-calling)
