@@ -7,6 +7,7 @@ import './styles/themes.css'
 import { router } from './router'
 import { usePluginStore } from './store/pluginStore'
 import { buttonPlugin } from './plugins/button'
+import MemeLoading from '@/components/memeLoading/MemeLoading';
 
 function App() {
   const { isDarkMode } = useThemeStore()
@@ -26,20 +27,23 @@ function App() {
   }, [isDarkMode])
 
   return (
-    <ConfigProvider
-      theme={{
-        algorithm: isDarkMode ? theme.darkAlgorithm : theme.defaultAlgorithm,
-        token: {
-          colorPrimary: isDarkMode ? '#52c41a' : '#1890ff', // 深色模式下使用绿色
-          colorSuccess: '#52c41a',
-          colorWarning: isDarkMode ? '#d89614' : '#faad14',
-          colorError: isDarkMode ? '#a61d24' : '#f5222d',
-          colorTextBase: isDarkMode ? 'rgba(255, 255, 255, 0.85)' : 'rgba(0, 0, 0, 0.85)',
-        },
-      }}
-    >
-      <RouterProvider router={router} />
-    </ConfigProvider>
+    <>
+      <ConfigProvider
+        theme={{
+          algorithm: isDarkMode ? theme.darkAlgorithm : theme.defaultAlgorithm,
+          token: {
+            colorPrimary: isDarkMode ? '#52c41a' : '#1890ff',
+            colorSuccess: '#52c41a',
+            colorWarning: isDarkMode ? '#d89614' : '#faad14',
+            colorError: isDarkMode ? '#a61d24' : '#f5222d',
+            colorTextBase: isDarkMode ? 'rgba(255, 255, 255, 0.85)' : 'rgba(0, 0, 0, 0.85)',
+          },
+        }}
+      >
+        <RouterProvider router={router} />
+      </ConfigProvider>
+      <MemeLoading />
+    </>
   )
 }
 

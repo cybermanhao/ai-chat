@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { defaultMemesSet } from './defaultMemesSet';
 
 /**
- * MemeLoading 组件 - 趣味全局 loading 遮罩
+ *  组件 - 趣味全局 loading 遮罩
  *
  * @param loadingSignal 是否显示 loading 遮罩
  * @param trueFan 彩蛋模式，true 时固定显示第 29 条 meme
@@ -28,6 +28,12 @@ export interface MemeLoadingProps {
   safemod?: boolean;
   /** boot 阶段加速时间（秒），safemod=true 时强制为 0.1 */
   boostDuration?: number;
+  /**
+   * 是否启用队列/计数模式（全局 loading 队列友好）
+   * true: loadingSignal 为计数/队列（number），>0 显示
+   * false: loadingSignal 为 boolean
+   */
+  queueMode?: boolean;
 }
 
 const MemeLoading: React.FC<MemeLoadingProps> = ({
@@ -38,6 +44,7 @@ const MemeLoading: React.FC<MemeLoadingProps> = ({
   minDuration = 0, // 默认无最短时间
   safemod = false, // 默认关闭 safemod
   boostDuration = 0.1, // 默认0.1秒
+  queueMode = false, // 默认非队列模式
 }) => {
   const [status, setStatus] = useState<'load' | 'boot' | 'off'>('off');
   const [currentMeme, setCurrentMeme] = useState('');
@@ -46,42 +53,47 @@ const MemeLoading: React.FC<MemeLoadingProps> = ({
   const [show, setShow] = useState(false); // 控制遮罩显示
   const [startTime, setStartTime] = useState<number>(0);
 
+  // 支持队列/计数模式
+  const isLoading = queueMode
+    ? (typeof loadingSignal === 'number' ? loadingSignal > 0 : !!loadingSignal)
+    : !!loadingSignal;
+
   useEffect(() => {
-    if (loadingSignal) {
+    if (isLoading) {
       setStatus('load');
       setShow(true);
       setStartTime(Date.now());
+      // 不重置 currentMeme/charIndex，动画不中断
     } else {
       setStatus('boot');
-      // safemod 下 minDuration 强制为 0.1
       const elapsed = Date.now() - startTime;
-      const minDur = safemod ? 0.1 : minDuration;
-      const remain = Math.max(minDur * 1000 - elapsed, 0);
+      // 这里minDuration已按safemod设定
+      const remain = Math.max(minDuration * 1000 - elapsed, 0);
       setTimeout(() => {
         setStatus('off');
         setShow(false);
+        setCurrentMeme('');
+        setCharIndex(0);
       }, 1000 + remain);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loadingSignal, safemod, minDuration]);
+  }, [isLoading, safemod, minDuration]);
 
   useEffect(() => {
     let interval: number;
     if (status === 'load') {
-      let randomIndex = Math.floor(Math.random() * memes.length);
+      let randomIndex = memeIndex;
       let meme = memes[randomIndex];
-      if (trueFan) {
-        //真的粉丝请使用这个载入
-        randomIndex = 28;
+      if (currentMeme.length === 0) {
+        // 只在动画未开始时随机 meme
+        randomIndex = trueFan ? 28 : Math.floor(Math.random() * memes.length);
         meme = memes[randomIndex];
+        setMemeIndex(randomIndex);
       }
-      setCurrentMeme('');
-      setMemeIndex(randomIndex);
-      setCharIndex(0);
       interval = window.setInterval(() => {
         setCharIndex((prevIndex) => {
           if (prevIndex < meme.length) {
-            setCurrentMeme((prevMeme) => prevMeme + meme[prevIndex]);
+            setCurrentMeme(meme.slice(0, prevIndex + 1));
             return prevIndex + 1;
           } else {
             clearInterval(interval);
@@ -92,13 +104,13 @@ const MemeLoading: React.FC<MemeLoadingProps> = ({
     } else if (status === 'boot') {
       const meme = memes[memeIndex] || '';
       const remainingChars = meme.length - charIndex;
-      // boostDuration 最低0.1，safemod下强制为0.1
       const boost = safemod ? 0.1 : Math.max(boostDuration, 0.1);
       const intervalTime = remainingChars > 0 ? (boost * 1000) / remainingChars : boost * 1000;
+      setCurrentMeme(meme.slice(0, charIndex)); // 修复：boot 阶段重置 currentMeme
       interval = window.setInterval(() => {
         setCharIndex((prevIndex) => {
           if (prevIndex < meme.length) {
-            setCurrentMeme((prevMeme) => prevMeme + meme[prevIndex]);
+            setCurrentMeme(meme.slice(0, prevIndex + 1)); // 修复：slice 取前缀
             return prevIndex + 1;
           } else {
             clearInterval(interval);
@@ -109,12 +121,23 @@ const MemeLoading: React.FC<MemeLoadingProps> = ({
     }
     return () => clearInterval(interval);
   }, [status, memes, trueFan, memeIndex, charIndex, boostDuration, safemod]);
+
+  // 动画结束后闪烁 '_'
+  const meme = memes[memeIndex] || '';
+  const isDone = currentMeme.length === meme.length;
+  const [blink, setBlink] = useState(true);
+  useEffect(() => {
+    if (isDone && status === 'load') {
+      const blinkTimer = setInterval(() => setBlink(b => !b), 500);
+      return () => clearInterval(blinkTimer);
+    }
+  }, [isDone, status]);
   const visibility = show ? 'visible' : 'hidden';
-  const visibleMeme = safemod ? '' : currentMeme;
+  const visibleMeme = safemod ? '' : currentMeme + (isDone && status === 'load' ? (blink ? '_' : ' ') : '_');
 
   return (
     <div className="meme-loading" style={{ visibility, backgroundColor }}>
-      <div className="meme">{safemod ? '' : visibleMeme + '_'}</div>
+      <div className="meme">{safemod ? '' : visibleMeme}</div>
       {/* 我真的没有故意设置成 '_' */}
     </div>
   );

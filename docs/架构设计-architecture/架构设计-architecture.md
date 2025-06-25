@@ -1,97 +1,94 @@
-# ZZ AI Chat 架构与特性
+# ZZ AI Chat 新架构设计（2025）
 
-## 项目特性
+## 总体目标
+- 聊天、消息、流式、插件、存储等核心能力高度解耦，便于多端适配和长期维护。
+- 采用“工厂对象”模式（如 Chat/Message），每个会话和消息自管理自身状态和行为。
+- 全局 store 只负责会话集合、全局配置、索引等，不再承担单个会话/消息的业务逻辑。
+- 流式处理、消息管理、存储、UI 渲染等各司其职，接口清晰。
+- 平台相关适配（如本地存储、LLM 服务、流式协议等）通过少量集中 adapter 继承/封装实现，业务对象只依赖抽象接口。
 
-- 🚀 支持主流大语言模型 (目前已支持 Deepseek，OpenAI/Qwen/本地模型规划中)
-- 🔌 强大的插件系统（渲染、工具、主题、AI 模型插件）
-- 🎨 自定义主题和多语言支持
-- 💻 跨平台支持 (Web, Desktop, WeChat Mini Program)
-- 🛠 开发者友好的架构
+---
 
-## 技术架构
-
-### 前端目录结构
+## 目录结构（核心相关）
 
 ```
+engine/
+  types/         # 通用类型定义（chat, message, stream, ...）
+  ...            # 核心业务逻辑（可选）
 web/
-├── src/
-│   ├── components/     # 公共组件
-│   ├── contexts/       # React Contexts
-│   ├── hooks/         # 自定义 Hooks
-│   ├── pages/         # 页面组件
-│   ├── plugins/       # 插件系统
-│   ├── services/      # API 服务
-│   ├── store/         # 状态管理
-│   ├── styles/        # 全局样式
-│   └── utils/         # 工具函数
+  src/
+    types/       # web 层扩展类型
+    pages/Chat/  # Chat 组件、工厂对象实现
+    store/       # 全局 store（zustand/redux）
+    engine/      # web 端适配/扩展（如 WebStorageAdapter、WebLLMService 等）
+    services/    # 具体的本地存储、API 调用等实现
+    ...
 ```
 
-### 状态管理
+---
 
-使用 [Zustand](https://github.com/pmndrs/zustand) 进行状态管理，相比 Redux 更加轻量和灵活。
+## 各模块分工
 
-示例:
-```typescript
-import { create } from 'zustand';
+### 1. Chat（会话工厂对象）
+- 封装单个会话的全部业务行为（如消息管理、流式处理、保存、加载、撤回等）。
+- 只管理自己的消息和状态，不关心全局。
+- 对外暴露如 sendMessage、appendStream、save、load、getMessages 等方法。
+- 便于多会话、多窗口、插件等场景扩展。
+- 依赖注入平台相关 adapter（如存储、流式、llmService），不直接依赖具体实现。
 
-interface ChatState {
-  messages: Message[];
-  addMessage: (message: Message) => void;
-}
+### 2. Message（消息工厂对象）
+- 封装单条消息的内容、状态、流式追加、状态变更等行为。
+- 支持多种消息类型（用户、助手、工具、系统、客户端提示等）。
+- 便于流式追加、富文本、工具调用等扩展。
 
-export const useChatStore = create<ChatState>((set) => ({
-  messages: [],
-  addMessage: (message) => set((state) => ({ 
-    messages: [...state.messages, message] 
-  })),
-}));
-```
+### 3. Store（全局状态/索引中心）
+- 只负责会话集合、当前活跃 chatId、会话列表、全局配置等。
+- 不直接处理单个会话/消息的业务细节。
+- 典型方法：setCurrentId、getCurrentChat、getChatList、全局设置管理等。
+- 便于多端共享和全局搜索、最近会话等功能。
 
-### 核心依赖
+### 4. Stream（流式处理模块）
+- 专门负责流式响应、流式状态、流式协议（SSE/WebSocket/HTTP chunk）等。
+- 类型定义单独放在 engine/types/stream.ts，便于多端/多协议扩展。
+- 只处理流式数据的接收、分发、状态管理，不关心消息持久化和 UI。
+- 平台相关协议适配通过集中 adapter 实现（如 WebStreamHandler）。
 
-- [React](https://react.dev/) - UI 框架
-- [Zustand](https://github.com/pmndrs/zustand) - 状态管理
-- [React Router](https://reactrouter.com/) - 路由管理
-- [Vite](https://vitejs.dev/) - 构建工具
-- [TypeScript](https://www.typescriptlang.org/) - 类型系统
-- [Less](https://lesscss.org/) - CSS 预处理器
+### 5. Storage（持久化/同步模块）
+- 负责会话、消息、设置等的本地/远端持久化与同步。
+- 可插拔，支持 IndexedDB、localStorage、云端等多种实现。
+- 只暴露 save/load/sync 等接口，不关心业务细节。
+- 平台相关实现通过集中 adapter（如 WebStorageAdapter）完成。
 
-### 多端支持
+### 6. UI 组件
+- 只负责渲染和用户交互。
+- 通过 props/context/当前 Chat 实例与业务对象解耦。
+- 不直接操作全局 store 或业务对象的内部状态。
 
-#### Web
-标准的 Web 应用，支持所有现代浏览器。使用 Vite 构建，支持 HMR 和快速开发。
+### 7. 插件/扩展系统
+- 支持渲染、工具、主题、AI 模型等多种插件。
+- 插件通过标准接口与 Chat/Message/Stream/Store 交互。
+- 插件系统本身不持有业务状态，只做能力扩展。
 
-#### 桌面应用 (规划中)
-基于 Electron 的桌面应用，提供更多本地功能:
-- 本地模型支持
-- 文件系统集成
-- 系统托盘
-- 离线使用
+---
 
-#### 微信小程序 (规划中)
-原生微信小程序，提供轻量级的聊天功能:
-- 基础对话
-- 快捷分享
-- 小程序云开发集成
+## 设计原则
+- 单一职责：每个模块只做一件事，接口清晰。
+- 可扩展性：便于多端适配、协议扩展、插件化。
+- 低耦合：各层通过接口/工厂对象解耦，便于测试和维护。
+- 类型安全：核心类型集中定义，便于全局推断和 IDE 支持。
+- 平台相关适配通过少量集中 adapter 实现，便于维护和切换。
 
-## 插件系统
+---
 
-支持多种类型的插件:
-- 渲染插件: 扩展消息渲染能力
-- 工具插件: 提供额外的功能
-- 主题插件: 自定义界面主题
-- AI 模型插件: 集成新的模型
+## 典型调用链举例
+1. UI 组件通过 store 拿到当前 Chat 实例。
+2. 用户发送消息，调用 chat.sendMessage，自动生成 Message 实例并处理流式响应。
+3. 流式数据到达，由 Stream 模块分发到对应 Chat/Message 实例，追加内容。
+4. Chat/Message 状态变更时自动触发 UI 刷新。
+5. 会话/消息变更时自动调用 Storage 持久化。
+6. 所有平台相关实现（如存储、llmService、流式协议）通过 adapter 注入。
 
-详细开发指南见 [插件开发指南](./plugin-development-guide.md)
+---
 
-## 贡献
-
-1. Fork 本仓库
-2. 创建特性分支 (`git checkout -b feature/AmazingFeature`)
-3. 提交更改 (`git commit -m 'Add some AmazingFeature'`)
-4. 推送到分支 (`git push origin feature/AmazingFeature`)
-5. 创建 Pull Request
-
-## 许可证
-
-本项目采用 MIT 许可证 - 查看 [LICENSE](../LICENSE) 了解详情
+## 结语
+本架构强调“工厂对象”与“全局索引”分离，流式、存储、插件等能力高度解耦，平台相关适配通过集中 adapter 实现，便于长期维护和多端扩展。具体类型和实现细节请参考各模块源码和类型定义。

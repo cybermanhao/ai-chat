@@ -29,18 +29,8 @@ export async function handleResponseStream(
         reasoning_content += delta.reasoning_content;
       }
       if (delta.tool_content !== null && delta.tool_content !== undefined && delta.tool_content !== 'null') {
-        // 尝试解析 tool_content 为对象
-        try {
-          const parsed = typeof delta.tool_content === 'string' ? JSON.parse(delta.tool_content) : delta.tool_content;
-          if (parsed && typeof parsed === 'object' && parsed.name) {
-            tool_content = parsed;
-          } else {
-            tool_content = delta.tool_content;
-          }
-        } catch {
-          // 兜底为原始字符串
-          tool_content = delta.tool_content;
-        }
+        // 只做透传，不做解析，交由上层 handler 处理
+        tool_content = delta.tool_content;
       }
       if (delta.observation_content !== null && delta.observation_content !== undefined && delta.observation_content !== 'null') {
         observation_content += delta.observation_content;

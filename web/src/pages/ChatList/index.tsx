@@ -8,7 +8,8 @@ import { useChatStore } from '@/store/chatStore';
 import { useChatList } from '@/hooks/useChatList';
 import ChatItem from './components/ChatItem';
 import DeleteConfirmModal from './components/DeleteConfirmModal';
-import MemeLoading from '@/components/memeLoading';
+import { useGlobalLoading } from '@/store/globalLoading';
+import MemeLoading from '@/components/memeLoading/MemeLoading';
 import './styles.less';
 
 const ChatList: React.FC = () => {
@@ -23,7 +24,7 @@ const ChatList: React.FC = () => {
   const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
   const [newTitle, setNewTitle] = useState('');
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
-  const [initLoading, setInitLoading] = useState(true);
+  const { show, hide } = useGlobalLoading();
 
   // 创建一个 ref 对象来存储活动聊天项的引用
   const activeChatRef = useRef<HTMLDivElement>(null);
@@ -40,24 +41,21 @@ const ChatList: React.FC = () => {
 
   // 自动加载聊天列表并跳转到上次聊天或新建
   useEffect(() => {
-    if (!initLoading) return;
-    const hasLocal = !!localStorage.getItem('chat_list');
-    if (!hasLocal && (!chatList || chatList.length === 0)) {
-      // 只有本地没有才新建
-      (async () => {
+    (async () => {
+      show();
+      const hasLocal = !!localStorage.getItem('chat_list');
+      if (!hasLocal && (!chatList || chatList.length === 0)) {
+        // 只有本地没有才新建
         const id = await addChat('新对话');
         setActiveChat(id);
         navigate(`/chat/${id}`);
-        setInitLoading(false);
-      })();
-    } else if (!currentChatId && persistedChatId) {
-      // 有聊天但未选中，跳转到上次聊天
-      navigate(`/chat/${persistedChatId}`);
-      setInitLoading(false);
-    } else {
-      setInitLoading(false);
-    }
-  }, [initLoading, chatList, currentChatId, persistedChatId, addChat, setActiveChat, navigate]);
+      } else if (!currentChatId && persistedChatId) {
+        // 有聊天但未选中，跳转到上次聊天
+        navigate(`/chat/${persistedChatId}`);
+      } 
+      hide();
+    })();
+  }, [chatList, currentChatId, persistedChatId, addChat, setActiveChat, navigate, show, hide]);
 
   const handleNewChat = async () => {
     const id = await addChat('新对话');
@@ -113,8 +111,7 @@ const ChatList: React.FC = () => {
 
   return (
     <div className="chat-list">
-      {/* 全局加载遮罩 */}
-      {initLoading && <div className="chat-list-init-loading"><MemeLoading loadingSignal={true} safemod={false} /></div>}
+      {/* 全局加载遮罩移除，统一由 App 根组件全局引入 */}
       <div className="chat-list-header">
         <Button 
           type="primary" 
@@ -126,7 +123,7 @@ const ChatList: React.FC = () => {
       </div>
       <List
         className="chat-list-content"
-        dataSource={initLoading ? [] : chatList}
+        dataSource={chatList}
         locale={{ emptyText: '暂无对话，点击上方按钮创建新对话' }}
         renderItem={chat => (
           <div ref={chat.id === currentChatId ? activeChatRef : null}>
@@ -172,6 +169,7 @@ const ChatList: React.FC = () => {
           setSelectedChatId(null);
         }}
       />
+      <MemeLoading />
     </div>
   );
 };

@@ -31,18 +31,94 @@ import MemeLoading, { defaultMemesSet } from './MemeLoading';
 
 | 参数             | 类型         | 说明                                                         |
 |------------------|--------------|--------------------------------------------------------------|
-| loadingSignal    | boolean      | 是否显示 loading 遮罩                                         |
+| loadingSignal    | boolean/number | 是否显示 loading 遮罩，队列模式下为 number（>0 显示）         |
+| queueMode        | boolean      | 是否启用队列/计数模式，true 时 loadingSignal 为 number        |
 | trueFan          | boolean      | 彩蛋模式，true 时固定显示第 29 条 meme                        |
 | memes            | string[]     | 可自定义 meme 列表，默认内置 defaultMemesSet                 |
 | backgroundColor  | string       | 遮罩背景色                                                   |
-| minDuration      | number       | 最短显示时间（秒），safemod=true 时强制为 0.1                |
+| minDuration      | number       | 最短显示时间（秒），safemod=true 时为0，否则为0.5              |
 | safemod          | boolean      | 安全模式，true 时不显示字符且所有动画加速为 0.1 秒           |
 | boostDuration    | number       | boot 阶段加速时间（秒），safemod=true 时强制为 0.1           |
 
-## 进阶
-- 支持 TypeScript 智能提示，所有 props 均有注释说明。
-- 可通过 `defaultMemesSet` 快速自定义弹幕内容。
-- safemod=true 时，所有动画极限加速且不显示字符。
+## 全局 loading 队列管理（推荐 useContext 实现）
+
+建议在 App 根组件引入 MemeLoading，并用 React Context 管理全局 loading 计数。
+
+### 1. 创建全局 LoadingContext
+
+```tsx
+import React, { createContext, useContext, useState, useCallback } from 'react';
+
+export const LoadingContext = createContext({
+  count: 0,
+  show: () => {},
+  hide: () => {},
+});
+
+export const useGlobalLoading = () => useContext(LoadingContext);
+
+export const LoadingProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [count, setCount] = useState(0);
+  const show = useCallback(() => setCount(c => c + 1), []);
+  const hide = useCallback(() => setCount(c => Math.max(0, c - 1)), []);
+  return (
+    <LoadingContext.Provider value={{ count, show, hide }}>
+      {children}
+    </LoadingContext.Provider>
+  );
+};
+```
+
+### 2. App 根组件引入 MemeLoading
+
+```tsx
+import MemeLoading from '@/components/memeLoading';
+import { LoadingProvider, useGlobalLoading } from '@/store/LoadingContext';
+
+function App() {
+  const { count } = useGlobalLoading();
+  return <>
+    {/* ...其它内容... */}
+    <MemeLoading loadingSignal={count} queueMode />
+  </>;
+}
+
+// 包裹整个应用
+export default function Root() {
+  return (
+    <LoadingProvider>
+      <App />
+    </LoadingProvider>
+  );
+}
+```
+
+### 3. 业务页面/异步任务用法
+
+```tsx
+import { useGlobalLoading } from '@/store/LoadingContext';
+const { show, hide } = useGlobalLoading();
+
+const handleAsync = async () => {
+  show();
+  try {
+    await doSomething();
+  } finally {
+    hide();
+  }
+};
+```
+
+### 4. 非队列模式（兼容旧用法）
+
+```tsx
+<MemeLoading loadingSignal={loading} safemod />
+```
+
+## 注意事项
+- 推荐全局只引入一次 MemeLoading，避免多页面重复遮罩。
+- 队列模式下，所有 loading 任务都应配对 show/hide，防止遮罩泄漏。
+- safemod=true 时动画极快且 minDuration=0。
 
 ---
 

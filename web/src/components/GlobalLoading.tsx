@@ -1,16 +1,32 @@
-import React from 'react';
+import React, { createContext, useContext, useState, useCallback } from 'react';
 import './GlobalLoading.less';
+import { useGlobalUIStore } from '@/store/globalUIStore';
 
-const GlobalLoading: React.FC<{ visible: boolean }> = ({ visible }) => {
-  if (!visible) return null;
+interface GlobalLoadingContextType {
+  count: number;
+  show: () => void;
+  hide: () => void;
+}
+
+const GlobalLoadingContext = createContext<GlobalLoadingContextType>({
+  count: 0,
+  show: () => {},
+  hide: () => {},
+});
+
+export const useGlobalLoading = () => useContext(GlobalLoadingContext);
+
+export const GlobalLoadingProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [count, setCount] = useState(0);
+  const show = useCallback(() => setCount(c => c + 1), []);
+  const hide = useCallback(() => setCount(c => Math.max(0, c - 1)), []);
   return (
-    <div className="global-loading-mask">
-      <div className="global-loading-spinner">
-        <div className="spinner" />
-        <div className="loading-text">载入中…</div>
-      </div>
-    </div>
+    <GlobalLoadingContext.Provider value={{ count, show, hide }}>
+      {children}
+    </GlobalLoadingContext.Provider>
   );
 };
 
-export default GlobalLoading;
+// 只需导出 Provider 和 useGlobalLoading，组件本身已自动读取 store
+export { default as MemeLoading } from './memeLoading/MemeLoading';
+export { useGlobalUIStore } from '@/store/globalUIStore';
