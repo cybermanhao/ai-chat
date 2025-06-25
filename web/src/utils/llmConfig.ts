@@ -1,4 +1,5 @@
 import type { Tool } from '@engine/service/mcpService';
+import { zodToJsonSchema } from 'zod-to-json-schema';
 
 export interface LLMConfig {
   model: string;
@@ -6,6 +7,11 @@ export interface LLMConfig {
   apiUrl?: string;
   [key: string]: string | number | boolean | object | undefined;
 }
+
+export const defaultLLMConfig: LLMConfig = {
+  model: '',
+  parallelToolCalls: false,
+};
 
 export function buildLLMRequestPayload(
   messages: Array<{ role: string; content: string; name?: string; tool_calls?: unknown; tool_call_id?: string }>,
@@ -32,9 +38,12 @@ export function buildLLMRequestPayload(
   const tools = (server?.tools || [])
     .filter(tool => typeof (tool as { enabled?: boolean }).enabled !== 'boolean' || (tool as { enabled?: boolean }).enabled)
     .map(tool => {
+      // 兼容 EnableToolItem 结构，直接用 inputSchema 作为 parameters
       let parameters: unknown = undefined;
-      if ('parameters' in tool && typeof (tool as { parameters?: unknown }).parameters === 'object' && (tool as { parameters?: unknown }).parameters !== null) {
-        parameters = (tool as { parameters?: unknown }).parameters;
+      if ('parameters' in tool && typeof tool.parameters === 'object' && tool.parameters !== null) {
+        parameters = tool.parameters;
+      } else if ('inputSchema' in tool && tool.inputSchema && typeof tool.inputSchema === 'object') {
+        parameters = tool.inputSchema;
       }
       const isValidSchema = parameters && typeof (parameters as { type?: unknown }).type === 'string' && (parameters as { type: string }).type === 'object';
       return {
@@ -51,6 +60,7 @@ export function buildLLMRequestPayload(
     apiKey,
     apiUrl,
     messages: formatMessages(messages),
+    parallelToolCalls: (extraOptions.parallelToolCalls ?? server?.llmConfig?.parallelToolCalls ?? defaultLLMConfig.parallelToolCalls),
     ...extraOptions,
   };
   if (tools.length > 0) {

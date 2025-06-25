@@ -65,6 +65,8 @@ export interface StreamChunk {
   thought_content?: string;
   error?: string;
   status?: MessageStatus;
+  tool_calls?: Array<{ function?: { name?: string; arguments?: string } }>;
+
 }
 
 // 运行时消息（包括所有类型的消息，且必须有status属性）

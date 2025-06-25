@@ -29,6 +29,7 @@ const Mcp = () => {
   const [messageApi, contextHolder] = antdMessage.useMessage();
 
   const handleAddServer = async () => {
+
     try {
       const values = await form.validateFields();
       addServer(values.name, values.url);
@@ -38,14 +39,17 @@ const Mcp = () => {
     } catch {
       // Form validation error, no need to handle
     }
+
   };
 
   const handleServerAction = async (serverId: string, isConnected: boolean) => {
+  
     if (isConnected) {
       disconnectServer(serverId);
     } else {
       await connectServer(serverId);
     }
+    
   };
 
   const [isToolModalVisible, setIsToolModalVisible] = useState(false);

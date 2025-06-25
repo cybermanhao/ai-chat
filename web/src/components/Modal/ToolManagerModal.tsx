@@ -16,6 +16,7 @@ const ToolManagerModal: React.FC<ToolManagerModalProps> = ({ open, onClose, them
 
   // 工具开关切换逻辑，支持启用/禁用工具
   const handleToolSwitch = (serverId: string, tool: MCPTool, checked: boolean) => {
+
     useMCPStore.setState(state => {
       const servers = state.servers.map(s => {
         if (s.id !== serverId) return s;
@@ -27,6 +28,7 @@ const ToolManagerModal: React.FC<ToolManagerModalProps> = ({ open, onClose, them
       });
       return { servers };
     });
+    
   };
 
   return (

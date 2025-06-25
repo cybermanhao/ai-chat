@@ -16,12 +16,6 @@ const mcpServer = new McpServer({
 } as ServerInfo);
 
 // greeting 资源
-function greetingHandler(_uri: URL, variables: { [key: string]: string | string[] }, _extra: any) {
-  return Promise.resolve({
-    contents: [{ uri: `greeting://${variables.name}`, text: `Hello, ${variables.name}!` }]
-  });
-}
-
 mcpServer.registerResource(
   "greeting",
   new ResourceTemplate("greeting://{name}", { list: undefined }),
@@ -29,7 +23,14 @@ mcpServer.registerResource(
     title: "greeting",
     description: "用于演示的一个资源协议"
   },
-  greetingHandler
+  async function greetingHandler(_uri: URL, variables: { [key: string]: string | string[] }, _extra: any) {
+    console.log(`[MCPServer] greeting resource called, variables:`, variables);
+    const result = {
+      contents: [{ uri: `greeting://${variables.name}`, text: `Hello, ${variables.name}!` }]
+    };
+    console.log(`[MCPServer] greeting resource result:`, result);
+    return result;
+  }
 );
 
 // translate prompt
@@ -40,14 +41,19 @@ mcpServer.registerPrompt(
     description: "进行翻译的prompt",
     argsSchema: { message: z.string() }
   },
-  async ({ message }: { message: string }) => ({
-    messages: [
-      {
-        role: "user",
-        content: { type: "text", text: `请将下面的话语翻译成中文：\n\n${message}` }
-      }
-    ]
-  })
+  async ({ message }: { message: string }) => {
+    console.log(`[MCPServer] translate prompt called, message:`, message);
+    const result = {
+      messages: [
+        {
+          role: "user" as const,
+          content: { type: "text" as const, text: `请将下面的话语翻译成中文：\n\n${message}` }
+        }
+      ]
+    };
+    console.log(`[MCPServer] translate prompt result:`, result);
+    return result;
+  }
 );
 
 // test 工具
@@ -68,11 +74,16 @@ mcpServer.registerTool(
     test1: string;
     test2?: string | string[];
     test3?: string;
-  }) => ({
-    content: [
-      { type: "text", text: JSON.stringify([test1, test2, test3, params]) }
-    ]
-  })
+  }) => {
+    console.log(`[MCPServer] test tool called, params:`, { params, test1, test2, test3 });
+    const result = {
+      content: [
+        { type: "text" as const, text: JSON.stringify([test1, test2, test3, params]) }
+      ]
+    };
+    console.log(`[MCPServer] test tool result:`, result);
+    return result;
+  }
 );
 
 // weather 工具
@@ -84,11 +95,14 @@ mcpServer.registerTool(
     inputSchema: { city_code: z.number() }
   },
   async ({ city_code }: { city_code: number }) => {
-    return {
+    console.log(`[MCPServer] weather tool called, city_code:`, city_code);
+    const result = {
       content: [
-        { type: "text", text: `城市编码 ${city_code} 的天气信息：晴，25℃` }
+        { type: "text" as const, text: `城市编码 ${city_code} 的天气信息：晴，25℃` }
       ]
     };
+    console.log(`[MCPServer] weather tool result:`, result);
+    return result;
   }
 );
 

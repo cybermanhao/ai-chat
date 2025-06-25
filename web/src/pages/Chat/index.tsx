@@ -136,6 +136,7 @@ export const Chat = () => {
 
   // 发送消息时显式保存
   const handleSend = async () => {
+
     if (!inputValue.trim() || !urlChatId) return;
     setLlmError(null);
     try {
@@ -166,7 +167,7 @@ export const Chat = () => {
           apiUrl: activeLLM.baseUrl, // 用 baseUrl 作为 apiUrl
         };
         // 构造 extraOptions，UI 配置优先
-        const extraOptions = {
+        const extraOptions: Record<string, unknown> = {
           model: currentConfig.userModel || '',
           temperature: config.temperature,
           max_tokens: config.maxTokens,
@@ -174,6 +175,10 @@ export const Chat = () => {
           apiKey: currentConfig.apiKey,
           apiUrl: activeLLM.baseUrl, // 用 baseUrl 作为 apiUrl
         };
+        // 如果有 tools，强制加 parallelToolCalls: false
+        if (activeServer && Array.isArray(activeServer.tools) && activeServer.tools.length > 0) {
+          extraOptions.parallelToolCalls = false;
+        }
         const payload = buildLLMRequestPayload(
           fullMessages,
           {
@@ -228,6 +233,7 @@ export const Chat = () => {
     } catch (error) {
       console.error('Send message failed:', error);
     }
+    
   };
 
   // 停止流式响应时也保存

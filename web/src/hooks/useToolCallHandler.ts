@@ -3,7 +3,11 @@ import { callToolWithStatus, MCPService } from '@/services/mcpService';
 
 export function useToolCallHandler(addMessage, updateLastMessage, mcpServiceInstance) {
   return useCallback(async (toolName: string, toolArgs: Record<string, any>) => {
-    if (!mcpServiceInstance) return;
+    console.log('[useToolCallHandler] called', toolName, toolArgs, mcpServiceInstance);
+    if (!mcpServiceInstance) {
+      console.warn('[useToolCallHandler] mcpServiceInstance is undefined!');
+      return;
+    }
     await callToolWithStatus({
       mcp: mcpServiceInstance,
       name: toolName,

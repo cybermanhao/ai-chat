@@ -57,7 +57,8 @@ export async function handleResponseStream(
         tool_content: tool_content as any, // 兼容 web 层类型
         observation_content: observation_content || undefined,
         thought_content: thought_content || undefined,
-        status
+        status,
+        tool_calls: delta.tool_calls // 透传 tool_calls 字段
       });
     }
     content = content.replace(/null/g, '');
