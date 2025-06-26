@@ -2,7 +2,7 @@ import { Form, Switch, Select, Button, Divider, Input, Tooltip, Card } from 'ant
 import { QuestionCircleOutlined } from '@ant-design/icons';
 import { useThemeStore } from '@/store/themeStore';
 import { useLLMConfig } from '@/hooks/useLLMConfig';
-import { useMemo } from 'react';
+import { useMemo, useEffect } from 'react';
 import './styles.less';
 
 const Settings = () => {
@@ -46,6 +46,17 @@ const Settings = () => {
     }
     return null;
   }, [activeLLM]);
+
+  // 保证表单内容和 store 实时同步
+  useEffect(() => {
+    form.setFieldsValue({
+      apiKey: currentConfig.apiKey,
+      model: currentConfig.userModel,
+      llm: activeLLM?.id,
+      darkMode: isDarkMode,
+      dmMode: dmMode,
+    });
+  }, [currentConfig.apiKey, currentConfig.userModel, activeLLM?.id, isDarkMode, dmMode, form]);
 
   return (
     <div className="settings-page">
@@ -108,6 +119,7 @@ const Settings = () => {
           >
             <Input.Password 
               placeholder="输入 API 密钥"
+              value={currentConfig.apiKey}
               onChange={(e) => handleApiKeyChange(e.target.value)}
             />
           </Form.Item>
@@ -122,6 +134,7 @@ const Settings = () => {
                 label: model,
                 value: model,
               })) : []}
+              value={currentConfig.userModel}
               onChange={handleModelChange}
               disabled={!activeLLM}
             />

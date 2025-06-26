@@ -4,19 +4,38 @@ import type { ChatMessage } from '../types/chat';
 import type { LLMService } from '../service/llmService';
 import { parseLLMStream, consumeLLMStream } from '../utils/streamHandler';
 import type { StreamChunk } from '../types/stream';
+import { MessageManager, Message, MessageProps } from '../types/message';
 
 export class ChatSession {
-  protected messages: ChatMessage[] = [];
+  protected messages: MessageManager;
   protected isGenerating = false;
   protected error: string | null = null;
   protected llmService: LLMService | null = null;
 
-  constructor(opts?: { llmService?: LLMService }) {
+  constructor(opts?: { llmService?: LLMService, initialMessages?: MessageProps[] }) {
+    console.log('[ChatSession.constructor] llmService:', opts?.llmService, 'class:', opts?.llmService?.constructor?.name);
     if (opts?.llmService) this.llmService = opts.llmService;
+    this.messages = new MessageManager(opts?.initialMessages || []);
   }
 
   getMessages() {
-    return this.messages;
+    return this.messages.getAllMessages();
+  }
+
+  addMessage(props: MessageProps) {
+    return this.messages.createMessage(props);
+  }
+
+  updateMessage(id: string, patch: Partial<MessageProps>) {
+    this.messages.updateMessage(id, patch);
+  }
+
+  deleteMessage(id: string) {
+    this.messages.deleteMessage(id);
+  }
+
+  clearMessages() {
+    this.messages.clearMessages();
   }
 
   getIsGenerating() {
@@ -30,7 +49,7 @@ export class ChatSession {
   async handleSend(input: string) {
     this.isGenerating = true;
     this.error = null;
-    this.messages.push({
+    this.messages.createMessage({
       id: Date.now().toString(),
       role: 'user',
       content: input,
@@ -38,7 +57,7 @@ export class ChatSession {
     });
     try {
       if (this.llmService) {
-        const stream = await this.llmService.createChatStream(input);
+        const stream = await this.llmService.createChatStream(this.messages.getAllMessages());
         const chunkIter = parseLLMStream(stream);
         await consumeLLMStream(chunkIter, (chunk: StreamChunk) => {
           if (!this.isGenerating) return;
@@ -55,17 +74,19 @@ export class ChatSession {
   }
 
   protected appendAssistantChunk(chunk: string) {
-    let last = this.messages[this.messages.length - 1];
+    const allMessages = this.messages.getAllMessages();
+    let last = allMessages[allMessages.length - 1];
     if (!last || last.role !== 'assistant') {
-      last = {
+      // 构造 MessageProps
+      const newMsgProps: MessageProps = {
         id: Date.now().toString() + '-assistant',
         role: 'assistant',
         content: '',
         timestamp: Date.now(),
       };
-      this.messages.push(last);
+      last = this.messages.createMessage(newMsgProps);
     }
-    last.content += chunk;
+    last.updateContent(last.content + chunk);
   }
 
   handleStop() {
@@ -74,7 +95,7 @@ export class ChatSession {
 
   protected async mockStreamResponse() {
     const id = Date.now().toString() + '-assistant';
-    this.messages.push({
+    const msg = this.messages.createMessage({
       id,
       role: 'assistant',
       content: '',
@@ -83,11 +104,50 @@ export class ChatSession {
     for (let i = 0; i < 5; i++) {
       if (!this.isGenerating) break;
       await new Promise(res => setTimeout(res, 400));
-      this.messages[this.messages.length - 1].content += '流片段' + (i + 1) + ' ';
+      msg.updateContent(msg.content + '流片段' + (i + 1) + ' ');
     }
   }
 
   save() {
     // 可由子类实现
+  }
+}
+
+export class ChatSessionManager {
+  protected sessionMap = new Map<string, ChatSession>();
+  protected activeId: string | null = null;
+
+  createSession(id: string): ChatSession {
+    if (this.sessionMap.has(id)) {
+      return this.sessionMap.get(id)!;
+    }
+    const session = new ChatSession({}); // 依赖注入可由子类扩展
+    this.sessionMap.set(id, session);
+    return session;
+  }
+
+  getSession(id: string): ChatSession | undefined {
+    return this.sessionMap.get(id);
+  }
+
+  getActiveSession(): ChatSession | undefined {
+    if (!this.activeId) return undefined;
+    return this.sessionMap.get(this.activeId);
+  }
+
+  setActiveSession(id: string): void {
+    this.activeId = id;
+    this.createSession(id); // 确保已创建
+  }
+
+  deleteSession(id: string): void {
+    this.sessionMap.delete(id);
+    if (this.activeId === id) {
+      this.activeId = null;
+    }
+  }
+
+  getAllSessions(): ChatSession[] {
+    return Array.from(this.sessionMap.values());
   }
 }

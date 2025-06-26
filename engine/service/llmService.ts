@@ -146,21 +146,15 @@ export class LLMService {
   }
 
   /**
-   * 新增：返回 LLM 流式响应的原始 ReadableStream（供 WebChatEngine/streamHandler 使用）
-   * @param input 用户输入或消息内容
-   * @returns ReadableStream<Uint8Array>
+   * 创建聊天流的核心方法，子类必须实现
+   * @param messages 聊天消息
+   * @param options 额外选项，如 llmConfig
    */
-  async createChatStream(input: string): Promise<ReadableStream<Uint8Array>> {
-    // 伪实现：实际应根据 LLM API 返回流式响应
-    // 这里假设 generate 返回的 response.body 是 ReadableStream
-    // 你可以根据实际 OpenAI/DeepSeek/Web API 调整
-    const response = await fetch('/api/llm/stream', {
-      method: 'POST',
-      body: JSON.stringify({ input }),
-      headers: { 'Content-Type': 'application/json' },
-    });
-    if (!response.body) throw new Error('No stream body');
-    return response.body;
+  async createChatStream(
+    messages: any[],
+    options?: any,
+  ): Promise<ReadableStream<Uint8Array>> {
+    throw new Error('LLMService.createChatStream must be implemented by a subclass');
   }
 
   protected getErrorMessage(error: Error): string {

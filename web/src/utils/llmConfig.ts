@@ -14,6 +14,7 @@ export const defaultLLMConfig: LLMConfig = {
 };
 
 export function buildLLMRequestPayload(
+
   messages: Array<{ role: string; content: string; name?: string; tool_calls?: unknown; tool_call_id?: string }>,
   options: {
     server?: { tools?: Tool[]; llmConfig?: LLMConfig };
@@ -68,4 +69,5 @@ export function buildLLMRequestPayload(
     payload.tool_choice = 'auto';
   }
   return payload;
+  
 }
