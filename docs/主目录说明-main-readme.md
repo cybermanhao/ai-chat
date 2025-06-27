@@ -14,7 +14,8 @@
 
 ## 3. 用法、集成与二次开发
 - [用法与集成-usage/数据流-data-flow.md](./用法与集成-usage/数据流-data-flow.md)  数据流
-- [用法与集成-usage/插件开发指南-plugin-development-guide.md](./用法与集成-usage/插件开发指南-plugin-development-guide.md)  插件开发
+- [用法与集成-usage/插件系统禁用说明.md](./用法与集成-usage/插件系统禁用说明.md)  **插件系统禁用说明** ⚠️
+- [用法与集成-usage/插件开发指南-plugin-development-guide.md](./用法与集成-usage/插件开发指南-plugin-development-guide.md)  插件开发（已禁用）
 - [API集成-api-integrations/](./API集成-api-integrations/)  API 集成（deepseek、mcp 等）
 
 ## 4. MCP 协议与生态教程

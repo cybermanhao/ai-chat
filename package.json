@@ -37,6 +37,7 @@
     "@anthropic-ai/sdk": "^0.54.0",
     "@lobehub/icons": "^2.4.0",
     "@modelcontextprotocol/sdk": "^1.13.0",
+    "@reduxjs/toolkit": "^2.8.2",
     "@types/highlight.js": "^10.1.0",
     "@types/prismjs": "^1.26.5",
     "antd": "^5.26.1",
@@ -49,12 +50,13 @@
     "prismjs": "^1.30.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
+    "react-redux": "^9.2.0",
     "react-router-dom": "^7.6.2",
+    "redux-persist": "^6.0.0",
     "scroll-into-view-if-needed": "^3.1.0",
     "uuid": "^11.1.0",
     "zod": "^3.25.67",
-    "zod-to-json-schema": "^3.24.5",
-    "zustand": "^5.0.5"
+    "zod-to-json-schema": "^3.24.5"
   },
   "devDependencies": {
     "@testing-library/react": "^16.3.0",

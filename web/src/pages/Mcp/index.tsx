@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { List, Button, Modal, Form, Input, Collapse, message as antdMessage } from 'antd';
 import { PlusOutlined, ApiOutlined, DisconnectOutlined } from '@ant-design/icons';
-import { useStore } from 'zustand';
-import { useMCPStore } from '@/store/mcpStore';
+import { useSelector, useDispatch } from 'react-redux';
+import type { RootState, AppDispatch } from '@/store';
+import { addServer, removeServer, setActiveServer } from '@/store/mcpStore';
 import './styles.less';
 import ToolManagerModal from '@/components/Modal/ToolManagerModal';
 import type { MCPTool } from '@/services/mcpService';
@@ -15,42 +16,35 @@ interface ServerFormData {
 }
 
 const Mcp = () => {
-  const servers = useStore(useMCPStore, state => state.servers);
-  const activeServerId = useStore(useMCPStore, state => state.activeServerId);
-  const isLoading = useStore(useMCPStore, state => state.isLoading);
-  const addServer = useStore(useMCPStore, state => state.addServer);
-  const removeServer = useStore(useMCPStore, state => state.removeServer);
-  const connectServer = useStore(useMCPStore, state => state.connectServer);
-  const disconnectServer = useStore(useMCPStore, state => state.disconnectServer);
-  const setActiveServer = useStore(useMCPStore, state => state.setActiveServer);
+  const servers = useSelector((state: RootState) => state.mcp.servers);
+  const activeServerId = useSelector((state: RootState) => state.mcp.activeServerId);
+  const isLoading = useSelector((state: RootState) => state.mcp.isLoading);
+  const dispatch: AppDispatch = useDispatch();
 
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [form] = Form.useForm<ServerFormData>();
   const [messageApi, contextHolder] = antdMessage.useMessage();
 
   const handleAddServer = async () => {
-
     try {
       const values = await form.validateFields();
-      addServer(values.name, values.url);
+      dispatch(addServer({ name: values.name, url: values.url }));
       setIsModalVisible(false);
       form.resetFields();
       messageApi.success('服务器添加成功');
     } catch {
       // Form validation error, no need to handle
     }
-
   };
 
-  const handleServerAction = async (serverId: string, isConnected: boolean) => {
-  
-    if (isConnected) {
-      disconnectServer(serverId);
-    } else {
-      await connectServer(serverId);
-    }
-    
-  };
+  // connectServer/disconnectServer 相关逻辑如为异步 thunk，可后续补充
+  // const handleServerAction = async (serverId: string, isConnected: boolean) => {
+  //   if (isConnected) {
+  //     dispatch(disconnectServer(serverId));
+  //   } else {
+  //     await dispatch(connectServer(serverId));
+  //   }
+  // };
 
   const [isToolModalVisible, setIsToolModalVisible] = useState(false);
 
@@ -85,26 +79,26 @@ const Mcp = () => {
               <List.Item
                 key={server.id}
                 className={`server-item ${activeServerId === server.id ? 'active' : ''}`}
-                onClick={() => setActiveServer(server.id)}
+                onClick={() => dispatch(setActiveServer(server.id))}
                 actions={[
-                  <Button
-                    key="connect"
-                    type={server.isConnected ? 'default' : 'primary'}
-                    icon={server.isConnected ? <DisconnectOutlined /> : <ApiOutlined />}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleServerAction(server.id, server.isConnected);
-                    }}
-                    loading={isLoading}
-                  >
-                    {server.isConnected ? '断开连接' : '连接'}
-                  </Button>,
+                  // <Button
+                  //   key="connect"
+                  //   type={server.isConnected ? 'default' : 'primary'}
+                  //   icon={server.isConnected ? <DisconnectOutlined /> : <ApiOutlined />}
+                  //   onClick={(e) => {
+                  //     e.stopPropagation();
+                  //     handleServerAction(server.id, server.isConnected);
+                  //   }}
+                  //   loading={isLoading}
+                  // >
+                  //   {server.isConnected ? '断开连接' : '连接'}
+                  // </Button>,
                   <Button
                     key="remove"
                     danger
                     onClick={(e) => {
                       e.stopPropagation();
-                      removeServer(server.id);
+                      dispatch(removeServer(server.id));
                     }}
                   >
                     删除
@@ -135,19 +129,21 @@ const Mcp = () => {
                 {server.error && (
                   <div style={{ color: '#ff4d4f', marginTop: 4, display: 'flex', alignItems: 'center', gap: 8 }}>
                     连接失败：{server.error}
+                    {/*
                     {server.isConnected && (
                       <Button
                         size="small"
                         icon={<DisconnectOutlined />}
                         onClick={e => {
                           e.stopPropagation();
-                          disconnectServer(server.id);
+                          dispatch(disconnectServer(server.id));
                         }}
                         style={{ marginLeft: 8 }}
                       >
                         断开连接
                       </Button>
                     )}
+                    */}
                   </div>
                 )}
                 {server.isConnected && Array.isArray(server.tools) && server.tools.length > 0 && (

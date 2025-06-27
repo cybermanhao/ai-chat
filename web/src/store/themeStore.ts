@@ -1,28 +1,28 @@
-import { create } from 'zustand'
-import { persist, devtools } from 'zustand/middleware'
+import { createSlice } from '@reduxjs/toolkit';
+import type { PayloadAction } from '@reduxjs/toolkit';
 
 interface ThemeState {
-  isDarkMode: boolean
-  toggleTheme: () => void
-  dmMode: boolean
-  setDMMode: (value: boolean) => void
+  isDarkMode: boolean;
+  dmMode: boolean;
 }
 
-export const useThemeStore = create<ThemeState>()(
-  devtools(
-    persist(
-      (set) => ({
-        isDarkMode: false,
-        toggleTheme: () => set((state) => ({ isDarkMode: !state.isDarkMode })),
-        dmMode: false,
-        setDMMode: (value: boolean) => set({ dmMode: value }),
-      }),
-      {
-        name: 'theme-storage',
-      }
-    ),
-    {
-      name: 'theme-store',
-    }
-  )
-)
+const initialState: ThemeState = {
+  isDarkMode: false,
+  dmMode: false,
+};
+
+const themeSlice = createSlice({
+  name: 'theme',
+  initialState,
+  reducers: {
+    toggleTheme(state) {
+      state.isDarkMode = !state.isDarkMode;
+    },
+    setDMMode(state, action: PayloadAction<boolean>) {
+      state.dmMode = action.payload;
+    },
+  },
+});
+
+export const { toggleTheme, setDMMode } = themeSlice.actions;
+export default themeSlice.reducer;

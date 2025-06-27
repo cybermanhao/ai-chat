@@ -1,18 +1,16 @@
 import React, { useState } from 'react';
+import { useSelector } from 'react-redux';
 import { DownOutlined, RightOutlined, LoadingOutlined, FormOutlined, CopyOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
-import type { MessageRole } from '@engine/types/chat';
+import type { MessageRole, MessageStatus } from '@engine/types/chat';
 import { Button, Tooltip } from 'antd';
 import { markdownToHtml, copyToClipboard } from '@/utils/markdown';
-import { useStore } from 'zustand';
-import { useChatRuntimeStore } from '@/store/chatRuntimeStore';
-import type { ChatRuntimeState } from '@/store/chatRuntimeStore';
 import AvatarIcon from '@/components/AvatarIcon';
+import type { RootState } from '@/store';
 import './styles.less';
-
-export type MessageStatus = 'connecting' | 'thinking' | 'generating' | 'stable' | 'done' | 'error';
 
 interface MessageCardProps {
   id: string;
+  chatId: string;
   content: string;
   role: MessageRole;
   reasoning_content?: string;
@@ -27,6 +25,7 @@ interface MessageCardProps {
 
 const MessageCard: React.FC<MessageCardProps> = ({ 
   id,
+  chatId,
   content, 
   role, 
   reasoning_content,
@@ -37,8 +36,10 @@ const MessageCard: React.FC<MessageCardProps> = ({
   noticeType = 'info',
   errorCode
 }) => {
-  // 修正 useChatRuntimeStore 用法，直接使用 web 端 store，类型自动推断
-  const runtimeMessage = useStore(useChatRuntimeStore, (state: ChatRuntimeState) => state.runtimeMessages[id]);
+  // 从 Redux state 中获取最新的消息状态
+  const runtimeMessage = useSelector((state: RootState) => 
+    state.chat.chatData[chatId]?.messages.find(m => m.id === id)
+  );
   const [showReasoning, setShowReasoning] = useState(true);
   const [showToolOutput, setShowToolOutput] = useState(true);
   const [showThoughts, setShowThoughts] = useState(true);
@@ -48,8 +49,8 @@ const MessageCard: React.FC<MessageCardProps> = ({
   const isUser = role === 'user';
   const isAssistant = role === 'assistant';
   const isClientNotice = role === 'client-notice';
-  // 修正 status 取值，避免根状态类型报错
-  const currentStatus = runtimeMessage && 'status' in runtimeMessage ? runtimeMessage.status : status;
+  // 直接使用 Redux 或 props 中的状态
+  const currentStatus = runtimeMessage?.status || status;
 
   // Get runtime content from store or props
   const runtimeContent = runtimeMessage ? {
@@ -88,6 +89,11 @@ const MessageCard: React.FC<MessageCardProps> = ({
         text: '生成中...', 
         icon: <LoadingOutlined />, 
         className: 'status-generating' 
+      },
+      tool_calling: {
+        text: '工具调用中...',
+        icon: <LoadingOutlined />,
+        className: 'status-tool-calling'
       },
       stable: {
         text: '',

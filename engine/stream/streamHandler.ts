@@ -93,4 +93,4 @@ export async function* streamHandler(response: Response): AsyncGenerator<Extende
       boundary = buffer.indexOf('\n\n');
     }
   }
-}
+} 

@@ -5,7 +5,7 @@ import type { ChatCompletionMessageToolCall } from 'openai/resources/chat/comple
 export type MessageRole = 'system' | 'user' | 'assistant' | 'tool' | 'client-notice';
 
 // 运行时消息状态
-export type MessageStatus = 'connecting' | 'thinking' | 'generating' | 'stable' | 'done' | 'error';
+export type MessageStatus = 'connecting' | 'thinking' | 'generating' | 'tool_calling' | 'stable' | 'done' | 'error';
 
 // 基础消息共同属性
 export type BaseMessage = {

@@ -1,6 +1,6 @@
 import { EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import { Card, Tag, Button } from 'antd';
-import type { AIRole } from '@/store/roleStore';
+import type { AIRole } from '@engine/store/roleStore';
 import './styles.less';
 
 interface RoleCardProps {

@@ -1,6 +1,15 @@
-import { extractXmlContent, extractPluginContent, processPluginContent } from '@engine/utils/xml';
-import type { ContentRenderer, RenderContext } from './types';
+// ========================================
+// [插件系统已禁用] - 插件系统尚未完善，暂时停止开发
+// 本文件保留渲染器类定义，但注释掉插件渲染逻辑
+// 如需恢复插件功能，请取消相关注释并完善插件系统实现
+// ========================================
 
+// [插件系统已禁用] - 注释掉插件相关的导入
+// import { extractXmlContent, extractPluginContent, processPluginContent } from '@engine/utils/xml';
+// import type { ContentRenderer, RenderContext } from './types';
+
+// [插件系统已禁用] - 保留类定义，但注释掉插件渲染逻辑
+/*
 export class XmlPluginRenderer implements ContentRenderer {
   name = 'xml-plugin';
   priority = 0; // 首先执行
@@ -44,6 +53,25 @@ export class XmlPluginRenderer implements ContentRenderer {
     }
 
     return processedContent;
+  }
+}
+*/
+
+// [插件系统已禁用] - 导出空的渲染器类，防止其他模块引用出错
+export class XmlPluginRenderer {
+  name = 'xml-plugin';
+  priority = 0;
+  
+  constructor(context: any) {
+    console.log('[插件系统已禁用] XmlPluginRenderer 已停用');
+  }
+
+  test(content: string) {
+    return false; // 始终返回 false，不处理任何内容
+  }
+
+  render(content: string) {
+    return content; // 直接返回原内容，不进行任何处理
   }
 }
 

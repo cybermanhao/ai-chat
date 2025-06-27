@@ -1,20 +1,18 @@
 import { PlusOutlined } from '@ant-design/icons';
 import { List, Button, Modal } from 'antd';
-import { useStore } from 'zustand';
-import { useRoleStore } from '@/store/roleStore';
-import type { AIRole } from '@/store/roleStore';
+import { useSelector, useDispatch } from 'react-redux';
+import type { RootState, AppDispatch } from '@/store';
+import { setSelectedRole, addRole, deleteRole, updateRole } from '@/store/roleStore';
+import type { AIRole } from '@engine/store/roleStore';
 import { useState } from 'react';
 import RoleCard from './components/RoleCard';
 import { RoleForm } from './components/RoleForm';
 import './styles.less';
 
 const RoleList: React.FC = () => {
-  const roles = useStore(useRoleStore, state => state.roles);
-  const selectedRole = useStore(useRoleStore, state => state.selectedRole);
-  const setSelectedRole = useStore(useRoleStore, state => state.setSelectedRole);
-  const addRole = useStore(useRoleStore, state => state.addRole);
-  const deleteRole = useStore(useRoleStore, state => state.deleteRole);
-  const updateRole = useStore(useRoleStore, state => state.updateRole);
+  const roles = useSelector((state: RootState) => state.role.roles);
+  const selectedRole = useSelector((state: RootState) => state.role.selectedRole);
+  const dispatch: AppDispatch = useDispatch();
   const [modalVisible, setModalVisible] = useState(false);
   const [editingRole, setEditingRole] = useState<AIRole | null>(null);
 
@@ -37,23 +35,23 @@ const RoleList: React.FC = () => {
       okText: '删除',
       cancelText: '取消',
       onOk: () => {
-        deleteRole(role.id);
+        dispatch(deleteRole(role.id));
         if (selectedRole?.id === role.id) {
-          setSelectedRole(null);
+          dispatch(setSelectedRole(null));
         }
       }
     });
   };
 
   const handleRoleSelect = (role: AIRole) => {
-    setSelectedRole(selectedRole?.id === role.id ? null : role);
+    dispatch(setSelectedRole(selectedRole?.id === role.id ? null : role));
   };
 
   const handleRoleChange = (role: AIRole) => {
     if (role.id.startsWith('new-')) {
-      addRole(role);
+      dispatch(addRole(role));
     } else {
-      updateRole(role.id, role);
+      dispatch(updateRole({ id: role.id, role }));
     }
     setModalVisible(false);
   };

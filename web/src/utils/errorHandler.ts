@@ -1,4 +1,3 @@
-import { createMessage } from './messageFactory';
 import type { ClientNoticeMessage } from '@/types/chat';
 
 // 错误代码常量
@@ -59,7 +58,15 @@ export function handleLLMError(error: unknown): ClientNoticeMessage {
     }
   }
   
-  return createMessage.clientNotice(message, type, code);
+  return {
+    id: 'client-notice-' + Date.now(),
+    timestamp: Date.now(),
+    content: message,
+    role: 'client-notice',
+    noticeType: type,
+    status: 'error',
+    ...(code ? { errorCode: code } : {})
+  };
 }
 
 // 移除本地 errorHandler.ts，已迁移到 engine/utils/errorHandler.ts

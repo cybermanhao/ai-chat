@@ -5,16 +5,19 @@ import {
   StopOutlined,
 } from '@ant-design/icons';
 import InputToolbar from '../InputToolbar';
+import { useSelector, useDispatch } from 'react-redux';
+import type { RootState, AppDispatch } from '@/store';
+import { sendMessageAsync } from '@/store/chatSlice';
 import './styles.less';
 
 interface InputSenderProps {
-  value: string;
+  value?: string;
   loading?: boolean;
   disabled?: boolean;
   isGenerating?: boolean;
   placeholder?: string;
-  onInputChange: (value: string) => void;
-  onSend: () => void;
+  onInputChange?: (value: string) => void;
+  onSend?: () => void;
   onStop?: () => void;
 }
 
@@ -30,14 +33,19 @@ const InputSender: React.FC<InputSenderProps> = ({
   onSend,
   onStop,
 }) => {
+  // 支持直接用 redux state
+  const dispatch: AppDispatch = useDispatch();
+  const currentChatId = useSelector((state: RootState) => state.chat.currentChatId);
+  const reduxIsGenerating = useSelector((state: RootState) => state.chat.isGenerating);
+  const [inputValue, setInputValue] = React.useState('');
   const isDisabled = loading || disabled;
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
   
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      if (!isDisabled && value.trim()) {
-        onSend();
+      if (!isDisabled && (value ?? inputValue).trim()) {
+        handleSend();
       }
     }
   };
@@ -46,16 +54,32 @@ const InputSender: React.FC<InputSenderProps> = ({
     // Focus the textarea when the component mounts
     textAreaRef.current?.focus();
   }, []);
+
+  const handleSend = () => {
+    if (onSend) {
+      onSend();
+    } else if (currentChatId) {
+      dispatch(sendMessageAsync({ chatId: currentChatId, input: value ?? inputValue }));
+      setInputValue('');
+    }
+  };
+
     return (    
     <div className="input-sender">
       <div className="sender-container">
         <div className="input-wrapper">
           <TextArea
             ref={textAreaRef}
-            value={value}
+            value={value !== undefined ? value : inputValue}
             disabled={isDisabled}
             placeholder={placeholder}
-            onChange={e => onInputChange(e.target.value)}
+            onChange={e => {
+              if (onInputChange) {
+                onInputChange(e.target.value);
+              } else {
+                setInputValue(e.target.value);
+              }
+            }}
             onKeyDown={handleKeyDown}
             autoSize={{ minRows: 1, maxRows: 5 }}
             className="message-input"
@@ -66,7 +90,7 @@ const InputSender: React.FC<InputSenderProps> = ({
           <InputToolbar loading={loading} />
 
           <div className="action-buttons">
-            {isGenerating ? (
+            {(isGenerating ?? reduxIsGenerating) ? (
               <Button
                 type="primary"
                 danger
@@ -79,8 +103,8 @@ const InputSender: React.FC<InputSenderProps> = ({
               <Button
                 type="primary"
                 icon={<SendOutlined />}
-                disabled={!value.trim() || isDisabled}
-                onClick={onSend}
+                disabled={!(value ?? inputValue).trim() || isDisabled}
+                onClick={handleSend}
               >
                 发送
               </Button>

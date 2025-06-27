@@ -17,7 +17,9 @@ interface AppSiderProps {
   onCollapse: (collapsed: boolean) => void;
 }
 
-type PanelType = 'chat' | 'settings' | 'mcp' | 'profile' | 'roles' | 'plugins';
+// [插件系统已禁用] - 注释掉插件面板类型，但保留UI结构
+// type PanelType = 'chat' | 'settings' | 'mcp' | 'profile' | 'roles' | 'plugins';
+type PanelType = 'chat' | 'settings' | 'mcp' | 'profile' | 'roles';
 
 // 创建一个 PanelContent 映射
 const PanelContent = {
@@ -26,7 +28,8 @@ const PanelContent = {
   profile: React.lazy(() => import('@/pages/Profile')),
   settings: React.lazy(() => import('@/pages/Settings')),
   mcp: React.lazy(() => import('@/pages/Mcp')),
-  plugins: React.lazy(() => import('@/pages/Plugins')),
+  // [插件系统已禁用] - 注释掉插件页面导入
+  // plugins: React.lazy(() => import('@/pages/Plugins')),
 };
 
 const AppSider = ({ collapsed, onCollapse }: AppSiderProps) => {
@@ -69,12 +72,13 @@ const AppSider = ({ collapsed, onCollapse }: AppSiderProps) => {
           >
             <MCP />
           </div>
-          <div
+          {/* [插件系统已禁用] - 注释掉插件工具栏按钮，但保留UI结构 */}
+          {/* <div
             className={`toolbar-item ${activePanel === 'plugins' ? 'active' : ''}`}
             onClick={() => handleToolClick('plugins')}
           >
             <AppstoreOutlined />
-          </div>
+          </div> */}
         </div>
         <div className="toolbar-bottom">
           <div

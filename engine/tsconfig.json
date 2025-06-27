@@ -9,7 +9,8 @@
     "emitDeclarationOnly": false,
     "module": "ESNext",
     "target": "ESNext",
-    "moduleResolution": "Node"
+    "moduleResolution": "Node",
+    "noImplicitAny": false
   },
   "include": ["./**/*.ts"]
 }

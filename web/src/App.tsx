@@ -1,25 +1,31 @@
 import { RouterProvider } from 'react-router-dom'
 import { ConfigProvider, theme } from 'antd'
-import { useThemeStore } from './store/themeStore'
 import { useEffect } from 'react'
 import './App.css'
 import './styles/themes.css'
 import { router } from './router'
-import { usePluginStore } from './store/pluginStore'
-import { buttonPlugin } from './plugins/button'
-import MemeLoading from '@/components/memeLoading/MemeLoading';
+// [插件系统已禁用] - 注释掉插件相关的导入
+// import { buttonPlugin } from './plugins/button'
+import MemeLoading from '@/components/memeLoading';
+import { useSelector, useDispatch } from 'react-redux';
+import type { RootState, AppDispatch } from './store';
+// [插件系统已禁用] - 注释掉插件相关的导入
+// import { addPlugin } from './store/pluginStore';
 
 function App() {
-  const { isDarkMode } = useThemeStore()
-  const { addPlugin, plugins } = usePluginStore()
+  const isDarkMode = useSelector((state: RootState) => state.theme.isDarkMode);
+  // [插件系统已禁用] - 注释掉插件相关的状态获取
+  // const plugins = useSelector((state: RootState) => state.plugin.plugins);
+  const dispatch: AppDispatch = useDispatch();
+  const loadingCount = useSelector((state: RootState) => state.globalUI.loadingCount);
 
+  // [插件系统已禁用] - 注释掉插件注册逻辑
   // Register default plugins
-  useEffect(() => {
-    // Check if button plugin already exists to avoid duplicates
-    if (!plugins.some((p: { id: string }) => p.id === buttonPlugin.id)) {
-      addPlugin(buttonPlugin);
-    }
-  }, [addPlugin, plugins])
+  // useEffect(() => {
+  //   if (!plugins.some((p: { id: string }) => p.id === buttonPlugin.id)) {
+  //     dispatch(addPlugin(buttonPlugin));
+  //   }
+  // }, [dispatch, plugins])
 
   // 当主题改变时，更新 body 的 data-theme 属性
   useEffect(() => {
@@ -42,7 +48,7 @@ function App() {
       >
         <RouterProvider router={router} />
       </ConfigProvider>
-      <MemeLoading />
+      <MemeLoading loadingSignal={loadingCount > 0} />
     </>
   )
 }

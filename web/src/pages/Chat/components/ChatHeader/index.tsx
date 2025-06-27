@@ -1,8 +1,9 @@
 import React from 'react';
 import { Select } from 'antd';
 import { useNavigate } from 'react-router-dom';
-import { useStore } from 'zustand';
-import { useChatStore } from '@/store/chatStore';
+import { useSelector, useDispatch } from 'react-redux';
+import type { RootState } from '@/store';
+import { setCurrentChat } from '@/store/chatSlice';
 import './styles.less';
 
 interface ChatHeaderProps {
@@ -11,12 +12,12 @@ interface ChatHeaderProps {
 
 const ChatHeader: React.FC<ChatHeaderProps> = ({ title }) => {
   const navigate = useNavigate();
-  const currentChatId = useStore(useChatStore, state => state.currentId);
-  const chatList = useStore(useChatStore, state => state.chats);
-  const setCurrentId = useStore(useChatStore, state => state.setCurrentId);
+  const dispatch = useDispatch();
+  const currentChatId = useSelector((state: RootState) => state.chat.currentChatId);
+  const chatList = useSelector((state: RootState) => state.chat.chatList);
 
   const handleChatChange = (newChatId: string) => {
-    setCurrentId(newChatId);
+    dispatch(setCurrentChat(newChatId));
     navigate(`/chat/${newChatId}`);
   };
 

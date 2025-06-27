@@ -1,5 +1,14 @@
-import type { Plugin } from '@/types/plugin';
+// ========================================
+// [插件系统已禁用] - 插件系统尚未完善，暂时停止开发
+// 本文件保留插件定义和实现，但注释掉插件导出
+// 如需恢复插件功能，请取消相关注释并完善插件系统实现
+// ========================================
 
+// [插件系统已禁用] - 注释掉插件类型导入
+// import type { Plugin } from '@/types/plugin';
+
+// [插件系统已禁用] - 保留插件定义，但注释掉导出
+/*
 export const buttonPlugin: Plugin = {
   id: 'button-renderer',
   name: '按钮渲染器',
@@ -61,3 +70,7 @@ export const buttonPlugin: Plugin = {
 - type: default | primary | dashed | text | link
 - size: small | middle | large`
 };
+*/
+
+// [插件系统已禁用] - 导出空对象，防止其他模块引用出错
+export const buttonPlugin: any = {};

@@ -1,17 +1,31 @@
-import { create } from 'zustand';
+import { createSlice } from '@reduxjs/toolkit';
+import type { PayloadAction } from '@reduxjs/toolkit';
 
-interface GlobalUIStore {
+interface GlobalUIState {
   loadingCount: number;
-  showLoading: () => void;
-  hideLoading: () => void;
   dmMode: boolean;
-  setDMMode: (value: boolean) => void;
 }
 
-export const useGlobalUIStore = create<GlobalUIStore>((set) => ({
+const initialState: GlobalUIState = {
   loadingCount: 0,
-  showLoading: () => set((state) => ({ loadingCount: state.loadingCount + 1 })),
-  hideLoading: () => set((state) => ({ loadingCount: Math.max(0, state.loadingCount - 1) })),
   dmMode: false,
-  setDMMode: (value) => set({ dmMode: value }),
-}));
+};
+
+const globalUISlice = createSlice({
+  name: 'globalUI',
+  initialState,
+  reducers: {
+    showLoading(state) {
+      state.loadingCount += 1;
+    },
+    hideLoading(state) {
+      state.loadingCount = Math.max(0, state.loadingCount - 1);
+    },
+    setDMMode(state, action: PayloadAction<boolean>) {
+      state.dmMode = action.payload;
+    },
+  },
+});
+
+export const { showLoading, hideLoading, setDMMode } = globalUISlice.actions;
+export default globalUISlice.reducer;

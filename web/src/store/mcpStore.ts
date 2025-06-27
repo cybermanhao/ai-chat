@@ -1,5 +1,5 @@
-import { create } from 'zustand';
-import { MCPService } from '../../../engine/service/mcpService';
+import { createSlice } from '@reduxjs/toolkit';
+import type { PayloadAction } from '@reduxjs/toolkit';
 import type { Tool } from '@engine/service/mcpService';
 
 export interface MCPServer {
@@ -12,146 +12,61 @@ export interface MCPServer {
   error?: string;
 }
 
-interface MCPStoreState {
+interface MCPState {
   servers: MCPServer[];
   activeServerId?: string;
   isLoading: boolean;
-  addServer: (name: string, url: string) => void;
-  removeServer: (id: string) => void;
-  connectServer: (id: string) => Promise<void>;
-  disconnectServer: (id: string) => void;
-  setActiveServer: (id: string) => void;
 }
 
-// 本地存储 key
-const STORAGE_KEY = 'mcp_servers_v1';
+const initialState: MCPState = {
+  servers: [],
+  activeServerId: undefined,
+  isLoading: false,
+};
 
-function saveServersToStorage(servers: MCPServer[], activeServerId?: string) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ servers, activeServerId }));
-  } catch { /* ignore */ }
-}
-
-function loadServersFromStorage(): { servers: MCPServer[]; activeServerId?: string } {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw);
-  } catch { /* ignore */ }
-  return { servers: [], activeServerId: undefined };
-}
-
-// MCPService 实例池，key 为 serverId
-const mcpServiceMap: Record<string, MCPService> = {};
-
-export const useMCPStore = create<MCPStoreState>((set, get) => {
-  // 初始化时从本地存储加载
-  const { servers: initialServers, activeServerId: initialActive } = loadServersFromStorage();
-  return {
-    servers: initialServers,
-    activeServerId: initialActive,
-    isLoading: false,
-    addServer: (name, url) => {
-      set(state => {
-        const servers: MCPServer[] = [
-          ...state.servers,
-          {
-            id: `${Date.now()}-${Math.random()}`,
-            name,
-            url,
-            isConnected: false,
-            loading: false,
-            tools: [],
-          },
-        ];
-        saveServersToStorage(servers, state.activeServerId);
-        return { servers };
+const mcpSlice = createSlice({
+  name: 'mcp',
+  initialState,
+  reducers: {
+    addServer(state, action: PayloadAction<{ name: string; url: string }>) {
+      state.servers.push({
+        id: `${Date.now()}-${Math.random()}`,
+        name: action.payload.name,
+        url: action.payload.url,
+        isConnected: false,
+        loading: false,
+        tools: [],
       });
     },
-    removeServer: (id) => {
-      set(state => {
-        const servers = state.servers.filter(s => s.id !== id);
-        const activeServerId = state.activeServerId === id ? undefined : state.activeServerId;
-        // 移除 MCPService 实例
-        if (mcpServiceMap[id]) {
-          mcpServiceMap[id].disconnect?.();
-          delete mcpServiceMap[id];
-        }
-        saveServersToStorage(servers, activeServerId);
-        return { servers, activeServerId };
-      });
-    },
-    connectServer: async (id) => {
-      set({ isLoading: true });
-      set(state => ({
-        servers: state.servers.map(s =>
-          s.id === id ? { ...s, loading: true, error: undefined } : s
-        ),
-      }));
-      const server = get().servers.find(s => s.id === id);
-      if (!server) return;
-      try {
-        // 只在首次连接时 new 实例
-        if (!mcpServiceMap[id]) {
-          mcpServiceMap[id] = new MCPService(server.url, 'STREAMABLE_HTTP');
-        }
-        const mcp = mcpServiceMap[id];
-        const { data, error } = await mcp.listTools();
-        let tools: Tool[] = [];
-        if (Array.isArray(data)) {
-          tools = data;
-        }
-        set(state => {
-          const servers = state.servers.map(s =>
-            s.id === id && !error
-              ? { ...s, isConnected: true, loading: false, error: undefined, tools }
-              : { ...s, isConnected: false, loading: false }
-          );
-          const activeServerId = error ? undefined : id;
-          saveServersToStorage(servers, activeServerId);
-          return { servers, activeServerId, isLoading: false };
-        });
-      } catch (e) {
-        set(state => {
-          const servers = state.servers.map(s =>
-            s.id === id
-              ? { ...s, isConnected: false, loading: false, error: e instanceof Error ? e.message : String(e), tools: [] }
-              : s
-          );
-          // 连接失败时移除实例
-          if (mcpServiceMap[id]) {
-            mcpServiceMap[id].disconnect?.();
-            delete mcpServiceMap[id];
-          }
-          saveServersToStorage(servers, undefined);
-          return { servers, activeServerId: undefined, isLoading: false };
-        });
+    removeServer(state, action: PayloadAction<string>) {
+      state.servers = state.servers.filter(s => s.id !== action.payload);
+      if (state.activeServerId === action.payload) {
+        state.activeServerId = undefined;
       }
     },
-    disconnectServer: (id) => {
-      set(state => {
-        const servers = state.servers.map(s =>
-          s.id === id ? { ...s, isConnected: false, tools: [] } : s
+    setActiveServer(state, action: PayloadAction<string | undefined>) {
+      state.activeServerId = action.payload;
+    },
+    setIsLoading(state, action: PayloadAction<boolean>) {
+      state.isLoading = action.payload;
+    },
+    updateServer(state, action: PayloadAction<{ id: string; data: Partial<MCPServer> }>) {
+      const { id, data } = action.payload;
+      state.servers = state.servers.map(server =>
+        server.id === id ? { ...server, ...data } : server
+      );
+    },
+    toggleToolEnabled: (state, action: PayloadAction<{ serverId: string; toolName: string; enabled: boolean }>) => {
+      state.servers = state.servers.map(server => {
+        if (server.id !== action.payload.serverId) return server;
+        const tools = server.tools.map(tool =>
+          tool.name === action.payload.toolName ? { ...tool, enabled: action.payload.enabled } : tool
         );
-        const activeServerId = state.activeServerId === id ? undefined : state.activeServerId;
-        // 断开时移除实例
-        if (mcpServiceMap[id]) {
-          mcpServiceMap[id].disconnect?.();
-          delete mcpServiceMap[id];
-        }
-        saveServersToStorage(servers, activeServerId);
-        return { servers, activeServerId };
+        return { ...server, tools };
       });
     },
-    setActiveServer: (id) => {
-      set(state => {
-        saveServersToStorage(state.servers, id);
-        return { activeServerId: id };
-      });
-    },
-  };
+  },
 });
 
-// 提供安全获取 MCPService 实例的方法
-export function getMCPServiceById(id: string): MCPService | undefined {
-  return mcpServiceMap[id];
-}
+export const { addServer, removeServer, setActiveServer, setIsLoading, updateServer, toggleToolEnabled } = mcpSlice.actions;
+export default mcpSlice.reducer;

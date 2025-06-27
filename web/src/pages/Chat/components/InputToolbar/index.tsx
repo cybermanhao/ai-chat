@@ -9,8 +9,9 @@ import {
 import { Button, Divider, Slider, Select, Popover, Tooltip } from 'antd';
 import type { ButtonProps } from 'antd';
 import React, { useState, useCallback } from 'react';
-import { useLLMConfig } from '@/hooks/useLLMConfig';
-import { useModelConfig } from '@/hooks/useModelConfig';
+import { useSelector, useDispatch } from 'react-redux';
+import { setUserModel } from '@/store/llmConfigSlice';
+import { llms } from '@engine/utils/llms';
 import SystemPromptModal from '@/components/Modal/SystemPromptModal';
 import ToolsModal from '@/components/Modal/ToolsModal';
 import './styles.less';
@@ -30,9 +31,15 @@ interface InputToolbarProps {
   loading?: boolean;
 }
 
+const EMPTY_OBJECT = {};
+
 const InputToolbar: React.FC<InputToolbarProps> = () => {
-  const { activeLLM, currentConfig, updateLLMConfig } = useLLMConfig();
-  const { config, updateTemperature, updateContextBalance, updateSystemPrompt } = useModelConfig();
+  const dispatch = useDispatch();
+  const llmConfig = useSelector((state: any) => state.llmConfig);
+  const availableLLMs = llms;
+  const activeLLM = availableLLMs.find(llm => llm.id === llmConfig.activeLLMId);
+  const currentConfig = llmConfig;
+  const config = useSelector((state: any) => state.chat?.chatData?.[state.chat?.currentChatId || '']?.settings || EMPTY_OBJECT);
 
   const [isSystemPromptOpen, setIsSystemPromptOpen] = useState(false);
   const [isToolsModalOpen, setIsToolsModalOpen] = useState(false);
@@ -44,20 +51,20 @@ const InputToolbar: React.FC<InputToolbarProps> = () => {
   const iconStyle = { fontSize: 18 };
   
   const handleModelChange = useCallback((value: string) => {
-    updateLLMConfig({ userModel: value });
-  }, [updateLLMConfig]);
+    dispatch(setUserModel(value));
+  }, [dispatch]);
 
   const handleTemperatureChange = useCallback((value: number) => {
-    updateTemperature(value);
-  }, [updateTemperature]);
+    // updateTemperature(value);
+  }, []);
 
   const handleContextBalanceChange = useCallback((value: number) => {
-    updateContextBalance(value);
-  }, [updateContextBalance]);
+    // updateContextBalance(value);
+  }, []);
 
   const handleSystemPromptChange = useCallback((value: string) => {
-    updateSystemPrompt(value);
-  }, [updateSystemPrompt]);
+    // updateSystemPrompt(value);
+  }, []);
 
   const handleMultiCallToggle = () => {
     setMultiCallEnabled(!multiCallEnabled);

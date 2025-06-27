@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
 import './GlobalLoading.less';
-import { useGlobalUIStore } from '@/store/globalUIStore';
+import useGlobalUIStore from '@/store/globalUIStore';
+
 
 interface GlobalLoadingContextType {
   count: number;
@@ -28,5 +29,4 @@ export const GlobalLoadingProvider: React.FC<{ children: React.ReactNode }> = ({
 };
 
 // 只需导出 Provider 和 useGlobalLoading，组件本身已自动读取 store
-export { default as MemeLoading } from './memeLoading/MemeLoading';
-export { useGlobalUIStore } from '@/store/globalUIStore';
+export { default as MemeLoading } from './memeLoading';

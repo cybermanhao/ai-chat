@@ -5,11 +5,12 @@ import type {
   ChatCompletionCreateParams,
   ChatCompletionMessageParam
 } from 'openai/resources/chat/completions';
-import type { ChatMessage } from '../types/chat';
+import type { ChatMessage, StreamChunk } from '../types/chat';
 import type { ModelConfig } from '../types/model';
 import type { Stream } from 'openai/streaming';
 import type { ExtendedChatCompletionChunk } from '../types/openai-extended';
 import type { LLMConfig } from '../types/llm';
+import { streamHandler, handleResponseStream } from '../stream/streamHandler';
 
 let currentStream: AbortController | null = null;
 
@@ -65,82 +66,60 @@ export class LLMService {
     return result;
   }
 
-  // 兼容旧 generate 签名，自动转为新签名调用
   async generate(
-    messagesOrRequest: ChatMessage[] | Record<string, unknown>,
-    modelConfigOrSignal?: ModelConfig | AbortSignal,
-    llmConfig?: LLMConfig,
-    signal?: AbortSignal
-  ): Promise<Stream<ExtendedChatCompletionChunk>> {
-    // 新签名：generate(request, signal)
-    if (Array.isArray(messagesOrRequest) && modelConfigOrSignal && llmConfig) {
-      // 旧签名兼容：generate(messages, modelConfig, llmConfig, signal)
-      const messages = messagesOrRequest;
-      const modelConfig = modelConfigOrSignal as ModelConfig;
-      const request: Record<string, unknown> = {
-        model: llmConfig.model,
-        messages: this.formatMessages(messages),
-        temperature: modelConfig.temperature,
-        max_tokens: modelConfig.maxTokens,
-        stream: true,
-        ...(llmConfig.tools && { tools: llmConfig.tools }),
-        ...(llmConfig.parallelToolCalls && { tool_choice: 'auto' }),
-        baseUrl: llmConfig.baseUrl,
-        apiKey: llmConfig.apiKey,
-        systemPrompt: llmConfig.systemPrompt,
-      };
-      return this.generate(request, signal);
-    }
-    // 新签名实现
-    const request = messagesOrRequest as Record<string, unknown>;
-    const client = this.createClient({
-      baseUrl: (request.baseUrl || request.apiUrl || '') as string,
-      apiKey: (request.apiKey || '') as string,
-      model: (request.model || '') as string,
-      temperature: (request.temperature as number) ?? 0.7,
-      maxTokens: (request.max_tokens as number) ?? 2048,
-      systemPrompt: (request.systemPrompt as string) ?? '',
+    request: {
+      model: string;
+      messages: any[];
+      temperature?: number;
+      max_tokens?: number;
+      stream?: boolean;
+      tools?: any;
+      tool_choice?: any;
+      baseUrl: string;
+      apiKey: string;
+      systemPrompt?: string;
+    },
+    {
+      onChunk,
+      onDone,
+      signal
+    }: {
+      onChunk?: (chunk: StreamChunk) => void | Promise<void>;
+      onDone?: (result: any) => void | Promise<void>;
+      signal?: AbortSignal;
+    } = {}
+  ) {
+    const client = new OpenAI({
+      baseURL: request.baseUrl,
+      apiKey: request.apiKey,
+      dangerouslyAllowBrowser: true
     });
-    // tool_choice 只允许 'auto' | 'none' | { function: { name: string } }
-    let toolChoice: any = undefined;
-    if (request.tool_choice === 'auto' || request.tool_choice === 'none') {
-      toolChoice = request.tool_choice;
-    } else if (
-      typeof request.tool_choice === 'object' &&
-      request.tool_choice !== null &&
-      'function' in request.tool_choice
-    ) {
-      toolChoice = request.tool_choice;
-    }
-    const params: ChatCompletionCreateParams = {
-      model: (request.model as string) || '',
-      messages: (request.messages as ChatCompletionMessageParam[]) || [],
-      temperature: typeof request.temperature === 'number' ? request.temperature : 0.7,
-      max_tokens: typeof request.max_tokens === 'number' ? request.max_tokens : 2048,
+    const params = {
+      model: request.model,
+      messages: request.messages,
+      temperature: request.temperature ?? 0.7,
+      max_tokens: request.max_tokens ?? 2048,
       stream: true,
       ...(Array.isArray(request.tools) ? { tools: request.tools } : {}),
-      ...(toolChoice !== undefined ? { tool_choice: toolChoice } : {}),
+      ...(request.tool_choice !== undefined ? { tool_choice: request.tool_choice } : {}),
     };
-    const abortController = new AbortController();
-    currentStream = abortController;
     try {
-      const timeoutId = setTimeout(() => {
-        if (abortController && !abortController.signal.aborted) {
-          abortController.abort('timeout');
-        }
-      }, 10000);
-      const response = await client.chat.completions.create(params, {
-        signal: (modelConfigOrSignal as AbortSignal) || abortController.signal
-      }) as unknown as Stream<ExtendedChatCompletionChunk>;
-      clearTimeout(timeoutId);
-      return response;
+      // 直接用 fetch 拿到 Response
+      const response = await fetch(`${request.baseUrl}/v1/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(request.apiKey ? { Authorization: `Bearer ${request.apiKey}` } : {})
+        },
+        body: JSON.stringify(params),
+        signal
+      });
+      // 用 engine 层 streamHandler 解析流
+      const chunkIter = streamHandler(response);
+      // 用 handleResponseStream 消费流
+      await handleResponseStream(chunkIter, onChunk, onDone);
     } catch (error) {
-      if (error instanceof Error) {
-        const enhancedError = new Error(this.getErrorMessage(error));
-        enhancedError.name = error.name;
-        (enhancedError as Error & { code: string }).code = this.getErrorCode(error);
-        throw enhancedError;
-      }
+      if (onDone) onDone({ error: error instanceof Error ? error.message : String(error) });
       throw error;
     }
   }

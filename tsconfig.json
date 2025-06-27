@@ -4,13 +4,16 @@
     "module": "ESNext",
     "moduleResolution": "Node",
     "strict": true,
+    "noImplicitAny": false,
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true,
     "declaration": true,
     "declarationMap": true,
     "composite": true,
-    "outDir": "./build"
+    "outDir": "./build",
+    "noUnusedLocals": false,
+    "noUnusedParameters": false
   },
   "include": ["./engine/**/*", "./web/**/*", "./electron/**/*", "./api/**/*", "./iframe/**/*", "./mcp-node/**/*"],
   "exclude": ["node_modules", "**/dist", "**/build"]

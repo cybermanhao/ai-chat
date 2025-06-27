@@ -1,5 +1,5 @@
 import { Form, Modal, Input } from 'antd';
-import type { AIRole } from '@/store/roleStore';
+import type { AIRole } from '@engine/store/roleStore';
 
 interface RoleFormProps {
   visible: boolean;

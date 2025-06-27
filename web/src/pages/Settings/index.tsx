@@ -1,31 +1,38 @@
 import { Form, Switch, Select, Button, Divider, Input, Tooltip, Card } from 'antd';
 import { QuestionCircleOutlined } from '@ant-design/icons';
-import { useThemeStore } from '@/store/themeStore';
-import { useLLMConfig } from '@/hooks/useLLMConfig';
+import { useSelector, useDispatch } from 'react-redux';
+import type { RootState, AppDispatch } from '@/store';
+import { toggleTheme, setDMMode } from '@/store/themeStore';
+import { setActiveLLMId, setApiKey, setUserModel } from '@/store/llmConfigSlice';
 import { useMemo, useEffect } from 'react';
 import './styles.less';
+import { llms } from '@engine/utils/llms';
 
 const Settings = () => {
-  const { 
-    activeLLM,
-    currentConfig,
-    availableLLMs,
-    selectLLM,
-    updateLLMConfig
-  } = useLLMConfig();
-  const { isDarkMode, toggleTheme, dmMode, setDMMode } = useThemeStore();
+  const dispatch: AppDispatch = useDispatch();
+  const isDarkMode = useSelector((state: RootState) => state.theme.isDarkMode);
+  const dmMode = useSelector((state: RootState) => state.theme.dmMode);
+  const llmConfig = useSelector((state: RootState) => state.llmConfig);
   const [form] = Form.useForm();
 
+  // 获取所有可用 LLM
+  const availableLLMs = llms;
+  // 当前 activeLLM
+  const activeLLM = availableLLMs.find(llm => llm.id === llmConfig.activeLLMId);
+  // 当前配置
+  const currentConfig = llmConfig;
+
+  // 选择 LLM
   const handleLLMChange = (llmId: string) => {
-    selectLLM(llmId);
+    dispatch(setActiveLLMId(llmId));
   };
-
+  // 修改模型
   const handleModelChange = (userModel: string) => {
-    updateLLMConfig({ userModel });
+    dispatch(setUserModel(userModel));
   };
-
-  const handleApiKeyChange = (value: string) => {
-    updateLLMConfig({ apiKey: value });
+  // 修改 API key
+  const handleApiKeyChange = (llmId: string, value: string) => {
+    dispatch(setApiKey({ llmId, apiKey: value }));
   };
 
   const handleSubmit = () => {
@@ -50,13 +57,13 @@ const Settings = () => {
   // 保证表单内容和 store 实时同步
   useEffect(() => {
     form.setFieldsValue({
-      apiKey: currentConfig.apiKey,
+      apiKey: currentConfig.apiKeys?.[currentConfig.activeLLMId] || '',
       model: currentConfig.userModel,
       llm: activeLLM?.id,
       darkMode: isDarkMode,
       dmMode: dmMode,
     });
-  }, [currentConfig.apiKey, currentConfig.userModel, activeLLM?.id, isDarkMode, dmMode, form]);
+  }, [currentConfig.apiKeys, currentConfig.userModel, activeLLM?.id, isDarkMode, dmMode, form]);
 
   return (
     <div className="settings-page">
@@ -73,19 +80,19 @@ const Settings = () => {
             autoSave: true,
             llm: activeLLM?.id,
             model: currentConfig?.userModel,
-            apiKey: currentConfig?.apiKey,
+            apiKey: currentConfig?.apiKeys?.[currentConfig.activeLLMId] || '',
             dmMode: dmMode,
           }}
         >
           <Form.Item label="界面设置" className="section-title" />
           <Form.Item label="深色模式" name="darkMode">
-            <Switch checked={isDarkMode} onChange={toggleTheme} />
+            <Switch checked={isDarkMode} onChange={() => dispatch(toggleTheme())} />
           </Form.Item>
           <Form.Item label="自动保存对话" name="autoSave">
             <Switch />
           </Form.Item>
           <Form.Item label="DM模式" name="dmMode">
-            <Switch checked={dmMode} onChange={setDMMode} />
+            <Switch checked={dmMode} onChange={v => dispatch(setDMMode(v))} />
           </Form.Item>
 
           <Divider />
@@ -119,8 +126,8 @@ const Settings = () => {
           >
             <Input.Password 
               placeholder="输入 API 密钥"
-              value={currentConfig.apiKey}
-              onChange={(e) => handleApiKeyChange(e.target.value)}
+              value={currentConfig.apiKeys?.[currentConfig.activeLLMId] || ''}
+              onChange={e => handleApiKeyChange(currentConfig.activeLLMId, e.target.value)}
             />
           </Form.Item>
 

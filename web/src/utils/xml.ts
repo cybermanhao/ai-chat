@@ -1,3 +1,9 @@
+// ========================================
+// [插件系统已禁用] - 插件系统尚未完善，暂时停止开发
+// 本文件保留XML解析工具函数，但注释掉插件相关的处理逻辑
+// 如需恢复插件功能，请取消相关注释并完善插件系统实现
+// ========================================
+
 // XML 解析和渲染相关的工具函数
 
 // 解析 XML 标签的属性
@@ -32,6 +38,8 @@ function parseTag(xml: string, tagName: string): Array<{
   return results;
 }
 
+// [插件系统已禁用] - 注释掉插件相关的XML处理函数实现
+/*
 // 提取插件块的内容
 function extractPluginContent(xml: string): Array<{
   pluginId: string;
@@ -49,16 +57,6 @@ function extractPluginContent(xml: string): Array<{
   }
 
   return results;
-}
-
-// 转义 HTML
-function escapeHtml(unsafe: string): string {
-  return unsafe
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
 }
 
 // 处理单个插件的内容
@@ -82,6 +80,28 @@ function processPluginContent(
   });
   
   return processedContent;
+}
+*/
+
+// [插件系统已禁用] - 导出空的插件处理函数，防止其他模块引用出错
+function extractPluginContent(xml: string): Array<{ pluginId: string; content: string }> {
+  console.log('[插件系统已禁用] extractPluginContent 已停用');
+  return [];
+}
+
+function processPluginContent(content: string, plugin: any): string {
+  console.log('[插件系统已禁用] processPluginContent 已停用');
+  return content;
+}
+
+// 转义 HTML
+function escapeHtml(unsafe: string): string {
+  return unsafe
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 }
 
 // 提取并处理XML块

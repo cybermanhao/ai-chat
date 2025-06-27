@@ -1,0 +1,118 @@
+Read file: web/src/store/index.ts
+Ran tool
+Ran tool
+Ran tool
+Ran tool
+Ran tool
+Ran tool
+Ran tool
+Ran tool
+Ran tool
+Ran tool
+Ran tool
+Ran tool
+Ran tool
+Read file: web/src/pages/Chat/components/MessageCard/index.tsx
+Read file: web/src/pages/Chat/components/MessageCard/index.tsx
+分析与重构方案如下：
+
+---
+
+## 1. 组件本地存储与 runtime 状态重构
+
+### 现状
+- `MessageCard` 组件依赖 `useChatRuntimeStore`（zustand）获取 runtimeMessages，动态渲染消息的流式状态与内容。
+- 其它组件也可能通过 `useXXXStore` 直接访问 zustand 状态或本地存储。
+
+### 目标
+- **所有 runtime 状态、消息内容、UI 状态全部通过 redux store（useSelector/useDispatch）管理。**
+- **本地存储的读写全部在 redux slice/thunk 层完成，组件只与 redux 交互。**
+- **彻底移除 useChatRuntimeStore/useXXXStore 及相关 import。**
+
+---
+
+## 2. 具体重构步骤
+
+### 2.1 注册所有新 slice 到 store/index.ts
+
+```ts
+import { configureStore } from '@reduxjs/toolkit';
+import chatReducer from './chatSlice';
+import globalUIReducer from './globalUIStore';
+import themeReducer from './themeStore';
+import roleReducer from './roleStore';
+import pluginReducer from './pluginStore';
+import mcpReducer from './mcpStore';
+
+export const store = configureStore({
+  reducer: {
+    chat: chatReducer,
+    globalUI: globalUIReducer,
+    theme: themeReducer,
+    role: roleReducer,
+    plugin: pluginReducer,
+    mcp: mcpReducer,
+  },
+});
+
+export type RootState = ReturnType<typeof store.getState>;
+export type AppDispatch = typeof store.dispatch;
+```
+
+---
+
+### 2.2 替换 useChatRuntimeStore 逻辑
+
+- 将 `runtimeMessage` 的获取方式改为从 redux 的 chat state 里查找对应消息的 runtime 字段（如 `state.chat.chatData[chatId].messages`）。
+- 如果 runtime 状态需要单独 slice，可在 chatSlice 里增加 runtimeMessages 字段，所有流式状态变更都通过 action/thunk 更新 redux。
+
+**示例替换：**
+```ts
+import { useSelector } from 'react-redux';
+import type { RootState } from '@/store';
+
+const runtimeMessage = useSelector((state: RootState) =>
+  state.chat.chatData[currentChatId]?.messages.find(m => m.id === id)
+);
+```
+- 其它 useXXXStore 也用类似方式替换为 useSelector/useDispatch。
+
+---
+
+### 2.3 本地存储重构
+
+- 在 chatSlice、pluginSlice、mcpSlice 等 reducer/thunk 内，所有需要持久化的 state 变更时，自动同步到 localStorage。
+- 页面初始化时（如 App.tsx/useEffect 或 store 初始化 thunk），从 localStorage 读取数据并 dispatch 到 redux。
+- 推荐用 redux-persist 自动持久化（如需更细粒度可手动实现）。
+
+---
+
+### 2.4 全局批量替换
+
+- 删除所有 `import { useXXXStore } from '@/store/xxxStore'`。
+- 替换为 `useSelector((state: RootState) => state.xxx)` 和 `useDispatch()`。
+- 检查所有 `import '@/store/xxxStore'`，全部指向 redux slice。
+
+---
+
+## 3. MessageCard 组件重构片段
+
+```ts
+import { useSelector } from 'react-redux';
+import type { RootState } from '@/store';
+
+const runtimeMessage = useSelector((state: RootState) =>
+  state.chat.chatData[currentChatId]?.messages.find(m => m.id === id)
+);
+```
+- 其它 runtime 字段同理，全部从 redux 获取。
+
+---
+
+## 4. 结论
+
+- 组件只与 redux 交互，所有本地存储和副作用逻辑都在 slice/thunk 层完成。
+- 彻底移除 useXXXStore 及 zustand 相关代码。
+- 本地存储推荐用 redux-persist 自动化，或在 slice/thunk 内手动同步。
+
+如需自动生成批量替换脚本、redux-persist 集成代码或具体组件重构示例，请指定模块或范围！

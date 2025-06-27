@@ -1,7 +1,8 @@
-// engine/utils/ChatMessageManager.ts
+// engine/managers/MessageManager.ts
 // 统一的消息管理器，整合消息创建和管理功能
 import type { MessageStatus } from '../types/chat';
-import { ChatMessage, RuntimeMessage, BaseMessageProps } from '../types/message';
+import type { RuntimeMessage, UserMessage, AssistantMessage, SystemMessage, ClientNoticeMessage } from '../types/chat';
+import type { BaseMessageProps } from '../types/message';
 
 export class ChatMessageManager {
   private messages: RuntimeMessage[] = [];
@@ -34,49 +35,46 @@ export class ChatMessageManager {
     this.saveChat();
   }
 
-  // 消息工厂方法
-  createUserMessage(content: string, status: MessageStatus = 'stable', extra: Partial<BaseMessageProps> = {}): RuntimeMessage {
-    const props: BaseMessageProps & { status: MessageStatus } = {
+  // 静态工厂方法，便于 redux/thunk 直接复用
+  static createUserMessage(content: string, status: MessageStatus = 'stable', extra: Partial<BaseMessageProps> = {}): RuntimeMessage {
+    return {
       id: extra.id || `msg-${Date.now()}`,
       role: 'user',
       content: content.trim(),
       timestamp: Date.now(),
       status,
       ...extra,
-    };
-    return new RuntimeMessage(props);
+    } as UserMessage & { status: MessageStatus };
   }
 
-  createAssistantMessage(content: string = '', status: MessageStatus = 'connecting', extra: Partial<BaseMessageProps> = {}): RuntimeMessage {
-    const props: BaseMessageProps & { status: MessageStatus } = {
+  static createAssistantMessage(content: string = '', status: MessageStatus = 'connecting', extra: Partial<BaseMessageProps> = {}): RuntimeMessage {
+    return {
       id: extra.id || `msg-${Date.now()}-response`,
       role: 'assistant',
       content,
       timestamp: Date.now(),
       status,
       ...extra,
-    };
-    return new RuntimeMessage(props);
+    } as AssistantMessage & { status: MessageStatus };
   }
 
-  createSystemMessage(content: string, extra: Partial<BaseMessageProps> = {}): RuntimeMessage {
-    const props: BaseMessageProps & { status: MessageStatus } = {
+  static createSystemMessage(content: string, extra: Partial<BaseMessageProps> = {}): RuntimeMessage {
+    return {
       id: extra.id || `sys-${Date.now()}`,
       role: 'system',
       content,
       timestamp: Date.now(),
       status: 'stable',
       ...extra,
-    };
-    return new RuntimeMessage(props);
+    } as SystemMessage & { status: MessageStatus };
   }
 
-  createClientNoticeMessage(
+  static createClientNoticeMessage(
     content: string,
     noticeType: 'error' | 'warning' | 'info' = 'error',
     errorCode?: string
   ): RuntimeMessage {
-    const props: BaseMessageProps & { status: MessageStatus } = {
+    return {
       id: `notice-${Date.now()}`,
       role: 'client-notice',
       content,
@@ -84,31 +82,30 @@ export class ChatMessageManager {
       status: 'stable',
       noticeType,
       errorCode,
-    };
-    return new RuntimeMessage(props);
+    } as ClientNoticeMessage;
   }
 
   // 便捷方法：创建并添加消息
   addUserMessage(content: string, status: MessageStatus = 'stable', extra: Partial<BaseMessageProps> = {}) {
-    const msg = this.createUserMessage(content, status, extra);
+    const msg = ChatMessageManager.createUserMessage(content, status, extra);
     this.addMessage(msg);
     return msg;
   }
 
   addAssistantMessage(content: string = '', status: MessageStatus = 'connecting', extra: Partial<BaseMessageProps> = {}) {
-    const msg = this.createAssistantMessage(content, status, extra);
+    const msg = ChatMessageManager.createAssistantMessage(content, status, extra);
     this.addMessage(msg);
     return msg;
   }
 
   addSystemMessage(content: string, extra: Partial<BaseMessageProps> = {}) {
-    const msg = this.createSystemMessage(content, extra);
+    const msg = ChatMessageManager.createSystemMessage(content, extra);
     this.addMessage(msg);
     return msg;
   }
 
   addClientNoticeMessage(content: string, noticeType: 'error' | 'warning' | 'info' = 'error', errorCode?: string) {
-    const msg = this.createClientNoticeMessage(content, noticeType, errorCode);
+    const msg = ChatMessageManager.createClientNoticeMessage(content, noticeType, errorCode);
     this.addMessage(msg);
     return msg;
   }
@@ -128,4 +125,4 @@ export class ChatMessageManager {
   setSaveCallback(saveChat: () => void) {
     this.saveChat = saveChat;
   }
-}
+} 

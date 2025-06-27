@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Modal, List, Switch, Divider } from 'antd';
-import { useMCPStore } from '@/store/mcpStore';
+import { useSelector, useDispatch } from 'react-redux';
+import type { RootState, AppDispatch } from '@/store';
+import { toggleToolEnabled } from '@/store/mcpStore';
 import type { MCPTool } from '@/services/mcpService';
 import type { Tool } from '@engine/service/mcpService';
 
@@ -11,24 +13,13 @@ interface ToolManagerModalProps {
 }
 
 const ToolManagerModal: React.FC<ToolManagerModalProps> = ({ open, onClose, themeColor = 'var(--primary-color)' }) => {
-  const { servers } = useMCPStore();
+  const servers = useSelector((state: RootState) => state.mcp.servers);
+  const dispatch: AppDispatch = useDispatch();
   const [selectedTool, setSelectedTool] = useState<{serverId: string, tool: MCPTool} | null>(null);
 
   // 工具开关切换逻辑，支持启用/禁用工具
   const handleToolSwitch = (serverId: string, tool: MCPTool, checked: boolean) => {
-
-    useMCPStore.setState(state => {
-      const servers = state.servers.map(s => {
-        if (s.id !== serverId) return s;
-        // 只标记工具的 enabled 字段
-        const tools = s.tools.map(t =>
-          t.name === tool.name ? { ...t, enabled: checked } : t
-        );
-        return { ...s, tools };
-      });
-      return { servers };
-    });
-    
+    dispatch(toggleToolEnabled({ serverId, toolName: tool.name, enabled: checked }));
   };
 
   return (
