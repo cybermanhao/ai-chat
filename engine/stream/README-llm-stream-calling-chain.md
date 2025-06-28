@@ -1,84 +1,162 @@
-# zz-ai-chat LLM 流式消息发送调用链分析
+# zz-ai-chat LLM 流式请求调用链（现代工程版）
 
-## 1. Redux 入口（web/src/store/chatSlice.ts）
+## 1. 总览
 
-- **发起端**：UI 组件（如 Chat/InputSender）调用 `dispatch(sendMessageAsync({ chatId, input }))`
-- **异步 action**：`sendMessageAsync`（redux-thunk）
-  - 组装参数（chatId、input、llmConfig、activeLLM 等）
-  - 追加用户消息到 redux
-  - **调用 engine 层 glue**：`createLLMStreamManager({...}).handleSend(input, signal)`
+本项目采用分层解耦的 LLM 流式请求架构，支持多端（Web/Electron）、多模型、多工具链、流式消息、工具调用、OCR/图片等后处理 glue，便于扩展和维护。
 
 ---
 
-## 2. engine/stream/streamManager.ts
+## 2. 分层结构与职责
 
-- **createLLMStreamManager**：业务 glue 工厂，负责 glue redux/engine/llmService
-  - 组装 initialMessages、llmConfig、activeLLM、tools、回调等
-  - 返回带有 handleSend 的 manager
+### 2.1 UI/Redux 层（web/src/store/chatSlice.ts）
+- 负责参数组装、状态管理、UI glue
+- 只调度 createLLMStreamManager，传递参数对象
+- 不关心底层流式细节
 
-- **handleSend**（核心 glue 逻辑）：
-  1. 组装消息队列，追加 user/assistant/system 消息
-  2. 构建 LLM 请求参数（model、apiKey、baseUrl、tools、systemPrompt 等）
-  3. **调用 llmService.generate** 发起流式请求
-  4. **流式消费 glue**（handleResponseStream）：
-     - onChunk 回调：  
-       - 更新消息内容到消息管理器和 redux
-       - 如有 tools，实例化 ToolCallAccumulator，处理 tool_calls 分片、tool_content glue
-     - onDone 回调：  
-       - 更新最终消息内容到消息管理器和 redux
-       - 触发 onStreamEnd
+### 2.2 业务 glue 层（engine/stream/streamManager.ts）
+- 负责 glue 业务流、消息管理、参数组装
+- 只调用 streamLLMChat，onChunk/onDone glue 到消息管理器和 redux
+- 工具链 glue、分片处理等可用 ToolCallAccumulator
+- 可选 glue 到 webview-glue/electron-glue
 
----
+### 2.3 LLM 请求 glue 层（engine/service/llmService.ts）
+- 只负责底层 LLM 请求、流式消费
+- 无状态 async function（streamLLMChat）
+- 支持自定义 fetch、工具链 glue、消息后处理 glue、proxy
+- 预留 postProcessMessages、ocrService、imageService 等 glue 接口
+- currentStream 支持流式中止
 
-## 3. engine/service/llmService.ts
+### 2.4 多端 glue 层（web/src/glue/webview-glue.ts、electron/webview-glue.ts）
+- 只负责多端 postMessage glue
+- createWebviewLLMGlue/createElectronWebviewGlue 工厂，onChunk/onDone/onAbort glue 到 UI
+- 业务层只需 glue onChunk/onDone 到此 glue，无需关心多端细节
 
-- **generate**：底层 LLM 请求 glue
-  - 用 fetch 直接请求 LLM 服务（如 OpenAI 兼容接口）
-  - 返回 Response，交由 streamHandler 解析
-
----
-
-## 4. engine/stream/streamHandler.ts
-
-- **streamHandler**：将 fetch Response 解析为 chunk（ExtendedChatCompletionChunk）
-- **handleResponseStream**：消费 chunk，逐步回调 onChunk/onDone
+### 2.5 工具链/后处理 glue 层（engine/service/ocr.service.ts、image.service.ts 等）
+- 只负责 OCR、图片等工具链 glue
+- 通过 postProcessMessages/ocrService/imageService 注入到 llmService
+- 业务层无需关心工具链实现
 
 ---
 
-## 5. 消息流向与 UI glue
+## 3. 关键接口/调用点
 
-- onChunk/onDone glue 到 redux（addMessage、updateLastMessage），驱动 UI 实时展示流式消息
-- 如有 tool call，tool call glue 也在 onChunk 内部处理
+- chatSlice.ts
+  ```ts
+  const streamManager = createLLMStreamManager({
+    // ...参数
+    onAddMessage: ...,
+    onUpdateLastMessage: ...,
+    onError: ...,
+    // 可选 glue: ...webviewGlue.onChunk/onDone
+  });
+  await streamManager.handleSend(input, new AbortController().signal);
+  ```
+
+- streamManager.ts
+  ```ts
+  await streamLLMChat({
+    baseURL,
+    apiKey,
+    model,
+    messages,
+    temperature,
+    tools,
+    parallelToolCalls,
+    onChunk, // glue 到消息管理器/redux/webviewGlue
+    onDone,  // glue 到消息管理器/redux/webviewGlue
+    postProcessMessages, // glue 工具链/后处理
+    ocrService, // glue OCR
+    imageService, // glue 图片
+    customFetch // glue 代理
+  });
+  ```
+
+- llmService.ts
+  ```ts
+  export async function streamLLMChat({ ... }) {
+    if (postProcessMessages) await postProcessMessages(messages);
+    // ...如需 OCR、图片 glue，可在此调用 ocrService/imageService
+    // ...openai sdk for await...of
+    for await (const chunk of stream as any) {
+      if (onChunk) onChunk(chunk);
+    }
+    if (onDone) onDone(lastChunk);
+  }
+  ```
+
+- webview-glue.ts / electron-glue.ts
+  ```ts
+  export function createWebviewLLMGlue({ webview }) {
+    return {
+      onChunk: (chunk) => webview.postMessage({ ... }),
+      onDone: (result) => webview.postMessage({ ... }),
+      onAbort: () => webview.postMessage({ ... })
+    }
+  }
+  ```
 
 ---
 
-## 6. 总结（调用链图）
+## 4. 结构图
 
 ```mermaid
 sequenceDiagram
 participant UI/Redux
 participant chatSlice
 participant streamManager
-participant llmService
-participant streamHandler
+participant llmService (streamLLMChat)
+participant webviewGlue
 
 UI/Redux->>chatSlice: dispatch(sendMessageAsync)
 chatSlice->>streamManager: createLLMStreamManager().handleSend()
-streamManager->>llmService: generate(payload, signal)
-llmService->>streamHandler: streamHandler(response)
-streamHandler->>streamManager: onChunk/onDone
-streamManager->>chatSlice/Redux: onAddMessage/onUpdateLastMessage
-chatSlice/Redux->>UI: UI 实时渲染
+streamManager->>llmService: streamLLMChat(params, { onChunk, onDone, ... })
+llmService-->>streamManager: onChunk/onDone
+streamManager->>webviewGlue: onChunk/onDone
+webviewGlue-->>UI: postMessage
 ```
 
 ---
 
-## 7. 关键分层说明
+## 5. 目录结构建议
 
-- **Redux/业务 glue**：只负责参数组装、状态管理、UI glue
-- **engine/streamManager**：只 glue 业务流、消息管理、tool call glue
-- **engine/llmService/streamHandler**：只负责底层请求和流式解析
+```
+engine/
+  service/
+    llmService.ts
+    ocr.service.ts
+    image.service.ts
+    axios-fetch.ts
+  stream/
+    streamManager.ts
+    streamHandler.ts
+    streamAccumulator.ts
+    README-llm-stream-calling-chain.md
+web/
+  src/
+    store/
+      chatSlice.ts
+    glue/
+      webview-glue.ts
+      electron-glue.ts
+```
 
 ---
 
-如需更详细的参数流、类型流、或某一层 glue 细节说明，可继续提问！ 
+## 6. 命名建议
+- **底层 LLM 请求函数**：`streamLLMChat`、`streamChatCompletion`、`llmStreamRequest` 等，突出"流式/无状态/异步"特性。
+- **业务 glue 工厂**：`createLLMStreamManager`、`createChatStreamManager` 等。
+- **流式分发回调**：`onChunk`、`onDone`、`onAbort`、`onToolCall` 等。
+- **工具链 glue**：`postProcessMessages`、`handleToolCall`、`ocrService`、`imageService` 等。
+- **多端 glue**：`postMessageGlue`、`webviewGlue`、`electronGlue` 等。
+
+---
+
+## 7. 扩展点与最佳实践
+- glue 层全部对象化、类型化，便于扩展和维护
+- 工具链/后处理 glue 可随时插拔
+- 多端 glue 只需 glue onChunk/onDone，无需关心底层细节
+- 流式 glue、工具链 glue、后处理 glue、代理 glue 全链路可插拔
+
+---
+
+如需进一步细化 glue 层、工具链、后处理等分层方案，可继续提问！ 

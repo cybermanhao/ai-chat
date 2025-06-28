@@ -43,6 +43,7 @@ const InputSender: React.FC<InputSenderProps> = ({
   
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
+      console.log('[InputSender] Enter pressed');
       e.preventDefault();
       if (!isDisabled && (value ?? inputValue).trim()) {
         handleSend();
@@ -56,9 +57,12 @@ const InputSender: React.FC<InputSenderProps> = ({
   }, []);
 
   const handleSend = () => {
+    console.log('[InputSender] handleSend called', { currentChatId, value, inputValue });
     if (onSend) {
+      console.log('[InputSender] onSend prop exists, calling onSend');
       onSend();
     } else if (currentChatId) {
+      console.log('[InputSender] dispatch sendMessageAsync', { chatId: currentChatId, input: value ?? inputValue });
       dispatch(sendMessageAsync({ chatId: currentChatId, input: value ?? inputValue }));
       setInputValue('');
     }
@@ -104,7 +108,10 @@ const InputSender: React.FC<InputSenderProps> = ({
                 type="primary"
                 icon={<SendOutlined />}
                 disabled={!(value ?? inputValue).trim() || isDisabled}
-                onClick={handleSend}
+                onClick={() => {
+                  console.log('[InputSender] Send button clicked');
+                  handleSend();
+                }}
               >
                 发送
               </Button>

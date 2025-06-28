@@ -5,6 +5,7 @@ import type { CompletionResult } from './streamHandler';
 import { buildLLMRequestPayload } from '../utils/llmConfig';
 import type { RuntimeMessage } from '../types/chat';
 import { ToolCallAccumulator } from './streamAccumulator';
+import { streamLLMChat, abortLLMStream } from '../service/llmService';
 
 export function createLLMStreamManager({
   initialMessages,
@@ -12,7 +13,7 @@ export function createLLMStreamManager({
   mcpServiceInstance,
   config,
   currentConfig,
-  activeLLM,
+  activeLLMConfig,
   activeServer,
   onAddMessage,
   onUpdateLastMessage,
@@ -25,7 +26,7 @@ export function createLLMStreamManager({
   mcpServiceInstance: any;
   config: any;
   currentConfig: any;
-  activeLLM: any;
+  activeLLMConfig: any;
   activeServer: any;
   onAddMessage: (msg: RuntimeMessage) => void;
   onUpdateLastMessage: (patch: Partial<RuntimeMessage>) => void;
@@ -34,10 +35,11 @@ export function createLLMStreamManager({
   onError?: (msg: string) => void;
 }) {
   console.log('currentConfig:', currentConfig);
-  console.log('activeLLM:', activeLLM);
+  console.log('activeLLMConfig:', activeLLMConfig);
   const messageManager = new ChatMessageManager(initialMessages, saveChat);
 
   async function handleSend(inputValue: string, abortSignal: AbortSignal) {
+    console.log('[streamManager] handleSend called', { inputValue });
     if (!inputValue.trim()) return;
     try {
       const userMessage = ChatMessageManager.createUserMessage(inputValue.trim());
@@ -49,53 +51,26 @@ export function createLLMStreamManager({
       const currentMessages = [...messageManager.getMessages()];
       const systemMessage = ChatMessageManager.createSystemMessage(config.systemPrompt);
       const fullMessages = [systemMessage, ...currentMessages];
-      
-      // 使用 buildLLMRequestPayload 构建请求
-      const payload = buildLLMRequestPayload(fullMessages, {
-        server: activeServer ? { 
-          tools: activeServer.tools, 
-          llmConfig: {
-            model: currentConfig.userModel || '',
-            apiKey: currentConfig.apiKeys?.[currentConfig.activeLLMId] || '',
-            apiUrl: activeLLM.baseUrl,
-          }
-        } : undefined,
-        extraOptions: {
-          model: currentConfig.userModel || '',
-          temperature: config.temperature,
-          max_tokens: config.maxTokens,
-          systemPrompt: config.systemPrompt,
-          apiKey: currentConfig.apiKeys?.[currentConfig.activeLLMId] || '',
-          apiUrl: activeLLM.baseUrl,
-        }
-      });
-      
-      const llmService = activeLLM.llmService;
-      const stream = await llmService.generate(
-        payload,
-        abortSignal
-      );
-      // 判断是否有 tools
-      const tools = config.tools || (activeServer && activeServer.tools);
-      let toolCallAccumulator: ToolCallAccumulator | undefined = undefined;
-      if (tools && Array.isArray(tools) && tools.length > 0) {
-        toolCallAccumulator = new ToolCallAccumulator({
-          onFlush: async (toolName, toolArgs) => {
-            // 这里 glue 到 handleToolCall，可按需扩展
-            // await handleToolCall(toolName, toolArgs);
-          }
-        });
-      }
-      await handleResponseStream(
-        stream,
-        async (chunk) => {
-          // 兼容 deepseek 响应字段，所有字段均为可选
-          // tool_content 可能为 string 或对象，需安全处理
+
+      // 构建参数对象
+      const llmParams = {
+        baseURL: activeLLMConfig.baseUrl,
+        apiKey: currentConfig.apiKeys?.[currentConfig.activeLLMId] || '',
+        model: currentConfig.userModel || '',
+        messages: fullMessages,
+        temperature: config.temperature,
+        tools: config.tools || (activeServer && activeServer.tools) || [],
+        parallelToolCalls: config.parallelToolCalls,
+        proxyServer: undefined, // 如有 proxy 需求可补充
+        postProcessMessages: undefined, // 如有后处理可补充
+        customFetch: undefined, // 如有自定义 fetch 可补充
+        onChunk: async (chunk: any) => {
+          console.log('[streamManager] onChunk', chunk);
+          // 工具链 glue
           let safeToolContent: string | undefined = undefined;
           if (typeof chunk.tool_content === 'string') {
             safeToolContent = chunk.tool_content;
           } else if (chunk.tool_content && typeof chunk.tool_content === 'object') {
-            // 兼容 deepseek function call 对象，序列化为字符串
             try {
               safeToolContent = JSON.stringify(chunk.tool_content);
             } catch {
@@ -118,31 +93,9 @@ export function createLLMStreamManager({
             thought_content: chunk.thought_content,
             status: chunk.status || 'generating'
           });
-          // tool call glue
-          if (toolCallAccumulator && Array.isArray((chunk as any).tool_calls)) {
-            toolCallAccumulator.addChunk((chunk as any).tool_calls);
-          }
-          if (toolCallAccumulator && chunk.tool_content && typeof chunk.tool_content === 'object' && (chunk.tool_content as any).name) {
-            const toolContent = chunk.tool_content as any;
-            const toolName = toolContent.name;
-            let toolArgs: Record<string, unknown> = {};
-            try {
-              toolArgs = toolContent.arguments ? JSON.parse(toolContent.arguments) : {};
-            } catch {}
-            // 直接调用 onFlush 回调（注意 options 为私有，若需更优解建议通过 addChunk+flushIfNeeded 统一处理）
-            await (toolCallAccumulator as any).options.onFlush(toolName, toolArgs);
-          }
-          // 检查 finish_reason，flush tool_calls
-          if (toolCallAccumulator) {
-            const finishReason = ((chunk as any).choices?.[0]?.finish_reason)
-              || ((chunk as any).finish_reason);
-            if (typeof toolCallAccumulator.flushIfNeeded === 'function') {
-              await toolCallAccumulator.flushIfNeeded(finishReason);
-            }
-          }
-          if (onStreamChunk) onStreamChunk(chunk);
         },
-        async (result: CompletionResult) => {
+        onDone: async (result: any) => {
+          console.log('[streamManager] onDone', result);
           messageManager.updateLastMessage({
             content: result.content,
             reasoning_content: result.reasoning_content,
@@ -161,7 +114,10 @@ export function createLLMStreamManager({
           });
           if (onStreamEnd) onStreamEnd(result);
         }
-      );
+      };
+      console.log('[streamManager] before streamLLMChat', llmParams);
+      await streamLLMChat(llmParams);
+      console.log('[streamManager] after streamLLMChat');
     } catch (err) {
       if (onError) onError(err instanceof Error ? err.message : String(err));
     }

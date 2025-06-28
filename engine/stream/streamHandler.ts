@@ -9,62 +9,65 @@ export interface CompletionResult {
   thought_content?: string;
 }
 
-export async function handleResponseStream(
-  stream: AsyncIterable<ExtendedChatCompletionChunk>,
-  onChunk?: (chunk: StreamChunk) => void | Promise<void>,
-  onDone?: (result: CompletionResult) => void | Promise<void>,
-) {
-  let content = '';
-  let reasoning_content = '';
-  let tool_content: string | ToolCallContent | undefined = undefined;
-  let observation_content = '';
-  let thought_content = '';
-  const status: MessageStatus = 'generating';
+// 可扩展流式响应处理器，适配多模型/多工具链/插件 glue
+export interface StreamHandlerOptions {
+  onChunk?: (msg: Record<string, any>) => void;
+  onDone?: (msg: Record<string, any>) => void;
+  // 扩展点：自定义 delta 处理
+  onDelta?: (delta: any, acc: Record<string, any>) => void;
+  // 扩展点：流程控制
+  onControl?: (delta: any, acc: Record<string, any>) => void;
+}
 
-  try {
+export async function handleResponseStream(
+  stream: AsyncIterable<any>,
+  options: StreamHandlerOptions = {}
+) {
+  // 累加器，存储所有需要拼接的字段
+  const acc: Record<string, any> = {
+    content: '',
+    reasoning_content: '',
+    tool_content: '',
+    observation_content: '',
+    tool_calling: undefined,
+    calltool: undefined,
+    status: 'generating'
+  };
+
     for await (const chunk of stream) {
-      const delta = chunk.choices[0]?.delta;
-      if (!delta) continue;
-      if (delta.reasoning_content !== null && delta.reasoning_content !== undefined && delta.reasoning_content !== 'null') {
-        reasoning_content += delta.reasoning_content;
+    const choice = chunk.choices?.[0];
+    const delta = choice?.delta || {};
+
+    // 默认字段累加
+    if (typeof delta.content === 'string') acc.content += delta.content;
+    if (typeof delta.reasoning_content === 'string') acc.reasoning_content += delta.reasoning_content;
+    if (typeof delta.tool_content === 'string') acc.tool_content += delta.tool_content;
+    if (typeof delta.observation_content === 'string') acc.observation_content += delta.observation_content;
+
+    // 工具链/流程 glue
+    if (delta.tool_calling) {
+      acc.status = 'tool_calling';
+      acc.tool_calling = delta.tool_calling;
       }
-      if (delta.tool_content !== null && delta.tool_content !== undefined && delta.tool_content !== 'null') {
-        // 只做透传，不做解析，交由上层 handler 处理
-        tool_content = delta.tool_content;
+    if (delta.calltool) {
+      acc.status = 'calltool';
+      acc.calltool = delta.calltool;
       }
-      if (delta.observation_content !== null && delta.observation_content !== undefined && delta.observation_content !== 'null') {
-        observation_content += delta.observation_content;
-      }
-      if (delta.thought_content !== null && delta.thought_content !== undefined && delta.thought_content !== 'null') {
-        thought_content += delta.thought_content;
-      }
-      if (delta.content !== null && delta.content !== undefined && delta.content !== 'null') {
-        content += delta.content;
-      }
-      onChunk?.({
-        content,
-        reasoning_content: reasoning_content || undefined,
-        tool_content: tool_content as any, // 兼容 web 层类型
-        observation_content: observation_content || undefined,
-        thought_content: thought_content || undefined,
-        status,
-        tool_calls: delta.tool_calls // 透传 tool_calls 字段
-      });
-    }
-    content = content.replace(/null/g, '');
-    reasoning_content = reasoning_content.replace(/null/g, '');
-    observation_content = observation_content.replace(/null/g, '');
-    thought_content = thought_content.replace(/null/g, '');
-    onDone?.({
-      content,
-      reasoning_content: reasoning_content || undefined,
-      tool_content: tool_content as any, // 兼容 web 层类型
-      observation_content: observation_content || undefined,
-      thought_content: thought_content || undefined
-    });
-  } catch (error) {
-    throw error;
+
+    // 扩展点：自定义 delta 处理
+    if (options.onDelta) options.onDelta(delta, acc);
+    // 扩展点：流程控制
+    if (options.onControl) options.onControl(delta, acc);
+
+    // glue 到上层
+    options.onChunk?.({ ...acc });
+
+    // 流程控制
+    if (choice?.finish_reason === 'stop') break;
   }
+
+  acc.status = 'stable';
+  options.onDone?.({ ...acc });
 }
 
 export async function* streamHandler(response: Response): AsyncGenerator<ExtendedChatCompletionChunk, void, unknown> {

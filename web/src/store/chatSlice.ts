@@ -29,13 +29,15 @@ export const sendMessageAsync = createAsyncThunk<
 >(
   'chat/sendMessageAsync',
   async ({ chatId, input }, { dispatch, getState }) => {
+    console.log('[chatSlice] sendMessageAsync called', { chatId, input });
     dispatch(setIsGenerating(true));
     try {
       const state = getState();
       const chatData = state.chat.chatData[chatId];
       const messages = chatData?.messages || [];
       const llmConfig = state.llmConfig;
-      const activeLLM = llms.find(l => l.id === llmConfig.activeLLMId);
+      const activeLLMConfig = llms.find(l => l.id === llmConfig.activeLLMId);
+      const currentApiKey = llmConfig.apiKeys[llmConfig.activeLLMId] || '';
       const chatConfig = chatData?.settings || {};
       // 追加用户消息
       const userMessage: ChatMessage = {
@@ -49,23 +51,34 @@ export const sendMessageAsync = createAsyncThunk<
       // 通过 streamManager 进行流式 glue
       const streamManager = createLLMStreamManager({
         initialMessages: [
-          ...messages.map(m => ({ ...m, status: m.status || 'stable' })),
-          { ...userMessage, status: userMessage.status || 'stable' }
+          ...messages.map(m => JSON.parse(JSON.stringify({ ...m, status: m.status || 'stable' }))),
+          JSON.parse(JSON.stringify({ ...userMessage, status: userMessage.status || 'stable' }))
         ],
-        currentConfig: llmConfig,
-        activeLLM,
+        currentConfig: {
+          ...llmConfig,
+          apiKey: currentApiKey,
+        },
+        activeLLMConfig,
         config: chatConfig,
         saveChat: () => {},
         mcpServiceInstance: undefined,
         activeServer: undefined,
-        onAddMessage: (msg: ChatMessage) => dispatch(addMessage({ chatId, message: msg })),
-        onUpdateLastMessage: (patch: Partial<ChatMessage>) => dispatch({
+        onAddMessage: (msg: ChatMessage) => {
+          console.log('[chatSlice] onAddMessage', msg);
+          dispatch(addMessage({ chatId, message: msg }));
+        },
+        onUpdateLastMessage: (patch: Partial<ChatMessage>) => {
+          console.log('[chatSlice] onUpdateLastMessage', patch);
+          dispatch({
           type: 'chat/updateLastAssistantMessage',
           payload: { chatId, message: patch },
-        }),
+          });
+        },
         onError: (err: string) => dispatch(setError(err)),
       });
+      console.log('[chatSlice] before streamManager.handleSend');
       await streamManager.handleSend(input, new AbortController().signal);
+      console.log('[chatSlice] after streamManager.handleSend');
     } catch (e: any) {
       dispatch(setError(e.message || 'LLM error'));
     } finally {
@@ -152,7 +165,9 @@ const chatSlice = createSlice({
       if (msgs && msgs.length > 0) {
         for (let i = msgs.length - 1; i >= 0; i--) {
           if (msgs[i].role === 'assistant') {
+            console.log('[chatSlice] updateLastAssistantMessage before', msgs[i]);
             msgs[i] = { ...msgs[i], ...message };
+            console.log('[chatSlice] updateLastAssistantMessage after', msgs[i]);
             break;
           }
         }

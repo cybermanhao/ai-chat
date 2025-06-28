@@ -7,7 +7,7 @@ import ChatHeader from './components/ChatHeader';
 import { Card } from 'antd';
 import { useState } from 'react';
 import './styles.less';
-import type { MessageStatus } from '@engine/types/chat';
+
 
 // 聊天页面组件，UI 只与 WebChatSession 交互
 export const Chat = () => {
@@ -21,6 +21,7 @@ export const Chat = () => {
   const [inputValue, setInputValue] = useState('');
 
   const handleSend = async () => {
+    console.log('[Chat] handleSend called');
     if (!currentChatId) return;
     dispatch(sendMessageAsync({ chatId: currentChatId, input: inputValue }));
     setInputValue('');
@@ -44,7 +45,10 @@ export const Chat = () => {
           disabled={isGenerating}
           isGenerating={isGenerating}
           onInputChange={setInputValue}
-          onSend={handleSend}
+          onSend={() => {
+            console.log('[Chat] onSend prop triggered');
+            handleSend();
+          }}
           onStop={() => {/* 停止流式生成逻辑 */}}
         />
       </div>

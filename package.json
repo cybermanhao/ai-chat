@@ -43,6 +43,7 @@
     "antd": "^5.26.1",
     "dotenv": "^16.5.0",
     "highlight.js": "^11.11.1",
+    "lodash": "^4.17.21",
     "markdown-it": "^14.1.0",
     "node-fetch": "^3.3.2",
     "normalize.css": "^8.0.1",
