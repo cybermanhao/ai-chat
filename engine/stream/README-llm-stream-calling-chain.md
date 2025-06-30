@@ -1,119 +1,78 @@
-# zz-ai-chat LLM 流式请求调用链（现代工程版）
+# zz-ai-chat LLM 流式请求事件驱动架构（重构版）
 
 ## 1. 总览
 
-本项目采用分层解耦的 LLM 流式请求架构，支持多端（Web/Electron）、多模型、多工具链、流式消息、工具调用、OCR/图片等后处理 glue，便于扩展和维护。
+本项目采用事件驱动的 LLM 流式请求架构，streamManager 作为 UI 层与底层服务（如 llmService、mcpService 等）的核心连接枢纽。通过事件机制实现指令式解耦、流程可控、插件化扩展，适配多端（Web/Electron）、多后端（远程/本地）、多工具链，极大提升灵活性与可维护性。
 
 ---
 
-## 2. 分层结构与职责
+## 2. 分层结构与职责（事件流重构）
 
-### 2.1 UI/Redux 层（web/src/store/chatSlice.ts）
-- 负责参数组装、状态管理、UI glue
-- 只调度 createLLMStreamManager，传递参数对象
-- 不关心底层流式细节
+### 2.1 UI/Redux 层
+- 只负责发出高层事件（如 sendMessage、stopStream、registerService 等）
+- 通过 dispatch/emit 事件与 streamManager 通信
+- 订阅流式消息、状态、异常等事件，驱动 UI 渲染
 
-### 2.2 业务 glue 层（engine/stream/streamManager.ts）
-- 负责 glue 业务流、消息管理、参数组装
-- 只调用 streamLLMChat，onChunk/onDone glue 到消息管理器和 redux
-- 工具链 glue、分片处理等可用 ToolCallAccumulator
-- 可选 glue 到 webview-glue/electron-glue
+### 2.2 streamManager（事件中心/连接层）
+- 作为 UI 与底层服务的桥梁，统一事件分发与生命周期管理
+- 维护事件总线，注册/注销服务（如 llmService、mcpService）
+- 接收 UI 层指令事件，转发给对应服务
+- 监听底层服务流式事件（如 chunk、done、error、toolCall），统一分发给 UI
+- 根据 streamHandler 解析结果动态驱动流程（如自动 toolCall、流式终止、异常回退等）
+- 支持插件化扩展（如工具链、后处理、代理等）
 
-### 2.3 LLM 请求 glue 层（engine/service/llmService.ts）
-- 只负责底层 LLM 请求、流式消费
-- 无状态 async function（streamLLMChat）
-- 支持自定义 fetch、工具链 glue、消息后处理 glue、proxy
-- 预留 postProcessMessages、ocrService、imageService 等 glue 接口
-- currentStream 支持流式中止
+### 2.3 llmService/mcpService（底层服务）
+- 只负责具体流式请求的发起、消费、终止
+- 通过事件接口与 streamManager 通信（如 onChunk、onDone、onError、onAbort）
+- 支持多后端注册与切换
+- 预留 glue 接口（如 postProcessMessages、ocrService、imageService 等）
 
-### 2.4 多端 glue 层（web/src/glue/webview-glue.ts、electron/webview-glue.ts）
-- 只负责多端 postMessage glue
-- createWebviewLLMGlue/createElectronWebviewGlue 工厂，onChunk/onDone/onAbort glue 到 UI
-- 业务层只需 glue onChunk/onDone 到此 glue，无需关心多端细节
+### 2.4 streamHandler（流式解析与流程控制）
+- 负责解析底层流式响应，抽象为高层事件（如 message、toolCall、end、error）
+- 根据解析结果驱动流程（如遇到 toolCall 自动发起工具请求，遇到 end 自动收尾）
+- 可插拔自定义解析器，适配不同协议/后端
 
-### 2.5 工具链/后处理 glue 层（engine/service/ocr.service.ts、image.service.ts 等）
-- 只负责 OCR、图片等工具链 glue
-- 通过 postProcessMessages/ocrService/imageService 注入到 llmService
-- 业务层无需关心工具链实现
-
----
-
-## 3. 关键接口/调用点
-
-- chatSlice.ts
-  ```ts
-  const streamManager = createLLMStreamManager({
-    // ...参数
-    onAddMessage: ...,
-    onUpdateLastMessage: ...,
-    onError: ...,
-    // 可选 glue: ...webviewGlue.onChunk/onDone
-  });
-  await streamManager.handleSend(input, new AbortController().signal);
-  ```
-
-- streamManager.ts
-  ```ts
-  await streamLLMChat({
-    baseURL,
-    apiKey,
-    model,
-    messages,
-    temperature,
-    tools,
-    parallelToolCalls,
-    onChunk, // glue 到消息管理器/redux/webviewGlue
-    onDone,  // glue 到消息管理器/redux/webviewGlue
-    postProcessMessages, // glue 工具链/后处理
-    ocrService, // glue OCR
-    imageService, // glue 图片
-    customFetch // glue 代理
-  });
-  ```
-
-- llmService.ts
-  ```ts
-  export async function streamLLMChat({ ... }) {
-    if (postProcessMessages) await postProcessMessages(messages);
-    // ...如需 OCR、图片 glue，可在此调用 ocrService/imageService
-    // ...openai sdk for await...of
-    for await (const chunk of stream as any) {
-      if (onChunk) onChunk(chunk);
-    }
-    if (onDone) onDone(lastChunk);
-  }
-  ```
-
-- webview-glue.ts / electron-glue.ts
-  ```ts
-  export function createWebviewLLMGlue({ webview }) {
-    return {
-      onChunk: (chunk) => webview.postMessage({ ... }),
-      onDone: (result) => webview.postMessage({ ... }),
-      onAbort: () => webview.postMessage({ ... })
-    }
-  }
-  ```
+### 2.5 多端适配层（webview-glue/electron-glue）
+- 只负责多端事件 glue（如 postMessage、IPC）
+- 事件机制天然适配多端，UI 层无需关心底层实现
 
 ---
 
-## 4. 结构图
+## 3. 事件机制与接口设计
+
+### 3.1 事件类型（建议）
+- UI -> streamManager：sendMessage、stopStream、registerService、unregisterService、toolCall、abort、retry 等
+- streamManager -> UI：message、chunk、done、error、toolCall、stateUpdate、serviceRegistered、serviceError 等
+- streamManager <-> 服务：request、chunk、done、error、abort、toolCall 等
+
+### 3.2 事件流典型流程
 
 ```mermaid
 sequenceDiagram
-participant UI/Redux
-participant chatSlice
+participant ui
 participant streamManager
-participant llmService (streamLLMChat)
-participant webviewGlue
+participant llmService
+participant streamHandler
 
-UI/Redux->>chatSlice: dispatch(sendMessageAsync)
-chatSlice->>streamManager: createLLMStreamManager().handleSend()
-streamManager->>llmService: streamLLMChat(params, { onChunk, onDone, ... })
-llmService-->>streamManager: onChunk/onDone
-streamManager->>webviewGlue: onChunk/onDone
-webviewGlue-->>UI: postMessage
+ui->>streamManager: sendMessage
+streamManager->>llmService: request（流式请求）
+llmService-->>streamManager: chunk/done/error
+streamManager->>streamHandler: 解析流式 chunk
+streamHandler-->>streamManager: message/toolCall/end
+streamManager->>ui: message/toolCall/stateUpdate
+ui->>streamManager: stopStream/abort
+streamManager->>llmService: abort
 ```
+
+---
+
+## 4. 插件化与扩展点
+
+- **服务注册/注销**：支持动态注册/切换 llmService、mcpService、本地/远端等多后端
+- **工具链/后处理 glue**：如 ocr、图片、代理等，通过事件机制注入
+- **流式解析器**：streamHandler 可插拔，适配不同协议/后端
+- **多端 glue**：事件机制天然适配 web/electron/小程序等多端
+- **异常与流程控制**：所有异常、终止、回退均事件化，便于统一处理
 
 ---
 
@@ -121,20 +80,20 @@ webviewGlue-->>UI: postMessage
 
 ```
 engine/
-  service/
-    llmService.ts
-    ocr.service.ts
-    image.service.ts
-    axios-fetch.ts
   stream/
-    streamManager.ts
-    streamHandler.ts
+    streamManager.ts   # 事件中心/连接层
+    streamHandler.ts   # 流式解析与流程控制
     streamAccumulator.ts
     README-llm-stream-calling-chain.md
+  service/
+    llmService.ts      # 底层 LLM 请求服务
+    mcpService.ts      # MCP 工具服务（可选）
+    ocr.service.ts
+    image.service.ts
 web/
   src/
     store/
-      chatSlice.ts
+      chatSlice.ts     # UI/Redux 事件发起
     glue/
       webview-glue.ts
       electron-glue.ts
@@ -142,21 +101,18 @@ web/
 
 ---
 
-## 6. 命名建议
-- **底层 LLM 请求函数**：`streamLLMChat`、`streamChatCompletion`、`llmStreamRequest` 等，突出"流式/无状态/异步"特性。
-- **业务 glue 工厂**：`createLLMStreamManager`、`createChatStreamManager` 等。
-- **流式分发回调**：`onChunk`、`onDone`、`onAbort`、`onToolCall` 等。
-- **工具链 glue**：`postProcessMessages`、`handleToolCall`、`ocrService`、`imageService` 等。
-- **多端 glue**：`postMessageGlue`、`webviewGlue`、`electronGlue` 等。
+## 6. 最佳实践与注意事项
+
+- 事件类型、payload 结构需标准化，建议用 TypeScript 类型统一约束
+- streamManager 只做事件分发和生命周期管理，具体实现交给服务/插件
+- UI 层只需订阅/发射事件，彻底解耦底层
+- 插件/工具链/多端 glue 全部事件化、对象化，便于扩展
+- 流程控制、异常处理、状态同步全部事件驱动，保证一致性和健壮性
 
 ---
 
-## 7. 扩展点与最佳实践
-- glue 层全部对象化、类型化，便于扩展和维护
-- 工具链/后处理 glue 可随时插拔
-- 多端 glue 只需 glue onChunk/onDone，无需关心底层细节
-- 流式 glue、工具链 glue、后处理 glue、代理 glue 全链路可插拔
+## 7. 总结
 
----
+本架构以事件驱动为核心，streamManager 作为连接枢纽，极大提升了 UI 与底层服务的解耦、扩展性和多端适配能力。所有流式请求、工具链、后处理、异常、流程控制均通过事件流统一管理，是现代 AI 聊天/多端应用的最佳实践。
 
-如需进一步细化 glue 层、工具链、后处理等分层方案，可继续提问！ 
+如需进一步细化事件协议、代码结构或插件机制，欢迎补充需求！ 
