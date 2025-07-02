@@ -1,14 +1,12 @@
 import { useState } from 'react';
-import { List, Button, Modal, Form, Input, Collapse, message as antdMessage } from 'antd';
-import { PlusOutlined, ApiOutlined, DisconnectOutlined } from '@ant-design/icons';
+import { List, Button, Modal, Form, Input, Collapse, Switch, message as antdMessage } from 'antd';
+import { PlusOutlined, ApiOutlined, DisconnectOutlined, PoweroffOutlined } from '@ant-design/icons';
 import { useSelector, useDispatch } from 'react-redux';
 import type { RootState, AppDispatch } from '@/store';
-import { addServer, removeServer, setActiveServer } from '@/store/mcpStore';
+import { addServer, removeServer, setActiveServer, connectServer, disconnectServer } from '@/store/mcpStore';
 import './styles.less';
 import ToolManagerModal from '@/components/Modal/ToolManagerModal';
 import type { MCPTool } from '@/services/mcpService';
-
-const { Panel } = Collapse;
 
 interface ServerFormData {
   name: string;
@@ -34,6 +32,25 @@ const Mcp = () => {
       messageApi.success('服务器添加成功');
     } catch {
       // Form validation error, no need to handle
+    }
+  };
+
+  const handleToggleConnection = async (serverId: string, connected: boolean) => {
+    try {
+      if (connected) {
+        // 连接服务器
+        const server = servers.find(s => s.id === serverId);
+        if (server) {
+          await dispatch(connectServer({ serverId, url: server.url })).unwrap();
+          messageApi.success('服务器连接成功');
+        }
+      } else {
+        // 断开服务器连接
+        await dispatch(disconnectServer(serverId)).unwrap();
+        messageApi.success('服务器已断开连接');
+      }
+    } catch (error) {
+      messageApi.error(`操作失败: ${error}`);
     }
   };
 
@@ -81,28 +98,27 @@ const Mcp = () => {
                 className={`server-item ${activeServerId === server.id ? 'active' : ''}`}
                 onClick={() => dispatch(setActiveServer(server.id))}
                 actions={[
-                  // <Button
-                  //   key="connect"
-                  //   type={server.isConnected ? 'default' : 'primary'}
-                  //   icon={server.isConnected ? <DisconnectOutlined /> : <ApiOutlined />}
-                  //   onClick={(e) => {
-                  //     e.stopPropagation();
-                  //     handleServerAction(server.id, server.isConnected);
-                  //   }}
-                  //   loading={isLoading}
-                  // >
-                  //   {server.isConnected ? '断开连接' : '连接'}
-                  // </Button>,
-                  <Button
-                    key="remove"
-                    danger
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      dispatch(removeServer(server.id));
-                    }}
-                  >
-                    删除
-                  </Button>
+                  <div key="connection-control" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <Switch
+                      checked={server.isConnected}
+                      loading={server.loading}
+                      onChange={(checked) => handleToggleConnection(server.id, checked)}
+                      checkedChildren="已连接"
+                      unCheckedChildren="已断开"
+                      size="small"
+                    />
+                    <Button
+                      key="remove"
+                      danger
+                      size="small"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        dispatch(removeServer(server.id));
+                      }}
+                    >
+                      删除
+                    </Button>
+                  </div>
                 ]}
               >
                 <List.Item.Meta
@@ -147,29 +163,39 @@ const Mcp = () => {
                   </div>
                 )}
                 {server.isConnected && Array.isArray(server.tools) && server.tools.length > 0 && (
-                  <Collapse ghost className="server-tools">
-                    <Panel header={`工具列表 (${server.tools.length})`} key="1">
-                      {/* 调试：打印工具列表 */}
-                      <pre style={{ display: 'none' }}>{JSON.stringify(server.tools, null, 2)}</pre>
-                      <List
-                        size="small"
-                        dataSource={server.tools as MCPTool[]}
-                        renderItem={(_tool, toolIndex: number) => {
-                          const toolData = (server.tools as MCPTool[])[toolIndex];
-                          // 也可在此处调试
-                          console.log('工具项:', toolData);
-                          return (
-                            <List.Item>
-                              <List.Item.Meta
-                                title={toolData?.name || ''}
-                                description={toolData?.description || ''}
-                              />
-                            </List.Item>
-                          );
-                        }}
-                      />
-                    </Panel>
-                  </Collapse>
+                  <Collapse 
+                    ghost 
+                    className="server-tools"
+                    items={[
+                      {
+                        key: '1',
+                        label: `工具列表 (${server.tools.length})`,
+                        children: (
+                          <>
+                            {/* 调试：打印工具列表 */}
+                            <pre style={{ display: 'none' }}>{JSON.stringify(server.tools, null, 2)}</pre>
+                            <List
+                              size="small"
+                              dataSource={server.tools as MCPTool[]}
+                              renderItem={(_tool, toolIndex: number) => {
+                                const toolData = (server.tools as MCPTool[])[toolIndex];
+                                // 也可在此处调试
+                                console.log('工具项:', toolData);
+                                return (
+                                  <List.Item>
+                                    <List.Item.Meta
+                                      title={toolData?.name || ''}
+                                      description={toolData?.description || ''}
+                                    />
+                                  </List.Item>
+                                );
+                              }}
+                            />
+                          </>
+                        )
+                      }
+                    ]}
+                  />
                 )}
               </List.Item>
             )}

@@ -5,7 +5,6 @@
   display: flex;
   flex-direction: column;
   background: var(--background-content);
-  justify-content: space-between;
   
   .chat-header {
     height: 64px;
@@ -16,6 +15,7 @@
     border-bottom: 1px solid var(--border-color-split);
     justify-content: center;
     z-index: 1;
+    flex-shrink: 0; // 防止header被压缩
     .ant-select {
       .ant-select-selection-item {
         font-weight: 500;
@@ -28,10 +28,11 @@
     flex: 1;
     display: flex;
     flex-direction: column;
-    overflow: hidden;
     position: relative;
-    justify-content: space-between;
     background: var(--background-content);
+    min-height: 0; // 关键：确保 flex 子元素能正确收缩
+    height: calc(100vh - 64px - 24px); // 精确计算：视口高度 - header - layout margin
+    overflow: hidden; // 确保只有MessageList滚动
   }
 }
 

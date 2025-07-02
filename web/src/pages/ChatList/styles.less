@@ -1,6 +1,5 @@
 @import '../../styles/variables.less';
-
-@import '../../styles/variables.less';
+@import '../../styles/mixins.less';
 
 .chat-list {
   height: 100%;
@@ -30,25 +29,9 @@
     border-radius: @border-radius-lg;
     border: 1px solid var(--border-color-split);
     padding: 8px 0;
-    scroll-behavior: smooth;
-
-    &::-webkit-scrollbar {
-      width: 6px;
-      height: 6px;
-    }
-
-    &::-webkit-scrollbar-thumb {
-      background: var(--border-color-split);
-      border-radius: 3px;
-      
-      &:hover {
-        background: var(--border-color-base);
-      }
-    }
-
-    &::-webkit-scrollbar-track {
-      background: transparent;
-    }
+    
+    // 使用统一的滚动条样式
+    .custom-scrollbar();
 
     :global(.ant-list-empty-text) {
       padding: 24px;

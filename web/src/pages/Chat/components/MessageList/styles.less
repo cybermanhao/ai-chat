@@ -1,4 +1,7 @@
+@import '../../../../styles/mixins.less';
+
 .message-list {
+  flex: 1; // 占用剩余空间
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -6,18 +9,12 @@
   max-width: 1200px;
   margin: 0 auto;
   padding: 16px;
-  overflow-y: auto;
+  overflow-y: auto; // 启用垂直滚动
+  overflow-x: hidden; // 禁用水平滚动
   background: var(--background-content);
+  min-height: 0; // 关键：允许收缩
+  height: 100%; // 确保占满父容器高度
   
-  // 美化滚动条
-  &::-webkit-scrollbar {
-    width: 6px;
-  }
-  &::-webkit-scrollbar-thumb {
-    background: var(--border-color-split);
-    border-radius: 3px;
-  }
-  &::-webkit-scrollbar-track {
-    background: var(--background-color-light);
-  }
+  // 使用统一的滚动条样式
+  .custom-scrollbar();
 }

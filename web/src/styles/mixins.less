@@ -1,0 +1,44 @@
+// 通用滚动条样式 mixin
+.custom-scrollbar() {
+  scroll-behavior: smooth;
+  
+  &::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: var(--border-color-split, #d9d9d9); // 添加备用颜色
+    border-radius: 3px;
+    
+    &:hover {
+      background: var(--border-color-base, #bfbfbf); // 添加备用颜色
+    }
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  // 火狐浏览器滚动条样式
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-color-split, #d9d9d9) transparent;
+}
+
+// 通用 flexbox 布局样式
+.flex-column() {
+  display: flex;
+  flex-direction: column;
+}
+
+.flex-center() {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.flex-between() {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}

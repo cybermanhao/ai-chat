@@ -1,6 +1,7 @@
 import React from 'react';
 import AppSider from '@/components/AppSider';
 import { Outlet } from 'react-router-dom';
+import { ChatProvider } from '@/contexts/chat/ChatContext';
 import './styles.less';
 
 const Layout = () => {
@@ -15,7 +16,9 @@ const Layout = () => {
         />
       </div>
       <div className="app-chat">
-        <Outlet />
+        <ChatProvider>
+          <Outlet />
+        </ChatProvider>
       </div>
     </div>
   );
