@@ -1,5 +1,7 @@
 // engine/types/stream.ts
 // 专门用于流式处理相关的类型定义
+// 废弃
+// @ts-ignore
 
 import type { MessageStatus } from './chat';
 

@@ -4,10 +4,24 @@ import type { OpenAI } from 'openai';
 // ToolCall 类型声明
 export type ToolCall = OpenAI.Chat.Completions.ChatCompletionChunk.Choice.Delta.ToolCall;
 
+// 流状态类型
+export type StreamPhase = 'connecting' | 'thinking' | 'generating' | 'tool_calling';
+
+// 扩展的 chunk 信息，包含状态信息
+export interface EnhancedChunk {
+  role: 'assistant';
+  content: string;
+  reasoning_content: string;
+  tool_calls: ToolCall[];
+  phase: StreamPhase;
+  isFirstChunk?: boolean;
+  isFirstContent?: boolean;
+}
+
 // 聚合 content、reasoning_content、tool_calls 字段，支持分片累积
 export async function handleResponseStream(
   stream: AsyncIterable<any>,
-  onChunk?: (chunk: any) => void
+  onChunk?: (chunk: EnhancedChunk) => void
 ): Promise<{ content: string; reasoning_content: string; tool_calls: ToolCall[] }> {
   const acc: { content: string; reasoning_content: string; tool_calls: ToolCall[] } = {
     content: '',
@@ -15,11 +29,42 @@ export async function handleResponseStream(
     tool_calls: [],
   };
 
+  // 状态跟踪变量
+  let isFirstChunk = true;
+  let hasReceivedContent = false;
+  let hasReceivedReasoning = false;
+
   // 用于分片累积 arguments
   // 支持多工具并发，每个工具调用按 index/id 聚合
   for await (const chunk of stream) {
     const choice = chunk.choices?.[0];
     const delta = choice?.delta || {};
+
+    // 判断当前 chunk 的状态
+    let phase: StreamPhase = 'connecting';
+    let isFirstContent = false;
+
+    if (delta.content !== undefined && delta.content !== null) {
+      if (!hasReceivedContent) {
+        hasReceivedContent = true;
+        isFirstContent = true;
+      }
+      phase = 'generating';
+    } else if (delta.reasoning_content !== undefined && delta.reasoning_content !== null) {
+      if (!hasReceivedReasoning) {
+        hasReceivedReasoning = true;
+      }
+      phase = 'thinking';
+    } else if (delta.tool_calls !== undefined && delta.tool_calls !== null) {
+      phase = 'tool_calling';
+    } else if (isFirstChunk) {
+      phase = 'connecting';
+    } else {
+      // 继续使用之前的状态
+      if (hasReceivedContent) phase = 'generating';
+      else if (hasReceivedReasoning) phase = 'thinking';
+      else phase = 'connecting';
+    }
 
     if (typeof delta.content === 'string') acc.content += delta.content;
     if (typeof delta.reasoning_content === 'string') acc.reasoning_content += delta.reasoning_content;
@@ -47,14 +92,22 @@ export async function handleResponseStream(
     }
 
     // 每个 chunk 都调用 onChunk 实现流式更新
+    // 注意：流式更新中不包含 timestamp/id，避免不必要的性能开销
     if (onChunk) {
       onChunk({
         role: 'assistant',
         content: acc.content,
         reasoning_content: acc.reasoning_content,
-        tool_calls: acc.tool_calls
+        tool_calls: acc.tool_calls,
+        phase,
+        isFirstChunk,
+        isFirstContent
+        // 注意：不包含 timestamp, id 等元数据，这些只在消息完成时设置
+        // 这样可以避免每次 chunk 更新都触发完整的对象比较
       });
     }
+
+    isFirstChunk = false;
 
     if (choice?.finish_reason === 'stop') break;
   }

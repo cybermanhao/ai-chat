@@ -1,3 +1,71 @@
+.message-card-group {
+  margin-bottom: 1rem;
+
+  .message-status-bar {
+    display: flex;
+    justify-content: flex-start;
+    padding: 0 1rem;
+    margin-bottom: 0.5rem;
+
+    .message-status {
+      font-size: 12px;
+      color: var(--text-color-secondary);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 8px;
+      border-radius: 12px;
+      background-color: var(--background-tertiary);
+      border: 1px solid var(--border-color-split);
+
+      .anticon {
+        font-size: 14px;
+        color: var(--success-color);
+      }
+
+      &.status-connecting {
+        color: var(--warning-color);
+        border-color: var(--warning-color);
+        background-color: rgba(250, 173, 20, 0.1);
+
+        .anticon {
+          color: var(--warning-color);
+        }
+      }
+
+      &.status-thinking {
+        color: var(--processing-color);
+        border-color: var(--processing-color);
+        background-color: rgba(114, 46, 209, 0.1);
+
+        .anticon {
+          color: var(--processing-color);
+        }
+      }
+
+      &.status-generating {
+        color: var(--success-color);
+        border-color: var(--success-color);
+        background-color: rgba(82, 196, 26, 0.1);
+
+        .anticon {
+          color: var(--success-color);
+        }
+      }
+
+      &.status-tool-calling {
+        color: var(--info-color);
+        border-color: var(--info-color);
+        background-color: rgba(24, 144, 255, 0.1);
+
+        .anticon {
+          color: var(--info-color);
+        }
+      }
+    }
+  }
+}
+
 .message-card {
   display: flex;
   margin-bottom: 1rem;
@@ -5,11 +73,11 @@
 
   &.message-user {
     justify-content: flex-end;
-    
+
     .message-inner {
       flex-direction: row-reverse;
     }
-    
+
     .message-body {
       margin-right: 1rem;
       margin-left: 0;
@@ -25,7 +93,7 @@
       align-items: center;
       justify-content: center;
     }
-    
+
     .message-body {
       margin-left: 1rem;
     }
@@ -44,7 +112,10 @@
       background-color: #e6f7ff;
       border: 1px solid #91d5ff;
     }
-  }.message-content {
+  }
+
+  &.message-user {
+    .message-content {
       background-color: var(--background-elevated);
       color: var(--text-color);
       border-radius: 12px 2px 12px 12px;
@@ -54,7 +125,7 @@
         color: var(--primary-color);
         text-decoration: none;
         transition: all 0.3s ease;
-        
+
         &:hover {
           color: var(--primary-color-hover);
           text-decoration: underline;
@@ -74,8 +145,10 @@
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
     }
   }
+
   &.message-assistant {
     justify-content: flex-start;
+
     .message-content {
       background-color: var(--background-elevated);
       color: var(--text-color);
@@ -104,18 +177,40 @@
 
       &.status-connecting {
         color: var(--warning-color);
+
+        .anticon {
+          color: var(--warning-color);
+        }
       }
-      
+
       &.status-thinking {
         color: var(--processing-color);
+
+        .anticon {
+          color: var(--processing-color);
+        }
       }
-      
-      &.status-answering {
+
+      &.status-generating {
         color: var(--success-color);
+
+        .anticon {
+          color: var(--success-color);
+        }
       }
-    }    .reasoning-section {
+
+      &.status-tool-calling {
+        color: var(--info-color);
+
+        .anticon {
+          color: var(--info-color);
+        }
+      }
+    }
+
+    .reasoning-section {
       margin-bottom: 0.5rem;
-      
+
       .reasoning-header {
         display: flex;
         align-items: center;
@@ -129,11 +224,12 @@
         border-radius: 6px;
         margin-bottom: 8px;
         transition: all 0.3s ease;
+        user-select: none;
 
         &:hover {
           background: var(--background-hover);
-          border-color: var(--success-color);
-          color: var(--success-color);
+          border-color: var(--primary-color);
+          color: var(--primary-color);
         }
 
         .anticon {
@@ -143,10 +239,12 @@
         }
 
         &:hover .anticon {
-          color: var(--success-color);
+          color: var(--primary-color);
           transform: scale(1.1);
         }
-      }      .reasoning-content {
+      }
+
+      .reasoning-content {
         background-color: var(--background-input);
         border: 1px solid var(--border-color-split);
         border-radius: 6px;
@@ -161,7 +259,8 @@
         font-family: 'JetBrains Mono', Consolas, Monaco, monospace;
         max-width: 100%;
         overflow-x: auto;
-        display: block; /* 确保显示元素 */
+        display: block;
+        animation: fadeIn 0.3s ease;
       }
     }
 
@@ -171,7 +270,7 @@
       margin-bottom: 1rem;
       border-left: 3px solid var(--border-color-split);
       padding-left: 1rem;
-      
+
       .section-header {
         display: flex;
         align-items: center;
@@ -209,7 +308,7 @@
 
     .tool-section {
       border-left-color: var(--warning-color);
-      
+
       .tool-content,
       .observation-content {
         margin-bottom: 0.5rem;
@@ -242,18 +341,21 @@
     color: #fff;
     flex-shrink: 0;
   }
+
   .message-body {
     flex: 1;
     min-width: 0;
     margin: 20px;
     max-width: 1600px; // 固定最大宽度
     width: 100%; // 占满可用空间
-    
+
     .reasoning-section {
       width: 100%; // 确保思考过程占满容器宽度
       box-sizing: border-box; // 包含padding和border在内
     }
-  }  .message-content {
+  }
+
+  .message-content {
     position: relative;
     padding: 0.75rem 1rem;
     word-wrap: break-word;
@@ -262,53 +364,108 @@
     font-size: 14px;
     position: relative;
 
-    .message-content-header {
-      position: absolute;
-      top: 0.5rem;
-      right: 0.5rem;
-      z-index: 1;
-      opacity: 0;
-      transition: opacity 0.2s ease;
-      display: flex;
-      gap: 4px;
+    .main-content-container {
+      position: relative;
 
-      .ant-btn {
-        color: var(--text-color-secondary);
-        opacity: 0.6;
-        transition: all 0.3s ease;
+      .message-content-header {
+        position: absolute;
+        top: 0.5rem;
+        right: 0.5rem;
+        z-index: 1;
+        opacity: 0;
+        transition: opacity 0.2s ease;
+        display: flex;
+        gap: 4px;
 
-        &:hover {
-          opacity: 1;
-          color: var(--primary-color);
-          background: var(--background-tertiary);
+        .ant-btn {
+          color: var(--text-color-secondary);
+          opacity: 0.6;
+          transition: all 0.3s ease;
+
+          &:hover {
+            opacity: 1;
+            color: var(--primary-color);
+            background: var(--background-tertiary);
+          }
+
+          &.active {
+            color: var(--primary-color);
+            opacity: 0.8;
+          }
         }
+      }
 
-        &.active {
-          color: var(--primary-color);
-          opacity: 0.8;
+      &:hover .message-content-header {
+        opacity: 1;
+      }
+
+      .main-content {
+        position: relative;
+        padding-right: 4rem; // 为按钮预留空间
+
+        .plain-text {
+          white-space: pre-wrap;
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+          line-height: 1.6;
         }
       }
     }
+  }
 
-    &:hover .message-content-header {
-      opacity: 1;
+  .message-inner {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    max-width: 80%;
+  }
+
+  .message-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    flex-shrink: 0;
+  }
+
+  .message-body {
+    flex: 1;
+    min-width: 0;
+    margin: 20px;
+    max-width: 1600px; // 固定最大宽度
+    width: 100%; // 占满可用空间
+
+    .reasoning-section {
+      width: 100%; // 确保思考过程占满容器宽度
+      box-sizing: border-box; // 包含padding和border在内
     }
+  }
+
+  .message-content {
+    position: relative;
+    padding: 0.75rem 1rem;
+    word-wrap: break-word;
+    line-height: 1.6;
+    min-height: 2.5rem; // 确保有足够的高度显示光标
+    font-size: 14px;
 
     .message-content-body {
       // ...existing code...
-      
+
       &.markdown-content {
         line-height: 1.6;
-        
+
         p:first-child {
           margin-top: 0;
         }
-        
+
         p:last-child {
           margin-bottom: 0;
         }
       }
-      
+
       &.plain-text {
         white-space: pre-wrap;
         word-break: break-word;
@@ -318,32 +475,39 @@
     .plain-text {
       white-space: pre-wrap;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    }      .markdown-content {
-        a {
+    }
+
+    .markdown-content {
+      a {
+        color: var(--primary-color);
+        text-decoration: none;
+        transition: all 0.3s ease;
+
+        &:hover {
+          color: var(--primary-color-hover);
+          text-decoration: underline;
+        }
+
+        &:active {
+          color: var(--primary-color-active);
+        }
+
+        &:visited {
           color: var(--primary-color);
-          text-decoration: none;
-          transition: all 0.3s ease;
-          
-          &:hover {
-            color: var(--primary-color-hover);
-            text-decoration: underline;
-          }
-          
-          &:active {
-            color: var(--primary-color-active);
-          }
-
-          &:visited {
-            color: var(--primary-color);
-            opacity: 0.8;
-          }
+          opacity: 0.8;
         }
+      }
 
-        h1, h2, h3, h4, h5, h6 {
-          margin: 1em 0 0.5em;
-          font-weight: 600;
-          line-height: 1.25;
-        }
+      h1,
+      h2,
+      h3,
+      h4,
+      h5,
+      h6 {
+        margin: 1em 0 0.5em;
+        font-weight: 600;
+        line-height: 1.25;
+      }
 
       pre {
         margin: 0.75rem 0;
@@ -375,7 +539,8 @@
         margin: 0.5em 0;
       }
 
-      ul, ol {
+      ul,
+      ol {
         padding-left: 1.5em;
         margin: 0.5em 0;
       }
@@ -397,8 +562,9 @@
         width: 100%;
         margin: 0.5em 0;
         border-collapse: collapse;
-        
-        th, td {
+
+        th,
+        td {
           padding: 0.5em;
           border: 1px solid var(--border-color-split);
           text-align: left;
@@ -437,20 +603,40 @@
     opacity: 0.8;
   }
 
-@keyframes blink {
-  0% { opacity: 1; }
-  50% { opacity: 0; }
-  100% { opacity: 1; }
-}
+  @keyframes blink {
+    0% {
+      opacity: 1;
+    }
 
-:global {
-  .copy-success-message {
-    .ant-message-notice-content {
-      background: var(--success-color);
-      color: #fff;
-      
-      .anticon {
+    50% {
+      opacity: 0;
+    }
+
+    100% {
+      opacity: 1;
+    }
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  :global {
+    .copy-success-message {
+      .ant-message-notice-content {
+        background: var(--success-color);
         color: #fff;
+
+        .anticon {
+          color: #fff;
+        }
       }
     }
   }

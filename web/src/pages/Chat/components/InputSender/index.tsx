@@ -36,7 +36,7 @@ const InputSender: React.FC<InputSenderProps> = ({
   // 支持直接用 redux state
   const dispatch: AppDispatch = useDispatch();
   const currentChatId = useSelector((state: RootState) => state.chat.currentChatId);
-  const reduxIsGenerating = useSelector((state: RootState) => state.chat.isGenerating[currentChatId || ''] || false);
+  const reduxIsGenerating = useSelector((state: RootState) => state.chat.isGenerating[currentChatId || ''] ?? false);
   const [inputValue, setInputValue] = React.useState('');
   const isDisabled = loading || disabled;
   const textAreaRef = useRef<HTMLTextAreaElement>(null);

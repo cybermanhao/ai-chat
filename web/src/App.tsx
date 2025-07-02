@@ -9,6 +9,7 @@ import { router } from './router'
 import MemeLoading from '@/components/memeLoading';
 import { useSelector, useDispatch } from 'react-redux';
 import type { RootState, AppDispatch } from './store';
+import { resetRuntimeStates } from './store/chatSlice';
 // [插件系统已禁用] - 注释掉插件相关的导入
 // import { addPlugin } from './store/pluginStore';
 
@@ -26,6 +27,11 @@ function App() {
   //     dispatch(addPlugin(buttonPlugin));
   //   }
   // }, [dispatch, plugins])
+
+  // 应用启动时重置所有运行时状态，确保 isGenerating 为 false
+  useEffect(() => {
+    dispatch(resetRuntimeStates());
+  }, [dispatch]);
 
   // 当主题改变时，更新 body 的 data-theme 属性
   useEffect(() => {

@@ -1,6 +1,8 @@
-import React from 'react';
-import { LoadingOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
+import React, { useState } from 'react';
+import { LoadingOutlined, DownOutlined, RightOutlined, EyeOutlined, EyeInvisibleOutlined, CopyOutlined } from '@ant-design/icons';
+import { Button, message } from 'antd';
 import type { MessageRole } from '@engine/types/chat';
+import { markdownToHtml } from '@engine/utils/markdown';
 
 import AvatarIcon from '@/components/AvatarIcon';
 
@@ -34,6 +36,49 @@ const statusMap: Record<IMessageCardStatus, { text: string; icon: React.ReactNod
 };
 
 const MessageCard: React.FC<MessageCardProps> = ({ messages, cardStatus = 'stable' }) => {
+  // 状态管理
+  const [collapsedReasoning, setCollapsedReasoning] = useState<Record<string, boolean>>({});
+  const [markdownEnabled, setMarkdownEnabled] = useState<Record<string, boolean>>({});
+
+  // 复制功能
+  const handleCopy = async (content: string) => {
+    try {
+      await navigator.clipboard.writeText(content);
+      message.success('已复制到剪贴板');
+    } catch (err) {
+      message.error('复制失败');
+    }
+  };
+
+  // 切换思考过程展开/折叠
+  const toggleReasoning = (messageId: string) => {
+    setCollapsedReasoning(prev => ({
+      ...prev,
+      [messageId]: !prev[messageId]
+    }));
+  };
+
+  // 切换 Markdown 渲染
+  const toggleMarkdown = (messageId: string) => {
+    setMarkdownEnabled(prev => ({
+      ...prev,
+      [messageId]: !prev[messageId]
+    }));
+  };
+
+  // 调试：检查 reasoning_content 数据
+  React.useEffect(() => {
+    const msgWithReasoning = messages.find(msg => msg.reasoning_content);
+    if (msgWithReasoning) {
+      console.log('[MessageCard] 检测到 reasoning_content:', {
+        messageId: msgWithReasoning.id,
+        reasoning_length: msgWithReasoning.reasoning_content?.length,
+        reasoning_preview: msgWithReasoning.reasoning_content?.substring(0, 100),
+        role: msgWithReasoning.role
+      });
+    }
+  }, [messages]);
+
   // 只读 props，不再自行决定状态
   return (
     <div className="message-card-group">
@@ -52,13 +97,13 @@ const MessageCard: React.FC<MessageCardProps> = ({ messages, cardStatus = 'stabl
         // 头像参数
         let avatarProps = {};
         if (isUser) {
-          avatarProps = { provider: 'deepseek', backgroundColor: '#e6f7ff', shape: 'circle', size: 36 };
+          avatarProps = { provider: 'deepseek', backgroundColor: '#e6f7ff', shape: 'circle', size: 32 };
         } else if (isAssistant) {
-          avatarProps = { provider: 'chatgpt', backgroundColor: '#f6ffed', shape: 'circle', size: 36 };
+          avatarProps = { provider: 'chatgpt', backgroundColor: '#f6ffed', shape: 'circle', size: 32 };
         } else if (isTool) {
-          avatarProps = { provider: 'chatgpt', backgroundColor: '#fffbe6', shape: 'circle', size: 36 };
+          avatarProps = { provider: 'chatgpt', backgroundColor: '#fffbe6', shape: 'circle', size: 32 };
         } else if (isClientNotice) {
-          avatarProps = { provider: 'deepseek', backgroundColor: '#fffbe6', shape: 'circle', size: 36 };
+          avatarProps = { provider: 'deepseek', backgroundColor: '#fffbe6', shape: 'circle', size: 32 };
         }
         // 渲染每条消息
         return (
@@ -67,15 +112,76 @@ const MessageCard: React.FC<MessageCardProps> = ({ messages, cardStatus = 'stabl
               <AvatarIcon {...avatarProps} />
             </div>
             <div className="message-content">
-              {/* assistant/tool/tool_call/observation/thought 渲染逻辑可按需扩展 */}
-              {isAssistant && msg.reasoning_content && (
-                <div className="reasoning-section">{msg.reasoning_content}</div>
+              {/* reasoning_content 渲染：思考过程，在主内容之前显示 */}
+              {(isAssistant || msg.role === 'assistant') && msg.reasoning_content && (
+                <div className="reasoning-section">
+                  <div 
+                    className="reasoning-header"
+                    onClick={() => toggleReasoning(msg.id)}
+                    style={{ cursor: 'pointer' }}
+                  >
+                    {collapsedReasoning[msg.id] ? <RightOutlined /> : <DownOutlined />}
+                    💭 思考过程
+                  </div>
+                  {!collapsedReasoning[msg.id] && (
+                    <div 
+                      className="reasoning-content"
+                      dangerouslySetInnerHTML={{ __html: markdownToHtml(msg.reasoning_content) }}
+                    />
+                  )}
+                </div>
               )}
+              
+              {/* tool 内容渲染 */}
               {isTool && msg.content && (
-                <div className="tool-section">{msg.content}</div>
+                <div className="tool-section">
+                  <div 
+                    className="tool-content"
+                    dangerouslySetInnerHTML={{ __html: markdownToHtml(msg.content) }}
+                  />
+                </div>
               )}
-              {/* 其他内容渲染 */}
-              <div className="main-content">{msg.content}</div>
+              
+              {/* 主内容渲染 - 带控制按钮 */}
+              {msg.content && (
+                <div className="main-content-container">
+                  {/* 控制按钮（仅对 assistant 消息显示） */}
+                  {isAssistant && (
+                    <div className="message-content-header">
+                      <Button
+                        type="text"
+                        size="small"
+                        icon={markdownEnabled[msg.id] ? <EyeInvisibleOutlined /> : <EyeOutlined />}
+                        onClick={() => toggleMarkdown(msg.id)}
+                        title={markdownEnabled[msg.id] ? '关闭 Markdown 渲染' : '开启 Markdown 渲染'}
+                      />
+                      <Button
+                        type="text"
+                        size="small"
+                        icon={<CopyOutlined />}
+                        onClick={() => handleCopy(msg.content)}
+                        title="复制内容"
+                      />
+                    </div>
+                  )}
+                  
+                  {/* 内容区域 */}
+                  {isUser || isClientNotice ? (
+                    <div className="main-content">{msg.content}</div>
+                  ) : (
+                    <div className="main-content">
+                      {markdownEnabled[msg.id] ? (
+                        <div 
+                          className="markdown-content"
+                          dangerouslySetInnerHTML={{ __html: markdownToHtml(msg.content) }}
+                        />
+                      ) : (
+                        <div className="plain-text">{msg.content}</div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         );

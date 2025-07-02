@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { useSelector } from 'react-redux';
 import type { RootState } from '@/store';
 import MessageCard from '../MessageCard';
@@ -19,23 +19,18 @@ const EMPTY_ARRAY: any[] = [];
 
 const MessageList = React.forwardRef<HTMLDivElement, MessageListProps>(
   ({ messages, activeChatRef }, ref) => {
-    // 支持直接用 redux state
+    // 优先使用 props 传入的 messages，否则从 Redux 读取
     const currentChatId = useSelector((state: RootState) => state.chat.currentChatId);
     const rawMessages = useSelector((state: RootState) => 
       state.chat.chatData[currentChatId || '']?.messages || EMPTY_ARRAY
     );
+    // 获取当前聊天的 MessageCard 状态
+    const messageCardStatus = useSelector((state: RootState) => 
+      state.chat.messageCardStatus[currentChatId || ''] ?? 'stable'
+    );
     
-    // 使用 useMemo 缓存处理后的消息，避免不必要的重渲染
-    const processedMessages = useMemo(() => {
-      return rawMessages.map((msg: any, idx: number) => ({
-        ...msg,
-        id: msg.id || `msg-${idx}`,
-        timestamp: msg.timestamp || Date.now() + idx,
-      }));
-    }, [rawMessages]);
-    
-    // 直接用 EnrichedMessage
-    const list: EnrichedMessage[] = (messages ?? processedMessages);
+    // 直接使用传入的 messages 或 Redux 中的 rawMessages
+    const list: EnrichedMessage[] = messages || rawMessages;
     // 分组逻辑：将连续的 assistant/tool 消息聚合为一组，传给 MessageCard
     const grouped: EnrichedMessage[][] = [];
     let buffer: EnrichedMessage[] = [];
@@ -50,7 +45,7 @@ const MessageList = React.forwardRef<HTMLDivElement, MessageListProps>(
     if (buffer.length) grouped.push(buffer);
     return (
       <div className="message-list" ref={ref}>
-        {grouped.map((group) => {
+        {grouped.map((group, index) => {
           // 客户端提示消息单独渲染
           if (group.length === 1 && group[0].role === 'client-notice') {
             const notice = group[0];
@@ -69,7 +64,20 @@ const MessageList = React.forwardRef<HTMLDivElement, MessageListProps>(
             ...msg,
             chatId: currentChatId || '',
           }));
-          return <MessageCard key={group.map(m=>m.id).join('-')} messages={messagesWithChatId} />;
+          
+          // 只有最后一个 MessageCard 显示状态
+          const isLastGroup = index === grouped.length - 1;
+          const shouldShowStatus = isLastGroup && (
+            group.some(msg => msg.role === 'assistant' || msg.role === 'tool')
+          );
+          
+          return (
+            <MessageCard 
+              key={group.map(m=>m.id).join('-')} 
+              messages={messagesWithChatId}
+              cardStatus={shouldShowStatus ? messageCardStatus : 'stable'}
+            />
+          );
         })}
         {activeChatRef && <div ref={activeChatRef} style={{ height: 1 }} />}
       </div>

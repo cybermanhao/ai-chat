@@ -10,7 +10,7 @@
 import { createSlice, createAction } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
 import { v4 as uuidv4 } from 'uuid';
-import type { ChatInfo, ChatData, EnrichedMessage } from '@engine/types/chat';
+import type { ChatInfo, ChatData, EnrichedMessage, IMessageCardStatus } from '@engine/types/chat';
 
 // 新的 ChatState 只负责快照/历史，不含 runtime 状态
 interface ChatState {
@@ -20,6 +20,8 @@ interface ChatState {
   error: string | null;
   // 运行时生成状态，按 chatId 维护
   isGenerating: { [chatId: string]: boolean };
+  // MessageCard 状态，按 chatId 维护
+  messageCardStatus: { [chatId: string]: IMessageCardStatus };
 }
 
 const initialState: ChatState = {
@@ -27,7 +29,8 @@ const initialState: ChatState = {
   chatData: {},
   currentChatId: null,
   error: null,
-  isGenerating: {},//目前为全局 TODO：修正为每个chat独立属性
+  isGenerating: {},// 运行时状态，每个 chatId 对应 false，表示没有在生成中
+  messageCardStatus: {}, // MessageCard 状态，每个 chatId 对应 'stable'
 };
 
 // 只做事件派发的 sendMessage action，实际流式/状态管理由 task-loop 处理
@@ -62,11 +65,17 @@ const chatSlice = createSlice({
         },
       };
       state.currentChatId = newChatId;
+      // 初始化运行时状态
+      state.isGenerating[newChatId] = false;
+      state.messageCardStatus[newChatId] = 'stable';
     },
     deleteChat: (state, action: PayloadAction<string>) => {
       const chatIdToDelete = action.payload;
       state.chatList = state.chatList.filter(chat => chat.id !== chatIdToDelete);
       delete state.chatData[chatIdToDelete];
+      // 清理运行时状态
+      delete state.isGenerating[chatIdToDelete];
+      delete state.messageCardStatus[chatIdToDelete];
       if (state.currentChatId === chatIdToDelete) {
         state.currentChatId = state.chatList[0]?.id || null;
       }
@@ -100,6 +109,13 @@ const chatSlice = createSlice({
         timestamp: msg.timestamp || Date.now() + idx,
       }));
       state.chatData[action.payload.chatId] = data;
+      // 确保运行时状态存在
+      if (!(action.payload.chatId in state.isGenerating)) {
+        state.isGenerating[action.payload.chatId] = false;
+      }
+      if (!(action.payload.chatId in state.messageCardStatus)) {
+        state.messageCardStatus[action.payload.chatId] = 'stable';
+      }
     },
     addMessage(state: ChatState, action: PayloadAction<{ chatId: string; message: EnrichedMessage }>) {
       const { chatId, message } = action.payload;
@@ -123,9 +139,41 @@ const chatSlice = createSlice({
         }
       }
     },
+    // 最小差分更新 assistant 消息（优化版本，避免整个对象重新创建）
+    patchLastAssistantMessage(state: ChatState, action: PayloadAction<{ chatId: string; patch: Partial<EnrichedMessage> }>) {
+      const { chatId, patch } = action.payload;
+      const msgs = state.chatData[chatId]?.messages;
+      if (msgs && msgs.length > 0) {
+        for (let i = msgs.length - 1; i >= 0; i--) {
+          if (msgs[i].role === 'assistant') {
+            const current = msgs[i];
+            // 只更新实际变化的字段，避免不必要的对象重创建
+            for (const [key, value] of Object.entries(patch)) {
+              if (current[key as keyof EnrichedMessage] !== value) {
+                (current as any)[key] = value;
+              }
+            }
+            break;
+          }
+        }
+      }
+    },
     setIsGenerating(state: ChatState, action: PayloadAction<{ chatId: string; value: boolean }>) {
       const { chatId, value } = action.payload;
       state.isGenerating[chatId] = value;
+    },
+    setMessageCardStatus(state: ChatState, action: PayloadAction<{ chatId: string; status: IMessageCardStatus }>) {
+      const { chatId, status } = action.payload;
+      state.messageCardStatus[chatId] = status;
+    },
+    // 重置所有运行时状态 - 在应用启动时调用
+    resetRuntimeStates(state: ChatState) {
+      // 为所有存在的 chatId 重置运行时状态为 false/'stable'，而不是清空
+      Object.keys(state.chatData).forEach(chatId => {
+        state.isGenerating[chatId] = false;
+        state.messageCardStatus[chatId] = 'stable';
+      });
+      state.error = null;
     },
   }
 });
@@ -140,7 +188,10 @@ export const {
   addMessage,
   setError,
   updateLastAssistantMessage,
+  patchLastAssistantMessage,
   setIsGenerating,
+  setMessageCardStatus,
+  resetRuntimeStates,
 } = chatSlice.actions;
 
 export default chatSlice.reducer;

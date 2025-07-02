@@ -1,28 +1,34 @@
 import { useSelector, useDispatch } from 'react-redux';
 import type { RootState, AppDispatch } from '@/store';
-import { sendMessage } from '@/store/chatSlice'; // 新增：只引入 sendMessage action
+import { sendMessage, setError } from '@/store/chatSlice'; // 新增：只引入 sendMessage action
 import MessageList from './components/MessageList';
 import InputSender from './components/InputSender';
 import ChatHeader from './components/ChatHeader';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import './styles.less';
 
+const EMPTY_ARRAY: any[] = []; // 移到组件外部，避免每次渲染重新创建
 
 // 聊天页面组件，UI 只与 WebChatSession 交互
 export const Chat = () => {
   const dispatch: AppDispatch = useDispatch();
   const currentChatId = useSelector((state: RootState) => state.chat.currentChatId);
-  const EMPTY_ARRAY: any[] = [];
   const chatData = useSelector((state: RootState) => state.chat.chatData[currentChatId || '']);
   const isGenerating = useSelector(
-    (state: RootState) => state.chat.isGenerating[currentChatId || ''] || false
+    (state: RootState) => state.chat.isGenerating[currentChatId || ''] ?? false
   );
   const error = useSelector((state: RootState) => state.chat.error);
 
-  // 将错误输出到 console 而不是 UI
-  if (error) {
-    console.error('[Chat] Redux Error:', error);
-  }
+  // 将错误输出到 console 而不是 UI，但只在错误变化时输出一次
+  useEffect(() => {
+    if (error) {
+      console.error('[Chat] Redux Error:', error);
+      // 清除错误状态，避免重复显示
+      setTimeout(() => {
+        dispatch(setError(null));
+      }, 100);
+    }
+  }, [error, dispatch]);
 
   const [inputValue, setInputValue] = useState('');
 
@@ -44,11 +50,7 @@ export const Chat = () => {
       <ChatHeader title={chatData?.info?.title || ''} />
       <div className="chat-content">
         <MessageList
-          messages={(chatData?.messages || EMPTY_ARRAY).map((msg: any, idx: number) => ({
-            ...msg,
-            id: msg.id || `msg-${idx}`,
-            timestamp: msg.timestamp || Date.now() + idx,
-          }))}
+          messages={(chatData?.messages || EMPTY_ARRAY)}
           isGenerating={isGenerating}
         />
         <InputSender

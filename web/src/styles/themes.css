@@ -6,6 +6,8 @@
   --success-color: #52c41a;
   --warning-color: #faad14;
   --error-color: #f5222d;
+  --info-color: #1890ff;
+  --processing-color: #722ed1;
   /* 文字颜色 */
   --text-color: rgba(0, 0, 0, 0.85);
   --text-color-secondary: rgba(0, 0, 0, 0.45);
@@ -67,6 +69,8 @@
   --success-color: #52c41a;
   --warning-color: #d89614;
   --error-color: #a61d24;
+  --info-color: #1668dc;
+  --processing-color: #9254de;
   /* 深色主题文字和背景颜色 */
   --text-color: rgba(255, 255, 255, 0.85);
   --text-color-secondary: rgba(255, 255, 255, 0.45);
