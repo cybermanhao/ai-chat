@@ -1,6 +1,6 @@
 import { configureStore, combineReducers } from '@reduxjs/toolkit';
 import { persistStore, persistReducer } from 'redux-persist';
-import storage from 'redux-persist/lib/storage'; // defaults to localStorage for web
+import storage from 'redux-persist/lib/storage'; // localStorage
 
 import chatReducer from './chatSlice';
 import globalUIReducer from './globalUIStore';
@@ -9,6 +9,7 @@ import roleReducer from './roleStore';
 import pluginReducer from './pluginStore';
 import mcpReducer from './mcpStore';
 import llmConfigReducer from './llmConfigSlice';
+import taskLoopMiddleware from './streamManagerMiddleware'; // 重命名后的中间件
 
 const persistConfig = {
   key: 'root',
@@ -37,10 +38,10 @@ export const store = configureStore({
         // 忽略 redux-persist 的 action 类型
         ignoredActions: ['persist/PERSIST', 'persist/REHYDRATE'],
       },
-    }),
+    }).concat(taskLoopMiddleware), // 集成 taskLoopMiddleware
 });
 
 export const persistor = persistStore(store);
 
 export type RootState = ReturnType<typeof store.getState>;
-export type AppDispatch = typeof store.dispatch; 
+export type AppDispatch = typeof store.dispatch;

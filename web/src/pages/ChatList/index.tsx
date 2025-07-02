@@ -35,12 +35,12 @@ const ChatList: React.FC = () => {
     }
   }, [currentChatId, activeChatRef]);
 
+  // 只在初始化时检查并创建默认对话，避免重复创建
   useEffect(() => {
-    // 如果没有聊天，则创建一个新聊天
     if (chatList.length === 0) {
       dispatch(addChat('新对话'));
     }
-  }, [chatList, dispatch]);
+  }, [chatList.length, dispatch]); // 只依赖 length，避免频繁触发
 
   useEffect(() => {
     // 当 Redux store 中的 currentChatId 变化时，自动导航

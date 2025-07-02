@@ -1,266 +1,85 @@
-import React, { useState } from 'react';
-import { useSelector } from 'react-redux';
-import { DownOutlined, RightOutlined, LoadingOutlined, FormOutlined, CopyOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
-import type { MessageRole, MessageStatus } from '@engine/types/chat';
-import { Button, Tooltip } from 'antd';
-import { markdownToHtml, copyToClipboard } from '@/utils/markdown';
+import React from 'react';
+import { LoadingOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
+import type { MessageRole } from '@engine/types/chat';
+
 import AvatarIcon from '@/components/AvatarIcon';
-import type { RootState } from '@/store';
+
 import './styles.less';
 
+import type { IMessageCardStatus } from '@engine/types/chat';
 interface MessageCardProps {
-  id: string;
-  chatId: string;
-  content: string;
-  role: MessageRole;
-  reasoning_content?: string;
-  tool_content?: string;
-  observation_content?: string;
-  thought_content?: string;
-  status?: MessageStatus;
-  isGenerating?: boolean;
-  noticeType?: 'error' | 'warning' | 'info';
-  errorCode?: string;
+  // 支持组合渲染：可传入一组消息（如 assistant+tool），也可单条
+  messages: Array<{
+    id: string;
+    chatId: string;
+    content: string;
+    role: MessageRole;
+    reasoning_content?: string;
+    tool_content?: string;
+    observation_content?: string;
+    thought_content?: string;
+    status?: string; // 仅作为附加信息，不再决定 MessageCard 渲染状态
+    noticeType?: 'error' | 'warning' | 'info';
+    errorCode?: string;
+  }>;
+  cardStatus?: IMessageCardStatus; // 新增：由外部传入流程状态
 }
 
-const MessageCard: React.FC<MessageCardProps> = ({ 
-  id,
-  chatId,
-  content, 
-  role, 
-  reasoning_content,
-  tool_content,
-  observation_content,
-  thought_content,
-  status = 'stable',
-  noticeType = 'info',
-  errorCode
-}) => {
-  // 从 Redux state 中获取最新的消息状态
-  const runtimeMessage = useSelector((state: RootState) => 
-    state.chat.chatData[chatId]?.messages.find(m => m.id === id)
-  );
-  const [showReasoning, setShowReasoning] = useState(true);
-  const [showToolOutput, setShowToolOutput] = useState(true);
-  const [showThoughts, setShowThoughts] = useState(true);
-  const [useMarkdown, setUseMarkdown] = useState(true);
-  
-  // Computed basic states
-  const isUser = role === 'user';
-  const isAssistant = role === 'assistant';
-  const isClientNotice = role === 'client-notice';
-  // 直接使用 Redux 或 props 中的状态
-  const currentStatus = runtimeMessage?.status || status;
+const statusMap: Record<IMessageCardStatus, { text: string; icon: React.ReactNode; className: string }> = {
+  connecting: { text: '连接中...', icon: <LoadingOutlined />, className: 'status-connecting' },
+  thinking: { text: '思考中...', icon: <LoadingOutlined />, className: 'status-thinking' },
+  generating: { text: '生成中...', icon: <LoadingOutlined />, className: 'status-generating' },
+  tool_calling: { text: '工具调用中...', icon: <LoadingOutlined />, className: 'status-tool-calling' },
+  stable: { text: '', icon: <></>, className: '' },
+};
 
-  // Get runtime content from store or props
-  const runtimeContent = runtimeMessage ? {
-    reasoning_content: (runtimeMessage as { reasoning_content?: string }).reasoning_content,
-    tool_content: (runtimeMessage as { tool_content?: string }).tool_content,
-    observation_content: (runtimeMessage as { observation_content?: string }).observation_content,
-    thought_content: (runtimeMessage as { thought_content?: string }).thought_content
-  } : {};
-
-  // Clean and filter content
-  const cleanContent = (str?: string) => {
-    if (!str) return '';
-    return str.replace(/null/g, '').trim();
-  };
-
-  const currentReasoningContent = cleanContent(runtimeContent.reasoning_content || reasoning_content);
-  const currentToolContent = cleanContent(runtimeContent.tool_content || tool_content);
-  const currentObservationContent = cleanContent(runtimeContent.observation_content || observation_content);
-  const currentThoughtContent = cleanContent(runtimeContent.thought_content || thought_content);
-
-  // Status rendering
-  const renderStatus = () => {
-    if (isUser || currentStatus === 'stable' || currentStatus === 'done') return null;
-      const statusMap: Record<MessageStatus, { text: string; icon: React.ReactNode; className: string }> = {
-      connecting: { 
-        text: '连接中...', 
-        icon: <LoadingOutlined />, 
-        className: 'status-connecting' 
-      },
-      thinking: { 
-        text: '思考中...', 
-        icon: <LoadingOutlined />, 
-        className: 'status-thinking' 
-      },
-      generating: { 
-        text: '生成中...', 
-        icon: <LoadingOutlined />, 
-        className: 'status-generating' 
-      },
-      tool_calling: {
-        text: '工具调用中...',
-        icon: <LoadingOutlined />,
-        className: 'status-tool-calling'
-      },
-      stable: {
-        text: '',
-        icon: <></>,
-        className: ''
-      },
-      done: {
-        text: '',
-        icon: <></>,
-        className: ''
-      },
-      error: {
-        text: '出错了',
-        icon: <ExclamationCircleOutlined />,
-        className: 'status-error'
-      }
-    };
-
-    // 明确 statusMap 索引类型，消除隐式 any
-    const statusInfo = statusMap[currentStatus as MessageStatus];
-    if (!statusInfo) return null;
-
-    return (
-      <div className={`message-status ${statusInfo.className}`}>
-        {statusInfo.icon} <span>{statusInfo.text}</span>
-      </div>
-    );
-  };
-  const roleClass = isUser ? 'message-user' : isClientNotice ? 'message-notice' : 'message-assistant';
-
-  // 头像参数
-  let avatarProps = {};
-  if (isUser) {
-    avatarProps = {
-      provider: 'user',
-      backgroundColor: '#e6f7ff',
-      shape: 'circle',
-      size: 36,
-      src: undefined,
-    };
-  } else if (isAssistant) {
-    avatarProps = {
-      provider: 'chatgpt',
-      backgroundColor: '#f6ffed',
-      shape: 'circle',
-      size: 36,
-      src: undefined,
-    };
-  } else if (isClientNotice) {
-    avatarProps = {
-      provider: 'info',
-      backgroundColor: '#fffbe6',
-      shape: 'circle',
-      size: 36,
-      src: undefined,
-    };
-  }
-
+const MessageCard: React.FC<MessageCardProps> = ({ messages, cardStatus = 'stable' }) => {
+  // 只读 props，不再自行决定状态
   return (
-    <div className={`message-card ${roleClass}`}>
-      <div className="message-header">
-        <AvatarIcon {...avatarProps} />
-        <div className="message-status">
-          {renderStatus()}
-        </div>
+    <div className="message-card-group">
+      <div className="message-status-bar">
+        {cardStatus !== 'stable' && (
+          <div className={`message-status ${statusMap[cardStatus].className}`}>
+            {statusMap[cardStatus].icon} <span>{statusMap[cardStatus].text}</span>
+          </div>
+        )}
       </div>
-      <div className="message-content">
-        {isAssistant && currentReasoningContent && (
-          <div className="reasoning-section">
-            <Button 
-              type="text" 
-              icon={showReasoning ? <DownOutlined /> : <RightOutlined />}
-              onClick={() => setShowReasoning(!showReasoning)}
-            >
-              Reasoning
-            </Button>
-            {showReasoning && (
-              <div className="reasoning-content">
-                {currentReasoningContent}
-              </div>
-            )}
-          </div>
-        )}
-        {isAssistant && (currentToolContent || currentObservationContent) && (
-          <div className="tool-section">
-            <Button 
-              type="text" 
-              icon={showToolOutput ? <DownOutlined /> : <RightOutlined />}
-              onClick={() => setShowToolOutput(!showToolOutput)}
-            >
-              Tool Output
-            </Button>
-            {showToolOutput && (
-              <>
-                {currentToolContent && (
-                  <div className="tool-content">
-                    {useMarkdown ? (
-                      <div className="markdown-body" dangerouslySetInnerHTML={{ __html: markdownToHtml(currentToolContent) }} />
-                    ) : (
-                      currentToolContent
-                    )}
-                  </div>
-                )}
-                {currentObservationContent && (
-                  <div className="observation-content">
-                    {useMarkdown ? (
-                      <div className="markdown-body" dangerouslySetInnerHTML={{ __html: markdownToHtml(currentObservationContent) }} />
-                    ) : (
-                      currentObservationContent
-                    )}
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-        )}
-        {isAssistant && currentThoughtContent && (
-          <div className="thought-section">
-            <Button 
-              type="text" 
-              icon={showThoughts ? <DownOutlined /> : <RightOutlined />}
-              onClick={() => setShowThoughts(!showThoughts)}
-            >
-              Thoughts
-            </Button>
-            {showThoughts && (
-              <div className="thought-content">
-                {useMarkdown ? (
-                  <div className="markdown-body" dangerouslySetInnerHTML={{ __html: markdownToHtml(currentThoughtContent) }} />
-                ) : (
-                  currentThoughtContent
-                )}
-              </div>
-            )}
-          </div>
-        )}
-        <div className="main-content">
-          {isClientNotice ? (
-            <div className={`notice-content ${noticeType}`}>
-              {content}
-              {errorCode && <div className="error-code">{errorCode}</div>}
+      {messages.map((msg) => {
+        const isUser = msg.role === 'user';
+        const isAssistant = msg.role === 'assistant';
+        const isTool = msg.role === 'tool';
+        const isClientNotice = msg.role === 'client-notice';
+        // 头像参数
+        let avatarProps = {};
+        if (isUser) {
+          avatarProps = { provider: 'deepseek', backgroundColor: '#e6f7ff', shape: 'circle', size: 36 };
+        } else if (isAssistant) {
+          avatarProps = { provider: 'chatgpt', backgroundColor: '#f6ffed', shape: 'circle', size: 36 };
+        } else if (isTool) {
+          avatarProps = { provider: 'chatgpt', backgroundColor: '#fffbe6', shape: 'circle', size: 36 };
+        } else if (isClientNotice) {
+          avatarProps = { provider: 'deepseek', backgroundColor: '#fffbe6', shape: 'circle', size: 36 };
+        }
+        // 渲染每条消息
+        return (
+          <div className={`message-card ${isUser ? 'message-user' : isAssistant ? 'message-assistant' : isTool ? 'message-tool' : 'message-notice'}`} key={msg.id}>
+            <div className="message-header">
+              <AvatarIcon {...avatarProps} />
             </div>
-          ) : useMarkdown ? (
-            <div className="markdown-body" dangerouslySetInnerHTML={{ __html: markdownToHtml(content) }} />
-          ) : (
-            content
-          )}
-        </div>
-      </div>
-      {isAssistant && (
-        <div className="message-actions">
-          <Tooltip title="Copy">
-            <Button 
-              type="text" 
-              icon={<CopyOutlined />} 
-              onClick={() => copyToClipboard(content)}
-            />
-          </Tooltip>
-          <Tooltip title="Toggle Markdown">
-            <Button 
-              type="text" 
-              icon={<FormOutlined />}
-              onClick={() => setUseMarkdown(!useMarkdown)} 
-            />
-          </Tooltip>
-        </div>
-      )}
+            <div className="message-content">
+              {/* assistant/tool/tool_call/observation/thought 渲染逻辑可按需扩展 */}
+              {isAssistant && msg.reasoning_content && (
+                <div className="reasoning-section">{msg.reasoning_content}</div>
+              )}
+              {isTool && msg.content && (
+                <div className="tool-section">{msg.content}</div>
+              )}
+              {/* 其他内容渲染 */}
+              <div className="main-content">{msg.content}</div>
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 };
