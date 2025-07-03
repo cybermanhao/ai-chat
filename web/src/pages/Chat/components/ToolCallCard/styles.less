@@ -1,0 +1,468 @@
+// 工具调用组件的主题配色
+:root {
+  // 浅色主题 - 咖啡色系
+  --tool-primary-light: #8b4513;        // 深咖啡色
+  --tool-primary-light-rgb: 139, 69, 19;
+  --tool-secondary-light: #d2691e;      // 中咖啡色
+  --tool-accent-light: #cd853f;         // 浅咖啡色
+  --tool-bg-light: #fdf6e3;             // 咖啡色背景
+  --tool-border-light: #deb887;         // 咖啡色边框
+}
+
+[data-theme="dark"] {
+  // 深色主题 - 金黄色系
+  --tool-primary-dark: #ffd700;         // 金黄色
+  --tool-primary-dark-rgb: 255, 215, 0;
+  --tool-secondary-dark: #ffb347;       // 橙金色
+  --tool-accent-dark: #ffa500;          // 深金色
+  --tool-bg-dark: #2c2416;              // 深色背景
+  --tool-border-dark: #b8860b;          // 深金色边框
+}
+
+.tool-call-card {
+  margin-bottom: 1rem;
+  // 使用工具调用专用颜色
+  border-left: 3px solid var(--tool-primary-light, #8b4513);
+  padding-left: 1rem;
+  transition: all 0.3s ease;
+
+  // 深色主题下的工具调用颜色
+  [data-theme="dark"] & {
+    border-left-color: var(--tool-primary-dark, #ffd700);
+  }
+
+  // 设置动画容器的自定义颜色
+  &.calling {
+    border-left-color: var(--tool-secondary-light, #d2691e);
+    --primary-color: var(--tool-secondary-light, #d2691e);
+    --primary-color-rgb: var(--tool-secondary-light-rgb, 210, 105, 30);
+    
+    [data-theme="dark"] & {
+      border-left-color: var(--tool-secondary-dark, #ffb347);
+      --primary-color: var(--tool-secondary-dark, #ffb347);
+      --primary-color-rgb: var(--tool-secondary-dark-rgb, 255, 179, 71);
+    }
+  }
+
+  &.success {
+    border-left-color: var(--tool-primary-light, #8b4513);
+    --primary-color: var(--tool-primary-light, #8b4513);
+    --primary-color-rgb: var(--tool-primary-light-rgb, 139, 69, 19);
+    
+    [data-theme="dark"] & {
+      border-left-color: var(--tool-primary-dark, #ffd700);
+      --primary-color: var(--tool-primary-dark, #ffd700);
+      --primary-color-rgb: var(--tool-primary-dark-rgb, 255, 215, 0);
+    }
+  }
+
+  &.error {
+    border-left-color: var(--error-color);
+    --primary-color: var(--error-color);
+    --primary-color-rgb: var(--error-color-rgb, 255, 77, 79);
+  }
+
+  .tool-call-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    padding: 12px 16px;
+    // 使用工具调用专用背景色
+    background-color: var(--tool-bg-light, #fdf6e3);
+    border: 1px solid var(--tool-border-light, #deb887);
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    user-select: none;
+
+    // 深色主题下的背景色
+    [data-theme="dark"] & {
+      background-color: var(--tool-bg-dark, #2c2416);
+      border-color: var(--tool-border-dark, #b8860b);
+    }
+
+    &:hover {
+      background-color: var(--tool-accent-light, #cd853f);
+      border-color: var(--tool-primary-light, #8b4513);
+      
+      [data-theme="dark"] & {
+        background-color: var(--tool-accent-dark, #ffa500);
+        border-color: var(--tool-primary-dark, #ffd700);
+      }
+    }
+
+    .tool-call-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex: 1;
+
+      .toggle-icon {
+        color: var(--text-color-secondary);
+        font-size: 12px;
+        transition: all 0.3s ease;
+        transform-origin: center;
+
+        .anticon {
+          transition: transform 0.3s ease;
+        }
+      }
+
+      .tool-icon {
+        font-size: 16px;
+      }
+
+      .tool-name {
+        font-weight: 500;
+        color: var(--text-color);
+        font-size: 14px
+      }
+    }
+
+    .tool-call-status {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+
+      .status-icon {
+        font-size: 14px;
+
+        &.calling {
+          color: var(--tool-secondary-light, #d2691e);
+          animation: rotate 1s linear infinite;
+          
+          [data-theme="dark"] & {
+            color: var(--tool-secondary-dark, #ffb347);
+          }
+        }
+
+        &.success {
+          color: var(--tool-primary-light, #8b4513);
+          
+          [data-theme="dark"] & {
+            color: var(--tool-primary-dark, #ffd700);
+          }
+        }
+
+        &.error {
+          color: var(--error-color);
+        }
+      }
+
+      .status-text {
+        font-size: 12px;
+        color: var(--text-color-secondary);
+      }
+    }
+
+    &:hover .toggle-icon {
+      color: var(--tool-primary-light, #8b4513);
+      transform: scale(1.1);
+      
+      [data-theme="dark"] & {
+        color: var(--tool-primary-dark, #ffd700);
+      }
+    }
+  }
+
+  // 工具调用内容
+  .tool-call-content {
+    margin-top: 12px;
+    animation: slideDown 0.3s ease-out;
+
+    .tool-call-input {
+      background-color: var(--background-tertiary);
+      border: 1px solid var(--border-color-split);
+      border-radius: 6px;
+      padding: 12px;
+      margin-bottom: 8px;
+
+      .input-header {
+        margin-bottom: 8px;
+
+        .input-label {
+          font-size: 12px;
+          color: var(--text-color-secondary);
+          font-weight: 500;
+        }
+      }
+
+      .input-content {
+        font-size: 12px;
+        color: var(--text-color-secondary);
+        line-height: 1.4;
+        font-family: 'JetBrains Mono', Consolas, Monaco, monospace;
+        background-color: var(--background-code);
+        padding: 8px;
+        border-radius: 4px;
+        border: 1px solid var(--border-color-split);
+        white-space: pre-wrap;
+        word-break: break-all;
+      }
+    }
+
+    .tool-call-result {
+      background-color: var(--background-input);
+      border: 1px solid var(--border-color-split);
+      border-radius: 6px;
+      padding: 16px;
+
+      .result-header {
+        margin-bottom: 12px;
+
+        .result-label {
+          font-size: 13px;
+          color: var(--text-color-secondary);
+          font-weight: 500;
+        }
+      }
+
+      .result-content {
+        font-size: 13px;
+        color: var(--text-color-secondary);
+        line-height: 1.6;
+        white-space: pre-wrap;
+        font-family: 'JetBrains Mono', Consolas, Monaco, monospace;
+
+        // Markdown 内容样式
+        h1, h2, h3, h4, h5, h6 {
+          margin: 1em 0 0.5em;
+          font-weight: 600;
+          line-height: 1.25;
+          color: var(--text-color);
+        }
+
+        p {
+          margin: 0.5em 0;
+
+          &:first-child {
+            margin-top: 0;
+          }
+
+          &:last-child {
+            margin-bottom: 0;
+          }
+        }
+
+        code {
+          font-family: 'JetBrains Mono', Consolas, Monaco, monospace;
+          font-size: 12px;
+          background-color: var(--background-code);
+          padding: 0.2em 0.4em;
+          border-radius: 3px;
+          margin: 0 0.2em;
+        }
+
+        pre {
+          margin: 0.75rem 0;
+          padding: 1rem;
+          border-radius: 6px;
+          overflow-x: auto;
+          background-color: var(--background-code);
+          border: 1px solid var(--border-color-split);
+
+          code {
+            background: none;
+            padding: 0;
+            color: inherit;
+          }
+        }
+
+        ul, ol {
+          padding-left: 1.5em;
+          margin: 0.5em 0;
+        }
+
+        blockquote {
+          margin: 0.5em 0;
+          padding: 0.5em 1em;
+          border-left: 4px solid var(--border-color-split);
+          background-color: var(--background-tertiary);
+        }
+
+        table {
+          width: 100%;
+          margin: 0.5em 0;
+          border-collapse: collapse;
+
+          th, td {
+            padding: 0.5em;
+            border: 1px solid var(--border-color-split);
+            text-align: left;
+          }
+
+          th {
+            background-color: var(--background-tertiary);
+            font-weight: 600;
+          }
+
+          tr:nth-child(even) {
+            background-color: var(--background-tertiary);
+          }
+        }
+      }
+    }
+  }
+
+  // 不同状态下的样式调整
+  &.calling {
+    .tool-call-header {
+      border-left: 3px solid var(--tool-secondary-light, #d2691e);
+      
+      [data-theme="dark"] & {
+        border-left-color: var(--tool-secondary-dark, #ffb347);
+      }
+    }
+
+    .tool-call-border .border-line .pulse-highlight {
+      background: linear-gradient(
+        90deg,
+        transparent 0%,
+        var(--tool-secondary-light, #d2691e) 50%,
+        transparent 100%
+      );
+      
+      [data-theme="dark"] & {
+        background: linear-gradient(
+          90deg,
+          transparent 0%,
+          var(--tool-secondary-dark, #ffb347) 50%,
+          transparent 100%
+        );
+      }
+    }
+  }
+
+  &.success {
+    .tool-call-header {
+      border-left: 3px solid var(--tool-primary-light, #8b4513);
+      
+      [data-theme="dark"] & {
+        border-left-color: var(--tool-primary-dark, #ffd700);
+      }
+    }
+
+    .tool-call-border .border-line {
+      background-color: rgba(var(--tool-primary-light-rgb, 139, 69, 19), 0.2);
+      
+      [data-theme="dark"] & {
+        background-color: rgba(var(--tool-primary-dark-rgb, 255, 215, 0), 0.2);
+      }
+    }
+  }
+
+  &.error {
+    .tool-call-header {
+      border-left: 3px solid var(--error-color);
+    }
+
+    .tool-call-border .border-line {
+      background-color: rgba(var(--error-color-rgb, 255, 77, 79), 0.2);
+    }
+
+    .tool-call-content .tool-call-result {
+      border-color: var(--error-color);
+      background-color: rgba(var(--error-color-rgb, 255, 77, 79), 0.05);
+    }
+  }
+}
+
+// ============================================================================
+// 工具调用卡片完成动画样式
+// ============================================================================
+@keyframes toolCallCompletionFlash {
+  0% {
+    transform: scale(1);
+    box-shadow: none;
+    background-color: transparent;
+  }
+  30% {
+    transform: scale(1.05);
+    box-shadow: 0 0 25px rgba(var(--primary-color-rgb, 139, 69, 19), 0.8);
+    background-color: rgba(var(--primary-color-rgb, 139, 69, 19), 0.3);
+  }
+  60% {
+    transform: scale(1.08);
+    box-shadow: 0 0 35px rgba(var(--primary-color-rgb, 139, 69, 19), 0.9);
+    background-color: rgba(var(--primary-color-rgb, 139, 69, 19), 0.4);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: none;
+    background-color: transparent;
+  }
+}
+
+// 工具调用卡片的完成动画
+.animated-container.completion-flash .tool-call-header {
+  animation: toolCallCompletionFlash 1.2s ease-out !important;
+  /* 调试：添加临时背景色确认选择器是否生效 */
+  outline: 2px solid red !important;
+}
+
+// 调试：确认 completion-flash 类是否被正确添加
+.animated-container.completion-flash {
+  /* 临时调试样式 */
+  border: 3px solid blue !important;
+}
+
+// 保留必要的动画
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+    max-height: 0;
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    max-height: 500px;
+  }
+}
+
+@keyframes rotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+// ============================================================================
+// PulseBackground 组件样式 (简化版，依赖 AnimatedContainer)
+// ============================================================================
+.pulse-background {
+  // 只保留基础样式，动画由 AnimatedContainer 控制
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+// 响应式调整
+@media (max-width: 768px) {
+  .tool-call-card {
+    .tool-call-header {
+      padding: 10px 12px;
+
+      .tool-call-title {
+        .tool-name {
+          font-size: 13px;
+        }
+      }
+
+      .tool-call-status {
+        .status-text {
+          font-size: 11px;
+        }
+      }
+    }
+
+    .tool-call-content .tool-call-result {
+      padding: 12px;
+
+      .result-content {
+        font-size: 12px;
+      }
+    }
+  }
+}

@@ -5,7 +5,8 @@ import {
   SettingOutlined,
   MessageOutlined,
   RobotOutlined,
-  AppstoreOutlined
+  AppstoreOutlined,
+  BugOutlined
 } from '@ant-design/icons';
 import { MCP } from '@lobehub/icons';
 import './styles.less';
@@ -19,7 +20,7 @@ interface AppSiderProps {
 
 // [插件系统已禁用] - 注释掉插件面板类型，但保留UI结构
 // type PanelType = 'chat' | 'settings' | 'mcp' | 'profile' | 'roles' | 'plugins';
-type PanelType = 'chat' | 'settings' | 'mcp' | 'profile' | 'roles';
+type PanelType = 'chat' | 'settings' | 'mcp' | 'profile' | 'roles' | 'debug';
 
 // 创建一个 PanelContent 映射
 const PanelContent = {
@@ -28,6 +29,7 @@ const PanelContent = {
   profile: React.lazy(() => import('@/pages/Profile')),
   settings: React.lazy(() => import('@/pages/Settings')),
   mcp: React.lazy(() => import('@/pages/Mcp')),
+  debug: React.lazy(() => import('@/pages/Debug')),
   // [插件系统已禁用] - 注释掉插件页面导入
   // plugins: React.lazy(() => import('@/pages/Plugins')),
 };
@@ -71,6 +73,12 @@ const AppSider = ({ collapsed, onCollapse }: AppSiderProps) => {
             onClick={() => handleToolClick('mcp')}
           >
             <MCP />
+          </div>
+          <div
+            className={`toolbar-item ${activePanel === 'debug' ? 'active' : ''}`}
+            onClick={() => handleToolClick('debug')}
+          >
+            <BugOutlined />
           </div>
           {/* [插件系统已禁用] - 注释掉插件工具栏按钮，但保留UI结构 */}
           {/* <div

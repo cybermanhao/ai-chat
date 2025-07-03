@@ -31,21 +31,71 @@ const MessageList = React.forwardRef<HTMLDivElement, MessageListProps>(
     
     // 直接使用传入的 messages 或 Redux 中的 rawMessages
     const list: EnrichedMessage[] = messages || rawMessages;
-    // 分组逻辑：将连续的 assistant/tool 消息聚合为一组，传给 MessageCard
-    const grouped: EnrichedMessage[][] = [];
-    let buffer: EnrichedMessage[] = [];
-    for (const msg of list) {
-      if (msg.role === 'assistant' || msg.role === 'tool') {
-        buffer.push(msg);
-      } else {
-        if (buffer.length) grouped.push(buffer), buffer = [];
-        grouped.push([msg]);
+    
+    // ============================================================================
+    // 优化分组逻辑：确保稳定的 key 策略
+    // ============================================================================
+    const grouped: Array<{
+      key: string;
+      messages: EnrichedMessage[];
+      isLastGroup: boolean;
+    }> = React.useMemo(() => {
+      const groups: EnrichedMessage[][] = [];
+      let buffer: EnrichedMessage[] = [];
+      
+      for (const msg of list) {
+        if (msg.role === 'assistant' || msg.role === 'tool') {
+          buffer.push(msg);
+        } else {
+          if (buffer.length) groups.push(buffer), buffer = [];
+          groups.push([msg]);
+        }
       }
-    }
-    if (buffer.length) grouped.push(buffer);
+      if (buffer.length) groups.push(buffer);
+      
+      // 为每个分组生成稳定的 key
+      return groups.map((group, index) => {
+        // 使用第一个消息的 id 作为稳定的 key
+        // 这样可以避免因分组变化导致的 key 改变
+        const firstMessage = group[0];
+        const key = firstMessage.id;
+        
+        return {
+          key,
+          messages: group,
+          isLastGroup: index === groups.length - 1
+        };
+      });
+    }, [list]);
+    // ============================================================================
+    // 预处理所有分组的消息 props，避免在渲染时重复创建
+    // ============================================================================
+    const processedGroups = React.useMemo(() => {
+      return grouped.map(groupItem => {
+        const { messages: group, isLastGroup } = groupItem;
+        
+        const messagesWithChatId = group.map(msg => ({
+          ...msg,
+          chatId: currentChatId || '',
+        }));
+        
+        const shouldShowStatus = isLastGroup && (
+          group.some(msg => msg.role === 'assistant' || msg.role === 'tool')
+        );
+        
+        return {
+          ...groupItem,
+          messagesWithChatId,
+          shouldShowStatus
+        };
+      });
+    }, [grouped, currentChatId, messageCardStatus]);
+
     return (
       <div className="message-list" ref={ref}>
-        {grouped.map((group, index) => {
+        {processedGroups.map((groupItem) => {
+          const { key, messages: group, messagesWithChatId, shouldShowStatus } = groupItem;
+          
           // 客户端提示消息单独渲染
           if (group.length === 1 && group[0].role === 'client-notice') {
             const notice = group[0];
@@ -59,21 +109,10 @@ const MessageList = React.forwardRef<HTMLDivElement, MessageListProps>(
               />
             );
           }
-          // assistant/tool 组合渲染
-          const messagesWithChatId = group.map(msg => ({
-            ...msg,
-            chatId: currentChatId || '',
-          }));
-          
-          // 只有最后一个 MessageCard 显示状态
-          const isLastGroup = index === grouped.length - 1;
-          const shouldShowStatus = isLastGroup && (
-            group.some(msg => msg.role === 'assistant' || msg.role === 'tool')
-          );
           
           return (
             <MessageCard 
-              key={group.map(m=>m.id).join('-')} 
+              key={key} // 使用稳定的 key
               messages={messagesWithChatId}
               cardStatus={shouldShowStatus ? messageCardStatus : 'stable'}
             />

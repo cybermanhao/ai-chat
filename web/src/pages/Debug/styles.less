@@ -1,0 +1,130 @@
+.debug-panel {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+  background: var(--background-content);
+
+  .debug-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border-color-split);
+    
+    .anticon {
+      color: var(--warning-color);
+      font-size: 18px;
+    }
+    
+    h4 {
+      color: var(--text-color);
+    }
+  }
+
+  .debug-content {
+    flex: 1;
+    overflow-y: auto;
+    
+    .ant-card {
+      border: 1px solid var(--border-color-split);
+      background: var(--background-elevated);
+      
+      .ant-card-head {
+        background: var(--background-tertiary);
+        border-bottom: 1px solid var(--border-color-split);
+        
+        .ant-card-head-title {
+          color: var(--text-color);
+          font-weight: 500;
+        }
+      }
+      
+      .ant-card-body {
+        background: var(--background-elevated);
+      }
+    }
+    
+    .ant-typography {
+      color: var(--text-color);
+      
+      &.ant-typography-secondary {
+        color: var(--text-color-secondary);
+      }
+    }
+    
+    .ant-input,
+    .ant-select {
+      background: var(--background-input);
+      border-color: var(--border-color-split);
+      color: var(--text-color);
+      
+      &:hover {
+        border-color: var(--primary-color);
+      }
+      
+      &:focus,
+      &.ant-select-focused {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 2px rgba(var(--primary-color-rgb), 0.2);
+      }
+    }
+    
+    .ant-select-dropdown {
+      background: var(--background-elevated);
+      border: 1px solid var(--border-color-split);
+      
+      .ant-select-item {
+        color: var(--text-color);
+        
+        &:hover {
+          background: var(--background-hover);
+        }
+        
+        &.ant-select-item-option-selected {
+          background: var(--primary-color);
+          color: #fff;
+        }
+      }
+    }
+    
+    .ant-btn {
+      &.ant-btn-primary {
+        background: var(--primary-color);
+        border-color: var(--primary-color);
+        
+        &:hover {
+          background: var(--primary-color-hover);
+          border-color: var(--primary-color-hover);
+        }
+      }
+      
+      &.ant-btn-default {
+        background: var(--background-elevated);
+        border-color: var(--border-color-split);
+        color: var(--text-color);
+        
+        &:hover {
+          border-color: var(--primary-color);
+          color: var(--primary-color);
+        }
+      }
+      
+      &.ant-btn-dangerous {
+        &:hover {
+          background: var(--error-color);
+          border-color: var(--error-color);
+        }
+      }
+    }
+  }
+}
+
+// 深色主题适配
+[data-theme='dark'] .debug-panel {
+  .ant-card {
+    .ant-card-head {
+      background: var(--background-secondary);
+    }
+  }
+}

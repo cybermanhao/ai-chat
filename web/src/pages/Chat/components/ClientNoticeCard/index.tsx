@@ -24,6 +24,15 @@ const ClientNoticeCard: React.FC<ClientNoticeCardProps> = ({
   timestamp,
 }) => {
   const [collapsed, setCollapsed] = useState(true);
+
+  // TODO: 修复client notice消息没有高度的调试信息
+  console.log('ClientNoticeCard render:', {
+    content: content?.substring(0, 50),
+    noticeType,
+    collapsed,
+    contentLength: content?.length,
+  });
+
   // 根据通知类型获取图标
   const getNoticeIcon = () => {
     switch (noticeType) {
@@ -94,6 +103,7 @@ const ClientNoticeCard: React.FC<ClientNoticeCardProps> = ({
           className="notice-message"
           style={{
             maxHeight: collapsed ? 60 : 300,
+            minHeight: collapsed ? 40 : 60, // TODO: 确保有最小高度
             overflow: 'auto',
             whiteSpace: 'pre-wrap',
             wordBreak: 'break-all',
@@ -102,6 +112,7 @@ const ClientNoticeCard: React.FC<ClientNoticeCardProps> = ({
             padding: 8,
             cursor: collapsed ? 'pointer' : 'auto',
             transition: 'max-height 0.2s',
+            border: '1px solid #d9d9d9', // TODO: 调试边框，确保元素可见
           }}
           onClick={() => collapsed && setCollapsed(false)}
         >

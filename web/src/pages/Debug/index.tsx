@@ -1,0 +1,642 @@
+import React, { useState } from 'react';
+import { Button, Card, Space, Typography, Input, Select, message, InputNumber, Switch } from 'antd';
+import { useSelector, useDispatch } from 'react-redux';
+import { BugOutlined, PlusOutlined, SendOutlined, DeleteOutlined, ToolOutlined } from '@ant-design/icons';
+import type { RootState } from '@/store';
+import type { MessageRole } from '@engine/types/chat';
+import type { ToolCall } from '@engine/stream/streamHandler';
+import { addMessage, clearMessages, updateLastAssistantMessage } from '@/store/chatSlice';
+import './styles.less';
+
+const { Title, Paragraph, Text } = Typography;
+const { TextArea } = Input;
+const { Option } = Select;
+
+const Debug: React.FC = () => {
+  const dispatch = useDispatch();
+  const chatData = useSelector((state: RootState) => state.chat.chatData);
+  const currentChatId = useSelector((state: RootState) => state.chat.currentChatId);
+  
+  const [toolMessageContent, setToolMessageContent] = useState('这是一个测试工具消息，用于调试UI交互功能。');
+  const [selectedMessageType, setSelectedMessageType] = useState<MessageRole>('tool');
+  
+  // 工具调用相关状态
+  const [toolName, setToolName] = useState('query_website');
+  const [toolArguments, setToolArguments] = useState('{"url": "https://www.example.com", "query": "获取网站标题和描述"}');
+  const [toolStatus, setToolStatus] = useState<'calling' | 'success' | 'error'>('success');
+  const [toolDelay, setToolDelay] = useState(10); // 工具完成延迟时间（秒）
+  const [isToolCollapsed, setIsToolCollapsed] = useState(true);
+  const [toolContent, setToolContent] = useState('网站查询完成！\n\n网站标题：Example Domain\n网站描述：This domain is for use in illustrative examples in documents.\n响应时间：8.2秒\n状态码：200');
+  const [showCallingState, setShowCallingState] = useState(true); // 是否显示调用中状态
+  
+  // 动画控制状态
+  const [useBackgroundPulse, setUseBackgroundPulse] = useState(false); // 是否使用背景脉冲
+  const [animationPhaseCounter, setAnimationPhaseCounter] = useState(0); // 动画相位计数器
+
+  // 添加测试消息到当前聊天
+  const handleAddTestMessage = () => {
+    if (!currentChatId) {
+      message.error('请先选择或创建一个聊天');
+      return;
+    }
+
+    const baseMessage = {
+      id: `test-${Date.now()}`,
+      content: toolMessageContent,
+      timestamp: Date.now(),
+    };
+
+    let testMessage;
+
+    switch (selectedMessageType) {
+      case 'user':
+        testMessage = {
+          ...baseMessage,
+          role: 'user' as const,
+        };
+        break;
+      case 'assistant':
+        testMessage = {
+          ...baseMessage,
+          role: 'assistant' as const,
+          reasoning_content: '这是一个测试的思考过程内容，用于验证reasoning功能的显示效果。',
+        };
+        break;
+      case 'tool':
+        testMessage = {
+          ...baseMessage,
+          role: 'tool' as const,
+          tool_call_id: `tool_call_${Date.now()}`,
+        };
+        break;
+      case 'client-notice':
+        testMessage = {
+          ...baseMessage,
+          role: 'client-notice' as const,
+          noticeType: 'info' as const,
+        };
+        break;
+      default:
+        testMessage = {
+          ...baseMessage,
+          role: 'assistant' as const,
+        };
+    }
+
+    // 直接添加消息到Redux状态
+    dispatch(addMessage({
+      chatId: currentChatId,
+      message: testMessage
+    }));
+
+    console.log('[Debug] 添加测试消息:', testMessage);
+    message.success(`成功添加${selectedMessageType}消息`);
+  };
+
+  // 清空当前聊天的所有消息
+  const handleClearMessages = () => {
+    if (!currentChatId) {
+      message.error('请先选择或创建一个聊天');
+      return;
+    }
+
+    dispatch(clearMessages({ chatId: currentChatId }));
+
+    message.success('已清空当前聊天的所有消息');
+  };
+
+  // 模拟流式更新
+  const handleSimulateStreaming = () => {
+    if (!currentChatId) {
+      message.error('请先选择或创建一个聊天');
+      return;
+    }
+
+    const baseMessage = {
+      id: `streaming-test-${Date.now()}`,
+      content: '',
+      role: 'assistant' as const,
+      timestamp: Date.now(),
+      reasoning_content: '正在思考如何回答这个问题...',
+    };
+
+    // 添加空消息
+    dispatch(addMessage({
+      chatId: currentChatId,
+      message: baseMessage
+    }));
+
+    // 模拟流式更新
+    const fullText = '这是一个模拟的流式更新测试。文本会逐步显示，就像真实的AI回复一样。可以用来测试UI的流式更新效果。';
+    let currentText = '';
+    let index = 0;
+
+    const interval = setInterval(() => {
+      if (index < fullText.length) {
+        currentText += fullText[index];
+        
+        dispatch(updateLastAssistantMessage({
+          chatId: currentChatId,
+          message: { content: currentText }
+        }));
+        
+        index++;
+      } else {
+        clearInterval(interval);
+        message.success('流式更新模拟完成');
+      }
+    }, 100);
+  };
+
+  // 添加工具消息到最后一条消息
+  const handleAddToolToLastMessage = () => {
+    if (!currentChatId) {
+      message.error('请先选择或创建一个聊天');
+      return;
+    }
+
+    const currentMessages = chatData[currentChatId]?.messages || [];
+    if (currentMessages.length === 0) {
+      message.error('当前聊天没有消息，请先发送一条消息');
+      return;
+    }
+
+    const toolMessage = {
+      id: `tool-${Date.now()}`,
+      content: toolMessageContent,
+      role: 'tool' as const,
+      tool_call_id: `tool_call_${Date.now()}`,
+      timestamp: Date.now(),
+    };
+
+    dispatch(addMessage({
+      chatId: currentChatId,
+      message: toolMessage
+    }));
+
+    message.success('成功在最后添加工具消息');
+  };
+
+  // 添加带有工具调用的助手消息
+  const handleAddAssistantWithToolCall = () => {
+    if (!currentChatId) {
+      message.error('请先选择或创建一个聊天');
+      return;
+    }
+
+    // 计算当前动画相位（每次添加递增，创建错开的动画效果）
+    const currentPhase = (animationPhaseCounter % 3) / 3; // 0, 0.33, 0.67
+    setAnimationPhaseCounter(prev => prev + 1);
+
+    // 只添加一个完整的工具调用消息，包含所有信息和自动状态变化
+    const toolMessage = {
+      id: `tool-complete-${Date.now()}`,
+      content: toolDelay > 0 ? '正在调用工具...' : (toolStatus === 'error' ? '工具调用失败：模拟错误' : toolContent),
+      role: 'tool' as const,
+      tool_call_id: `call_${Date.now()}`,
+      timestamp: Date.now(),
+      // 工具调用相关信息
+      toolName: toolName,
+      toolArguments: toolArguments,
+      toolStatus: toolDelay > 0 ? 'calling' as const : toolStatus,
+      // 调试配置
+      debugConfig: {
+        autoStatusChange: toolDelay > 0 ? {
+          delay: toolDelay * 1000,
+          finalStatus: toolStatus,
+          finalContent: toolStatus === 'error' ? '工具调用失败：模拟错误' : toolContent,
+        } : undefined,
+        animationPhase: currentPhase,
+        useBackgroundPulse: useBackgroundPulse,
+      }
+    };
+
+    dispatch(addMessage({
+      chatId: currentChatId,
+      message: toolMessage
+    }));
+
+    message.success(`成功添加完整工具调用流程 (相位: ${currentPhase.toFixed(2)}, ${useBackgroundPulse ? '背景脉冲' : '底边脉冲'})`);
+  };
+
+  // 仅添加工具调用（不添加结果）
+  const handleAddToolCallOnly = () => {
+    if (!currentChatId) {
+      message.error('请先选择或创建一个聊天');
+      return;
+    }
+
+    const toolCall: ToolCall = {
+      index: 0,
+      id: `call_${Date.now()}`,
+      type: 'function',
+      function: {
+        name: toolName,
+        arguments: toolArguments,
+      },
+    };
+
+    const assistantMessage = {
+      id: `assistant-tool-only-${Date.now()}`,
+      content: '我需要调用工具来帮助您。',
+      role: 'assistant' as const,
+      tool_calls: [toolCall],
+      timestamp: Date.now(),
+    };
+
+    dispatch(addMessage({
+      chatId: currentChatId,
+      message: assistantMessage
+    }));
+
+    message.success('成功添加工具调用（仅显示调用中状态）');
+    console.log('[Debug] 工具调用ID:', toolCall.id, '- 可用于后续添加结果');
+  };
+
+  const currentMessages = currentChatId ? (chatData[currentChatId]?.messages || []) : [];
+
+  return (
+    <div className="debug-panel">
+      <div className="debug-header">
+        <BugOutlined style={{ marginRight: 8 }} />
+        <Title level={4} style={{ margin: 0 }}>调试模式</Title>
+      </div>
+
+      <div className="debug-content">
+        <Card title="消息测试" size="small" style={{ marginBottom: 16 }}>
+          <Space direction="vertical" style={{ width: '100%' }}>
+            <div>
+              <Text strong>消息类型：</Text>
+              <Select
+                value={selectedMessageType}
+                onChange={setSelectedMessageType}
+                style={{ width: '100%', marginTop: 4 }}
+              >
+                <Option value="user">� User 消息</Option>
+                <Option value="assistant">🤖 Assistant 消息</Option>
+                <Option value="tool">🔧 Tool 消息</Option>
+                <Option value="client-notice">� Client Notice 消息</Option>
+              </Select>
+            </div>
+            
+            <div>
+              <Text strong>消息内容：</Text>
+              <TextArea
+                value={toolMessageContent}
+                onChange={(e) => setToolMessageContent(e.target.value)}
+                placeholder="输入测试消息内容..."
+                rows={3}
+                style={{ marginTop: 4 }}
+              />
+            </div>
+
+            <Space wrap>
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={handleAddTestMessage}
+              >
+                添加测试消息
+              </Button>
+              
+              <Button
+                icon={<PlusOutlined />}
+                onClick={handleAddToolToLastMessage}
+              >
+                在最后添加Tool消息
+              </Button>
+            </Space>
+          </Space>
+        </Card>
+
+        <Card title="工具调用测试" size="small" style={{ marginBottom: 16 }}>
+          <Space direction="vertical" style={{ width: '100%' }}>
+            <div>
+              <Text strong>工具名称：</Text>
+              <Input
+                value={toolName}
+                onChange={(e) => setToolName(e.target.value)}
+                placeholder="例如：search_web, get_weather"
+                style={{ marginTop: 4 }}
+              />
+            </div>
+
+            <div>
+              <Text strong>工具参数 (JSON)：</Text>
+              <TextArea
+                value={toolArguments}
+                onChange={(e) => setToolArguments(e.target.value)}
+                placeholder='{"query": "测试查询"}'
+                rows={2}
+                style={{ marginTop: 4 }}
+              />
+            </div>
+
+            <div>
+              <Text strong>工具状态：</Text>
+              <Select
+                value={toolStatus}
+                onChange={setToolStatus}
+                style={{ width: '100%', marginTop: 4 }}
+              >
+                <Option value="calling">🔄 调用中</Option>
+                <Option value="success">✅ 成功</Option>
+                <Option value="error">❌ 失败</Option>
+              </Select>
+            </div>
+
+            <div>
+              <Text strong>完成延迟 (秒)：</Text>
+              <InputNumber
+                value={toolDelay}
+                onChange={(value) => setToolDelay(value || 0)}
+                min={0}
+                max={10}
+                style={{ width: '100%', marginTop: 4 }}
+                placeholder="0表示立即完成"
+              />
+            </div>
+
+            <div>
+              <Text strong>默认折叠状态：</Text>
+              <Switch
+                checked={isToolCollapsed}
+                onChange={setIsToolCollapsed}
+                style={{ marginLeft: 8 }}
+              />
+            </div>
+
+            <div>
+              <Text strong>显示调用中状态：</Text>
+              <Switch
+                checked={showCallingState}
+                onChange={setShowCallingState}
+                style={{ marginLeft: 8 }}
+              />
+              <Text type="secondary" style={{ fontSize: 12, marginLeft: 8 }}>
+                开启后会先显示工具调用状态，然后显示结果
+              </Text>
+            </div>
+
+            <div>
+              <Text strong>工具调用结果内容：</Text>
+              <TextArea
+                value={toolContent}
+                onChange={(e) => setToolContent(e.target.value)}
+                placeholder="工具调用的返回结果内容..."
+                rows={3}
+                style={{ marginTop: 4 }}
+              />
+            </div>
+
+            <div>
+              <Text strong>脉冲动画类型：</Text>
+              <Switch
+                checked={useBackgroundPulse}
+                onChange={setUseBackgroundPulse}
+                style={{ marginLeft: 8 }}
+              />
+              <Text type="secondary" style={{ fontSize: 12, marginLeft: 8 }}>
+                {useBackgroundPulse ? '背景脉冲' : '底边脉冲'}
+              </Text>
+            </div>
+
+            <div>
+              <Text strong>动画相位计数：</Text>
+              <Text code style={{ marginLeft: 8 }}>{animationPhaseCounter}</Text>
+              <Button 
+                size="small" 
+                onClick={() => setAnimationPhaseCounter(0)}
+                style={{ marginLeft: 8 }}
+              >
+                重置
+              </Button>
+            </div>
+
+            <Space wrap>
+              <Button
+                type="primary"
+                icon={<ToolOutlined />}
+                onClick={handleAddAssistantWithToolCall}
+              >
+                添加完整工具调用流程
+              </Button>
+              
+              <Button
+                icon={<ToolOutlined />}
+                onClick={handleAddToolCallOnly}
+              >
+                仅添加工具调用（调用中状态）
+              </Button>
+            </Space>
+          </Space>
+        </Card>
+
+        <Card title="流式更新测试" size="small" style={{ marginBottom: 16 }}>
+          <Space direction="vertical" style={{ width: '100%' }}>
+            <Paragraph type="secondary" style={{ margin: 0 }}>
+              模拟AI回复的流式更新效果，测试UI的实时更新表现。
+            </Paragraph>
+            <Button
+              type="default"
+              icon={<SendOutlined />}
+              onClick={handleSimulateStreaming}
+            >
+              开始流式更新模拟
+            </Button>
+          </Space>
+        </Card>
+
+        <Card title="聊天管理" size="small" style={{ marginBottom: 16 }}>
+          <Space direction="vertical" style={{ width: '100%' }}>
+            <div>
+              <Text strong>当前聊天ID：</Text>
+              <Text code>{currentChatId || '未选择'}</Text>
+            </div>
+            <div>
+              <Text strong>消息数量：</Text>
+              <Text>{currentMessages.length}</Text>
+            </div>
+            <Button
+              danger
+              icon={<DeleteOutlined />}
+              onClick={handleClearMessages}
+            >
+              清空当前聊天消息
+            </Button>
+          </Space>
+        </Card>
+
+        <Card title="开发者工具" size="small">
+          <Space direction="vertical" style={{ width: '100%' }}>
+            <Button
+              onClick={() => {
+                console.log('当前Redux状态:', (window as any).__REDUX_STORE__?.getState());
+              }}
+            >
+              打印Redux状态到控制台
+            </Button>
+            
+            <Button
+              onClick={() => {
+                const script = document.createElement('script');
+                script.textContent = `
+                  // 快速调试工具
+                  window.debugTools = {
+                    addToolMessage: (content = '调试工具消息') => {
+                      const state = window.__REDUX_STORE__.getState();
+                      const currentChatId = state.chat.currentChatId;
+                      if (!currentChatId) return console.error('没有活跃聊天');
+                      
+                      window.__REDUX_STORE__.dispatch({
+                        type: 'chat/addMessage',
+                        payload: {
+                          chatId: currentChatId,
+                          message: {
+                            id: 'debug-tool-' + Date.now(),
+                            content,
+                            role: 'tool',
+                            tool_call_id: 'debug_tool_call_' + Date.now(),
+                            timestamp: Date.now(),
+                          }
+                        }
+                      });
+                    },
+                    addAssistantMessage: (content = '调试助手消息', reasoning = '调试思考过程') => {
+                      const state = window.__REDUX_STORE__.getState();
+                      const currentChatId = state.chat.currentChatId;
+                      if (!currentChatId) return console.error('没有活跃聊天');
+                      
+                      window.__REDUX_STORE__.dispatch({
+                        type: 'chat/addMessage',
+                        payload: {
+                          chatId: currentChatId,
+                          message: {
+                            id: 'debug-assistant-' + Date.now(),
+                            content,
+                            role: 'assistant',
+                            reasoning_content: reasoning,
+                            timestamp: Date.now(),
+                          }
+                        }
+                      });
+                    },
+                    addUserMessage: (content = '调试用户消息') => {
+                      const state = window.__REDUX_STORE__.getState();
+                      const currentChatId = state.chat.currentChatId;
+                      if (!currentChatId) return console.error('没有活跃聊天');
+                      
+                      window.__REDUX_STORE__.dispatch({
+                        type: 'chat/addMessage',
+                        payload: {
+                          chatId: currentChatId,
+                          message: {
+                            id: 'debug-user-' + Date.now(),
+                            content,
+                            role: 'user',
+                            timestamp: Date.now(),
+                          }
+                        }
+                      });
+                    },
+                    addNoticeMessage: (content = '调试通知消息', noticeType = 'info') => {
+                      const state = window.__REDUX_STORE__.getState();
+                      const currentChatId = state.chat.currentChatId;
+                      if (!currentChatId) return console.error('没有活跃聊天');
+                      
+                      window.__REDUX_STORE__.dispatch({
+                        type: 'chat/addMessage',
+                        payload: {
+                          chatId: currentChatId,
+                          message: {
+                            id: 'debug-notice-' + Date.now(),
+                            content,
+                            role: 'client-notice',
+                            noticeType,
+                            timestamp: Date.now(),
+                          }
+                        }
+                      });
+                    },
+                    clearMessages: () => {
+                      const state = window.__REDUX_STORE__.getState();
+                      const currentChatId = state.chat.currentChatId;
+                      if (!currentChatId) return console.error('没有活跃聊天');
+                      
+                      window.__REDUX_STORE__.dispatch({
+                        type: 'chat/clearMessages',
+                        payload: { chatId: currentChatId }
+                      });
+                    },
+                    addAssistantWithToolCall: (toolName = 'search_web', toolArgs = '{"query": "测试查询"}', content = '我需要调用工具来帮助您。') => {
+                      const state = window.__REDUX_STORE__.getState();
+                      const currentChatId = state.chat.currentChatId;
+                      if (!currentChatId) return console.error('没有活跃聊天');
+                      
+                      const toolCall = {
+                        index: 0,
+                        id: 'call_' + Date.now(),
+                        type: 'function',
+                        function: {
+                          name: toolName,
+                          arguments: toolArgs,
+                        },
+                      };
+                      
+                      window.__REDUX_STORE__.dispatch({
+                        type: 'chat/addMessage',
+                        payload: {
+                          chatId: currentChatId,
+                          message: {
+                            id: 'debug-assistant-tool-' + Date.now(),
+                            content,
+                            role: 'assistant',
+                            tool_calls: [toolCall],
+                            timestamp: Date.now(),
+                          }
+                        }
+                      });
+                    },
+                    addToolCallResult: (toolCallId, content = '工具调用结果', success = true) => {
+                      const state = window.__REDUX_STORE__.getState();
+                      const currentChatId = state.chat.currentChatId;
+                      if (!currentChatId) return console.error('没有活跃聊天');
+                      
+                      window.__REDUX_STORE__.dispatch({
+                        type: 'chat/addMessage',
+                        payload: {
+                          chatId: currentChatId,
+                          message: {
+                            id: 'debug-tool-result-' + Date.now(),
+                            content: success ? content : '工具调用失败：' + content,
+                            role: 'tool',
+                            tool_call_id: toolCallId,
+                            timestamp: Date.now(),
+                          }
+                        }
+                      });
+                    }
+                  };
+                  console.log('调试工具已加载到 window.debugTools，可用方法：');
+                  console.log('- debugTools.addUserMessage(content)');
+                  console.log('- debugTools.addAssistantMessage(content, reasoning)');
+                  console.log('- debugTools.addToolMessage(content)');
+                  console.log('- debugTools.addNoticeMessage(content, noticeType)');
+                  console.log('- debugTools.addAssistantWithToolCall(toolName, toolArgs, content)');
+                  console.log('- debugTools.addToolCallResult(toolCallId, content, success)');
+                  console.log('- debugTools.clearMessages()');
+                `;
+                document.head.appendChild(script);
+                message.success('调试工具已注入到控制台');
+              }}
+            >
+              注入控制台调试工具
+            </Button>
+          </Space>
+        </Card>
+      </div>
+    </div>
+  );
+};
+
+export default Debug;

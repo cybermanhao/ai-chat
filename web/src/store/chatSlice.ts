@@ -189,6 +189,13 @@ const chatSlice = createSlice({
     setAutoScroll(state: ChatState, action: PayloadAction<boolean>) {
       state.settings.autoScroll = action.payload;
     },
+    // 清空指定聊天的所有消息
+    clearMessages(state: ChatState, action: PayloadAction<{ chatId: string }>) {
+      const { chatId } = action.payload;
+      if (state.chatData[chatId]) {
+        state.chatData[chatId].messages = [];
+      }
+    },
   }
 });
 
@@ -207,6 +214,7 @@ export const {
   setMessageCardStatus,
   resetRuntimeStates,
   setAutoScroll,
+  clearMessages,
 } = chatSlice.actions;
 
 export default chatSlice.reducer;
