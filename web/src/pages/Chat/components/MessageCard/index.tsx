@@ -121,9 +121,9 @@ const MessageCard: React.FC<MessageCardProps> = ({ messages, cardStatus = 'stabl
         // 头像参数
         let avatarProps = {};
         if (isUser) {
-          avatarProps = { provider: 'deepseek', backgroundColor: '#e6f7ff', shape: 'circle', size: 32 };
+          avatarProps = { provider: 'user', backgroundColor: '#e6f7ff', shape: 'circle', size: 32 };
         } else if (isAssistant) {
-          avatarProps = { provider: 'chatgpt', backgroundColor: '#f6ffed', shape: 'circle', size: 32 };
+          avatarProps = { provider: 'deepseek', backgroundColor: '#f6ffed', shape: 'circle', size: 32 };
         } else if (isTool) {
           avatarProps = { provider: 'chatgpt', backgroundColor: '#fffbe6', shape: 'circle', size: 32 };
         } else if (isClientNotice) {

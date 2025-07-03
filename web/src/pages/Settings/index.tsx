@@ -4,6 +4,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import type { RootState, AppDispatch } from '@/store';
 import { toggleTheme, setDMMode } from '@/store/themeStore';
 import { setActiveLLMId, setApiKey, setUserModel } from '@/store/llmConfigSlice';
+import { setAutoScroll } from '@/store/chatSlice';
 import { useMemo, useEffect } from 'react';
 import './styles.less';
 import { llms } from '@engine/utils/llms';
@@ -13,6 +14,7 @@ const Settings = () => {
   const isDarkMode = useSelector((state: RootState) => state.theme.isDarkMode);
   const dmMode = useSelector((state: RootState) => state.theme.dmMode);
   const llmConfig = useSelector((state: RootState) => state.llmConfig);
+  const autoScroll = useSelector((state: RootState) => state.chat.settings.autoScroll);
   const [form] = Form.useForm();
 
   // 获取所有可用 LLM
@@ -62,8 +64,9 @@ const Settings = () => {
       llm: activeLLM?.id,
       darkMode: isDarkMode,
       dmMode: dmMode,
+      autoScroll: autoScroll,
     });
-  }, [currentConfig.apiKeys, currentConfig.userModel, activeLLM?.id, isDarkMode, dmMode, form]);
+  }, [currentConfig.apiKeys, currentConfig.userModel, activeLLM?.id, isDarkMode, dmMode, autoScroll, form]);
 
   return (
     <div className="settings-page">
@@ -82,6 +85,7 @@ const Settings = () => {
             model: currentConfig?.userModel,
             apiKey: currentConfig?.apiKeys?.[currentConfig.activeLLMId] || '',
             dmMode: dmMode,
+            autoScroll: autoScroll,
           }}
         >
           <Form.Item label="界面设置" className="section-title" />
@@ -93,6 +97,13 @@ const Settings = () => {
           </Form.Item>
           <Form.Item label="DM模式" name="dmMode">
             <Switch checked={dmMode} onChange={v => dispatch(setDMMode(v))} />
+          </Form.Item>
+          <Form.Item 
+            label="自动滚动" 
+            name="autoScroll"
+            extra="开启后，在流式输出和状态变化时自动滚动到底部"
+          >
+            <Switch checked={autoScroll} onChange={v => dispatch(setAutoScroll(v))} />
           </Form.Item>
 
           <Divider />

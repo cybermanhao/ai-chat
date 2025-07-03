@@ -1,5 +1,5 @@
-// 测试差分更新机制
-import { createStreamingPatch, shouldUpdateStreamContent } from '../utils/messageDiff';
+// 测试差分更新机制 - 简化版本
+import { createStreamingPatch } from '../utils/messageDiff';
 import type { EnrichedMessage } from '@engine/types/chat';
 
 // 简单的测试用例
@@ -89,28 +89,28 @@ function runTests() {
     console.log('⚠️ 部分测试失败，请检查差分更新逻辑');
   }
   
-  // 测试 shouldUpdateStreamContent 函数
-  console.log('\n🧪 测试 shouldUpdateStreamContent 函数...');
-  const streamTests = [
-    { current: '', updated: 'Hello', expected: true, name: '空内容到有内容' },
-    { current: 'Hello', updated: 'Hello world', expected: true, name: '内容增长' },
-    { current: 'Hello world', updated: 'Hello world', expected: false, name: '内容相同' },
-    { current: 'Hello', updated: '', expected: false, name: '新内容为空' },
-    { current: 'Hello', updated: 'Hi', expected: true, name: '内容完全不同' }
-  ];
+  // // 测试 shouldUpdateStreamContent 函数 - 已简化，不再需要复杂的差分检测
+  // console.log('\n🧪 测试 shouldUpdateStreamContent 函数...');
+  // const streamTests = [
+  //   { current: '', updated: 'Hello', expected: true, name: '空内容到有内容' },
+  //   { current: 'Hello', updated: 'Hello world', expected: true, name: '内容增长' },
+  //   { current: 'Hello world', updated: 'Hello world', expected: false, name: '内容相同' },
+  //   { current: 'Hello', updated: '', expected: false, name: '新内容为空' },
+  //   { current: 'Hello', updated: 'Hi', expected: true, name: '内容完全不同' }
+  // ];
   
-  let streamPassedTests = 0;
-  streamTests.forEach((test) => {
-    const result = shouldUpdateStreamContent(test.current, test.updated);
-    if (result === test.expected) {
-      console.log(`  ✅ ${test.name}: 通过`);
-      streamPassedTests++;
-    } else {
-      console.log(`  ❌ ${test.name}: 期望 ${test.expected}, 实际 ${result}`);
-    }
-  });
+  // let streamPassedTests = 0;
+  // streamTests.forEach((test) => {
+  //   const result = shouldUpdateStreamContent(test.current, test.updated);
+  //   if (result === test.expected) {
+  //     console.log(`  ✅ ${test.name}: 通过`);
+  //     streamPassedTests++;
+  //   } else {
+  //     console.log(`  ❌ ${test.name}: 期望 ${test.expected}, 实际 ${result}`);
+  //   }
+  // });
   
-  console.log(`\n📊 shouldUpdateStreamContent 测试结果: ${streamPassedTests}/${streamTests.length} 通过`);
+  // console.log(`\n📊 shouldUpdateStreamContent 测试结果: ${streamPassedTests}/${streamTests.length} 通过`);
 }
 
 // 导出测试函数供开发者调用

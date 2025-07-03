@@ -70,56 +70,25 @@
   display: flex;
   margin-bottom: 1rem;
   padding: 0 1rem;
+  gap: 20px; // 为所有消息卡片添加头像和内容之间的间距
 
   &.message-user {
-    justify-content: flex-end;
+    justify-content: flex-end; // 用户消息右对齐
+    flex-direction: row-reverse; // 反向排列，让头像在右边，内容在左边
+    max-width: 80%; // 限制用户消息容器最大宽度，不占满整行
+    margin-left: auto; // 推到右侧
+    margin-right: 0; // 确保右侧没有额外边距
+    width: fit-content; // 让容器宽度适应内容
 
-    .message-inner {
-      flex-direction: row-reverse;
-    }
-
-    .message-body {
-      margin-right: 1rem;
-      margin-left: 0;
-      max-width: 1000px;
-      min-width: 700px;
-    }
-  }
-
-  &.message-notice {
-    .message-avatar {
-      font-size: 1.5rem;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .message-body {
-      margin-left: 1rem;
-    }
-
-    &.notice-error .message-content {
-      background-color: #fff1f0;
-      border: 1px solid #ffccc7;
-    }
-
-    &.notice-warning .message-content {
-      background-color: #fffbe6;
-      border: 1px solid #ffe58f;
-    }
-
-    &.notice-info .message-content {
-      background-color: #e6f7ff;
-      border: 1px solid #91d5ff;
-    }
-  }
-
-  &.message-user {
     .message-content {
       background-color: var(--background-elevated);
       color: var(--text-color);
       border-radius: 12px 2px 12px 12px;
       border: 1px solid var(--border-color-split);
+      max-width: 1000px;
+      min-width: 200px;
+      width: fit-content; // 让内容宽度适应文本内容
+      flex: none; // 移除flex: 1，不让内容占据剩余空间
 
       a {
         color: var(--primary-color);
@@ -140,26 +109,63 @@
       }
     }
 
-    .message-avatar {
-      background-color: var(--primary-color);
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    .message-header {
+      flex-shrink: 0; // 确保头像不被压缩
+      
+      // 用户头像样式
+      .avatar-icon {
+        background-color: var(--primary-color);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+      }
+    }
+  }
+
+  &.message-notice {
+    .message-header {
+      flex-shrink: 0;
+    }
+
+    .message-content {
+      margin-left: 0; // 移除之前的margin-left，改用gap控制间距
+    }
+
+    &.notice-error .message-content {
+      background-color: #fff1f0;
+      border: 1px solid #ffccc7;
+    }
+
+    &.notice-warning .message-content {
+      background-color: #fffbe6;
+      border: 1px solid #ffe58f;
+    }
+
+    &.notice-info .message-content {
+      background-color: #e6f7ff;
+      border: 1px solid #91d5ff;
     }
   }
 
   &.message-assistant {
     justify-content: flex-start;
 
+    .message-header {
+      flex-shrink: 0;
+      
+      // Assistant头像样式
+      .avatar-icon {
+        background-color: var(--success-color);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+      }
+    }
+
     .message-content {
+      min-width: 600px;
+      max-width: 1000px; // 限制最大宽度
       background-color: var(--background-elevated);
       color: var(--text-color);
       border-radius: 2px 12px 12px 12px;
       border: 1px solid var(--border-color-split);
       // 只保留局部样式，markdown 结构样式已全局化
-    }
-
-    .message-avatar {
-      background-color: var(--success-color);
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
     }
 
     .message-status {
@@ -210,7 +216,7 @@
 
     .reasoning-section {
       margin-bottom: 0.5rem;
-
+      
       .reasoning-header {
         display: flex;
         align-items: center;
@@ -257,8 +263,9 @@
         overflow-wrap: break-word;
         word-break: normal;
         font-family: 'JetBrains Mono', Consolas, Monaco, monospace;
-        max-width: 100%;
-        overflow-x: auto;
+        // 简单方案：限制reasoning-content的最大宽度不超过message-content的最小宽度
+        max-width: 600px; // 对应上面message-content的min-width: 600px
+        overflow-x: auto; // 内容过长时显示滚动条
         display: block;
         animation: fadeIn 0.3s ease;
       }

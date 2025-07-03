@@ -1,33 +1,33 @@
 // 差分更新机制的单元测试
-import { shouldUpdateStreamContent, createStreamingPatch } from '../messageDiff';
+import { createStreamingPatch } from '../messageDiff';
 import type { EnrichedMessage } from '@engine/types/chat';
 import { describe, test, expect } from 'vitest';
-// 测试智能增量更新
-describe('shouldUpdateStreamContent', () => {
-  test('空内容到有内容应该更新', () => {
-    expect(shouldUpdateStreamContent('', 'Hello')).toBe(true);
-  });
+// // 测试智能增量更新 - 已简化，不再使用复杂的差分检测
+// describe('shouldUpdateStreamContent', () => {
+//   test('空内容到有内容应该更新', () => {
+//     expect(shouldUpdateStreamContent('', 'Hello')).toBe(true);
+//   });
 
-  test('内容增长应该更新', () => {
-    expect(shouldUpdateStreamContent('Hello', 'Hello world')).toBe(true);
-  });
+//   test('内容增长应该更新', () => {
+//     expect(shouldUpdateStreamContent('Hello', 'Hello world')).toBe(true);
+//   });
 
-  test('相同内容不应该更新', () => {
-    expect(shouldUpdateStreamContent('Hello', 'Hello')).toBe(false);
-  });
+//   test('相同内容不应该更新', () => {
+//     expect(shouldUpdateStreamContent('Hello', 'Hello')).toBe(false);
+//   });
 
-  test('内容完全不同应该更新', () => {
-    expect(shouldUpdateStreamContent('Hello', 'Goodbye')).toBe(true);
-  });
+//   test('内容完全不同应该更新', () => {
+//     expect(shouldUpdateStreamContent('Hello', 'Goodbye')).toBe(true);
+//   });
 
-  test('新内容为空不应该更新', () => {
-    expect(shouldUpdateStreamContent('Hello', '')).toBe(false);
-  });
+//   test('新内容为空不应该更新', () => {
+//     expect(shouldUpdateStreamContent('Hello', '')).toBe(false);
+//   });
 
-  test('内容缩短但不以原内容开头应该更新', () => {
-    expect(shouldUpdateStreamContent('Hello world', 'Hi')).toBe(true);
-  });
-});
+//   test('内容缩短但不以原内容开头应该更新', () => {
+//     expect(shouldUpdateStreamContent('Hello world', 'Hi')).toBe(true);
+//   });
+// });
 
 // 测试流式补丁创建
 describe('createStreamingPatch', () => {

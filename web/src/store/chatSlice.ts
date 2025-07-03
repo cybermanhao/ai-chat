@@ -22,6 +22,10 @@ interface ChatState {
   isGenerating: { [chatId: string]: boolean };
   // MessageCard 状态，按 chatId 维护
   messageCardStatus: { [chatId: string]: IMessageCardStatus };
+  // 聊天设置
+  settings: {
+    autoScroll: boolean; // 自动滚动开关
+  };
 }
 
 const initialState: ChatState = {
@@ -31,10 +35,16 @@ const initialState: ChatState = {
   error: null,
   isGenerating: {},// 运行时状态，每个 chatId 对应 false，表示没有在生成中
   messageCardStatus: {}, // MessageCard 状态，每个 chatId 对应 'stable'
+  settings: {
+    autoScroll: true, // 默认开启自动滚动
+  },
 };
 
 // 只做事件派发的 sendMessage action，实际流式/状态管理由 task-loop 处理
 export const sendMessage = createAction<{ chatId: string; input: string }>('chat/sendMessage');
+
+// 停止生成 action
+export const stopGeneration = createAction<{ chatId: string }>('chat/stopGeneration');
 
 const chatSlice = createSlice({
   name: 'chat',
@@ -175,6 +185,10 @@ const chatSlice = createSlice({
       });
       state.error = null;
     },
+    // 设置自动滚动开关
+    setAutoScroll(state: ChatState, action: PayloadAction<boolean>) {
+      state.settings.autoScroll = action.payload;
+    },
   }
 });
 
@@ -192,6 +206,7 @@ export const {
   setIsGenerating,
   setMessageCardStatus,
   resetRuntimeStates,
+  setAutoScroll,
 } = chatSlice.actions;
 
 export default chatSlice.reducer;
