@@ -38,7 +38,16 @@ const statusMap: Record<IMessageCardStatus, { text: string; icon: React.ReactNod
 const MessageCard: React.FC<MessageCardProps> = ({ messages, cardStatus = 'stable' }) => {
   // 状态管理
   const [collapsedReasoning, setCollapsedReasoning] = useState<Record<string, boolean>>({});
-  const [markdownEnabled, setMarkdownEnabled] = useState<Record<string, boolean>>({});
+  // 默认开启 Markdown 渲染
+  const [markdownEnabled, setMarkdownEnabled] = useState<Record<string, boolean>>(() => {
+    const initialState: Record<string, boolean> = {};
+    messages.forEach(msg => {
+      if (msg.role === 'assistant' || msg.role === 'tool') {
+        initialState[msg.id] = true; // 默认开启 Markdown 渲染
+      }
+    });
+    return initialState;
+  });
 
   // 复制功能
   const handleCopy = async (content: string) => {
@@ -79,6 +88,19 @@ const MessageCard: React.FC<MessageCardProps> = ({ messages, cardStatus = 'stabl
     }
   }, [messages]);
 
+  // 确保新消息也默认开启 Markdown 渲染
+  React.useEffect(() => {
+    setMarkdownEnabled(prev => {
+      const newState = { ...prev };
+      messages.forEach(msg => {
+        if ((msg.role === 'assistant' || msg.role === 'tool') && !(msg.id in newState)) {
+          newState[msg.id] = true; // 新消息默认开启 Markdown 渲染
+        }
+      });
+      return newState;
+    });
+  }, [messages]);
+
   // 只读 props，不再自行决定状态
   return (
     <div className="message-card-group">
@@ -89,11 +111,13 @@ const MessageCard: React.FC<MessageCardProps> = ({ messages, cardStatus = 'stabl
           </div>
         )}
       </div>
-      {messages.map((msg) => {
+      {messages.map((msg, index) => {
         const isUser = msg.role === 'user';
         const isAssistant = msg.role === 'assistant';
         const isTool = msg.role === 'tool';
         const isClientNotice = msg.role === 'client-notice';
+        const isLastMessage = index === messages.length - 1;
+        
         // 头像参数
         let avatarProps = {};
         if (isUser) {
@@ -105,85 +129,96 @@ const MessageCard: React.FC<MessageCardProps> = ({ messages, cardStatus = 'stabl
         } else if (isClientNotice) {
           avatarProps = { provider: 'deepseek', backgroundColor: '#fffbe6', shape: 'circle', size: 32 };
         }
+        
         // 渲染每条消息
         return (
-          <div className={`message-card ${isUser ? 'message-user' : isAssistant ? 'message-assistant' : isTool ? 'message-tool' : 'message-notice'}`} key={msg.id}>
-            <div className="message-header">
-              <AvatarIcon {...avatarProps} />
-            </div>
-            <div className="message-content">
-              {/* reasoning_content 渲染：思考过程，在主内容之前显示 */}
-              {(isAssistant || msg.role === 'assistant') && msg.reasoning_content && (
-                <div className="reasoning-section">
-                  <div 
-                    className="reasoning-header"
-                    onClick={() => toggleReasoning(msg.id)}
-                    style={{ cursor: 'pointer' }}
-                  >
-                    {collapsedReasoning[msg.id] ? <RightOutlined /> : <DownOutlined />}
-                    💭 思考过程
-                  </div>
-                  {!collapsedReasoning[msg.id] && (
+          <React.Fragment key={msg.id}>
+            <div className={`message-card ${isUser ? 'message-user' : isAssistant ? 'message-assistant' : isTool ? 'message-tool' : 'message-notice'}`}>
+              <div className="message-header">
+                <AvatarIcon {...avatarProps} />
+              </div>
+              <div className="message-content">
+                {/* reasoning_content 渲染：思考过程，在主内容之前显示 */}
+                {(isAssistant || msg.role === 'assistant') && msg.reasoning_content && (
+                  <div className="reasoning-section">
                     <div 
-                      className="reasoning-content"
-                      dangerouslySetInnerHTML={{ __html: markdownToHtml(msg.reasoning_content) }}
+                      className="reasoning-header"
+                      onClick={() => toggleReasoning(msg.id)}
+                      style={{ cursor: 'pointer' }}
+                    >
+                      {collapsedReasoning[msg.id] ? <RightOutlined /> : <DownOutlined />}
+                      💭 思考过程
+                    </div>
+                    {!collapsedReasoning[msg.id] && (
+                      <div 
+                        className="reasoning-content"
+                        dangerouslySetInnerHTML={{ __html: markdownToHtml(msg.reasoning_content) }}
+                      />
+                    )}
+                  </div>
+                )}
+                
+                {/* tool 内容渲染 */}
+                {isTool && msg.content && (
+                  <div className="tool-section">
+                    <div 
+                      className="tool-content"
+                      dangerouslySetInnerHTML={{ __html: markdownToHtml(msg.content) }}
                     />
-                  )}
-                </div>
-              )}
-              
-              {/* tool 内容渲染 */}
-              {isTool && msg.content && (
-                <div className="tool-section">
-                  <div 
-                    className="tool-content"
-                    dangerouslySetInnerHTML={{ __html: markdownToHtml(msg.content) }}
-                  />
-                </div>
-              )}
-              
-              {/* 主内容渲染 - 带控制按钮 */}
-              {msg.content && (
-                <div className="main-content-container">
-                  {/* 控制按钮（仅对 assistant 消息显示） */}
-                  {isAssistant && (
-                    <div className="message-content-header">
-                      <Button
-                        type="text"
-                        size="small"
-                        icon={markdownEnabled[msg.id] ? <EyeInvisibleOutlined /> : <EyeOutlined />}
-                        onClick={() => toggleMarkdown(msg.id)}
-                        title={markdownEnabled[msg.id] ? '关闭 Markdown 渲染' : '开启 Markdown 渲染'}
-                      />
-                      <Button
-                        type="text"
-                        size="small"
-                        icon={<CopyOutlined />}
-                        onClick={() => handleCopy(msg.content)}
-                        title="复制内容"
-                      />
-                    </div>
-                  )}
-                  
-                  {/* 内容区域 */}
-                  {isUser || isClientNotice ? (
-                    <div className="main-content">{msg.content}</div>
-                  ) : (
-                    <div className="main-content">
-                      {markdownEnabled[msg.id] ? (
-                        <div 
-                          className="markdown-content"
-                          dangerouslySetInnerHTML={{ __html: markdownToHtml(msg.content) }}
+                  </div>
+                )}
+                
+                {/* 主内容渲染 - 带控制按钮 */}
+                {msg.content && !isTool && (
+                  <div className="main-content-container">
+                    {/* 控制按钮（仅对 assistant 消息显示） */}
+                    {isAssistant && (
+                      <div className="message-content-header">
+                        <Button
+                          type="text"
+                          size="small"
+                          icon={markdownEnabled[msg.id] ? <EyeInvisibleOutlined /> : <EyeOutlined />}
+                          onClick={() => toggleMarkdown(msg.id)}
+                          title={markdownEnabled[msg.id] ? '关闭 Markdown 渲染' : '开启 Markdown 渲染'}
                         />
-                      ) : (
-                        <div className="plain-text">{msg.content}</div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
+                        <Button
+                          type="text"
+                          size="small"
+                          icon={<CopyOutlined />}
+                          onClick={() => handleCopy(msg.content)}
+                          title="复制内容"
+                        />
+                      </div>
+                    )}
+                    
+                    {/* 内容区域 */}
+                    {isUser || isClientNotice ? (
+                      <div className="main-content">{msg.content}</div>
+                    ) : (
+                      <div className="main-content">
+                        {markdownEnabled[msg.id] ? (
+                          <div 
+                            className="markdown-content"
+                            dangerouslySetInnerHTML={{ __html: markdownToHtml(msg.content) }}
+                          />
+                        ) : (
+                          <div className="plain-text">{msg.content}</div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
+            
+            {/* 消息分隔符 - 不是最后一条消息时显示 */}
+            {!isLastMessage && (
+              <div className="message-separator">
+                <div className="separator-line"></div>
+                <div className="separator-dot"></div>
+              </div>
+            )}
+          </React.Fragment>
         );
       })}
     </div>
