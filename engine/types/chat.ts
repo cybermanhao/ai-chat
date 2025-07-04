@@ -51,13 +51,15 @@ export type AssistantMessage = BaseMessage & {
   role: 'assistant';
   prefix?: boolean; //deepseek特殊优化，开启后reasoning_contengt启用
   reasoning_content?: string;//deepseek特殊优化，开启后reasoning_contengt启用
-
+  tool_calls?: ChatCompletionMessageToolCall[]; // 工具调用数组
 };
 
 // 工具消息
 export type ToolMessage = BaseMessage & {
   role: 'tool';
   tool_call_id: string;
+  toolName?: string; // 添加工具名称字段
+  toolArguments?: string; // 添加工具调用参数字段
 };
 
 // 客户端提示消息（用于错误提示，不会发送给模型）
@@ -118,6 +120,7 @@ export interface EnableToolItem {
 // 聊天设置
 export interface ChatSetting {
   modelIndex: number;
+  userModel?: string; // 用户选择的具体模型
   systemPrompt: string;
   enableTools: EnableToolItem[];
   temperature: number;

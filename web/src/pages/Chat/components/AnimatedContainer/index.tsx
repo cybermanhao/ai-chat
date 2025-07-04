@@ -42,8 +42,6 @@ const AnimatedContainer: React.FC<AnimatedContainerProps> = ({
 
   // ============================================================================
   // 动画事件监听
-  // TODO: 修复showCompletionFlash状态变化时动画不播放的问题
-  // 问题：尽管showCompletionFlash为true，但CSS动画可能因为时序问题没有触发
   // ============================================================================
   useEffect(() => {
     if (showCompletionFlash) {
@@ -56,8 +54,6 @@ const AnimatedContainer: React.FC<AnimatedContainerProps> = ({
 
   // ============================================================================
   // 组件渲染
-  // TODO: 修复completion-flash类名添加后动画不生效的问题
-  // 调试发现：类名正确添加到DOM，但动画选择器可能有问题
   // ============================================================================
   const containerClassName = [
     'animated-container',

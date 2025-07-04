@@ -36,16 +36,19 @@ const ToolCallCard: React.FC<ToolCallCardProps> = ({
   debugConfig = {}
 }) => {
   // ============================================================================
+  // 简化状态管理：直接管理折叠状态，不依赖 useDebugAnimation
+  // ============================================================================
+  const [isCollapsed, setIsCollapsed] = React.useState(collapsed);
+  
+  // ============================================================================
   // 调试模式状态管理 (仅用于Debug页面)
   // 在生产环境中，这些状态应该由外部的 task-loop 控制
   // ============================================================================
   const {
     currentStatus,
     currentContent,
-    isCollapsed,
     animationActive,
     showCompletionFlash,
-    setIsCollapsed,
     updateState
   } = useDebugAnimation({
     id,
@@ -56,14 +59,27 @@ const ToolCallCard: React.FC<ToolCallCardProps> = ({
   });
 
   // ============================================================================
+  // 同步外部 collapsed 状态到内部状态
+  // ============================================================================
+  React.useEffect(() => {
+    setIsCollapsed(collapsed);
+  }, [collapsed]);
+
+  // ============================================================================
   // 用户交互处理
   // ============================================================================
   const handleToggle = () => {
     const newCollapsed = !isCollapsed;
+    console.log(`[ToolCallCard] Toggle clicked for ${id}: ${isCollapsed} -> ${newCollapsed}`);
     setIsCollapsed(newCollapsed);
     onToggle?.(id, newCollapsed);
     updateState();
   };
+
+  // 调试日志
+  React.useEffect(() => {
+    console.log(`[ToolCallCard] ${id} state changed: isCollapsed=${isCollapsed}, status=${status}`);
+  }, [id, isCollapsed, status]);
 
   // ============================================================================
   // 状态渲染工具函数
@@ -131,15 +147,30 @@ const ToolCallCard: React.FC<ToolCallCardProps> = ({
       {!isCollapsed && (
         <div className="tool-call-content">
           {/* 工具输入参数 */}
-          {toolArguments && (
+          {toolArguments && toolArguments.trim() !== '' && toolArguments !== '{}' && (
             <div className="tool-call-input">
               <div className="input-header">
-                <span className="input-label">输入参数：</span>
+                <span className="input-label">📝 输入参数：</span>
               </div>
-              <div 
-                className="input-content"
-                dangerouslySetInnerHTML={{ __html: markdownToHtml(toolArguments) }}
-              />
+              <div className="input-content">
+                {(() => {
+                  try {
+                    // 尝试格式化 JSON
+                    const parsed = JSON.parse(toolArguments);
+                    const formatted = JSON.stringify(parsed, null, 2);
+                    return (
+                      <pre className="json-content">
+                        {formatted}
+                      </pre>
+                    );
+                  } catch (e) {
+                    // 如果不是有效的 JSON，则按普通文本显示
+                    return (
+                      <div dangerouslySetInnerHTML={{ __html: markdownToHtml(toolArguments) }} />
+                    );
+                  }
+                })()}
+              </div>
             </div>
           )}
           
@@ -147,13 +178,28 @@ const ToolCallCard: React.FC<ToolCallCardProps> = ({
           <div className="tool-call-result">
             <div className="result-header">
               <span className="result-label">
-                {currentStatus === 'calling' ? '调用中...' : currentStatus === 'error' ? '调用失败：' : '调用结果：'}
+                {currentStatus === 'calling' ? '⏳ 调用中...' : currentStatus === 'error' ? '❌ 调用失败：' : '✅ 调用结果：'}
               </span>
             </div>
-            <div 
-              className="result-content"
-              dangerouslySetInnerHTML={{ __html: markdownToHtml(currentContent) }}
-            />
+            <div className="result-content">
+              {(() => {
+                try {
+                  // 尝试格式化 JSON 结果
+                  const parsed = JSON.parse(currentContent);
+                  const formatted = JSON.stringify(parsed, null, 2);
+                  return (
+                    <pre className="json-content">
+                      {formatted}
+                    </pre>
+                  );
+                } catch (e) {
+                  // 如果不是有效的 JSON，则按 Markdown 显示
+                  return (
+                    <div dangerouslySetInnerHTML={{ __html: markdownToHtml(currentContent) }} />
+                  );
+                }
+              })()}
+            </div>
           </div>
         </div>
       )}

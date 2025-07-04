@@ -17,12 +17,12 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
       try {
         const element = messageListRef.current;
         
-        console.log('[ChatContext] scrollToBottom called', {
-          scrollHeight: element.scrollHeight,
-          clientHeight: element.clientHeight,
-          scrollTop: element.scrollTop,
-          shouldScroll: element.scrollHeight > element.clientHeight
-        });
+        // console.log('[ChatContext] scrollToBottom called', {
+        //   scrollHeight: element.scrollHeight,
+        //   clientHeight: element.clientHeight,
+        //   scrollTop: element.scrollTop,
+        //   shouldScroll: element.scrollHeight > element.clientHeight
+        // });
         
         // 使用 requestAnimationFrame 确保 DOM 完全更新
         requestAnimationFrame(() => {
@@ -38,11 +38,11 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
             const maxScrollTop = element.scrollHeight - element.clientHeight;
             
             if (Math.abs(currentScrollTop - maxScrollTop) > 5) {
-              console.log('[ChatContext] Using fallback scroll', {
-                currentScrollTop,
-                maxScrollTop,
-                difference: Math.abs(currentScrollTop - maxScrollTop)
-              });
+              // console.log('[ChatContext] Using fallback scroll', {
+              //   currentScrollTop,
+              //   maxScrollTop,
+              //   difference: Math.abs(currentScrollTop - maxScrollTop)
+              // });
               element.scrollTop = element.scrollHeight;
             }
           }, 300);

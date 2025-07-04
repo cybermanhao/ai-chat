@@ -1,4 +1,4 @@
-import type { ChatInfo, ChatMessage, ChatData, AssistantMessage } from '@/types/chat'
+import type { ChatInfo, ChatMessage, ChatData, EnrichedMessage } from '@/types/chat'
 import { persistData, loadPersistedData, type Storage } from '@/utils/storage'
 import { STORAGE_KEYS } from '@/config/storage'
 import { defaultChatSetting } from '@engine/config/defaultChatSetting'
@@ -30,7 +30,7 @@ export class ChatStorageService {
     return data?.messages || []
   }
   // 保存聊天消息
-  async saveMessages(chatId: string, messages: ChatMessage[]): Promise<void> {
+  async saveMessages(chatId: string, messages: EnrichedMessage[]): Promise<void> {
     const existingData = this.getChatData(chatId);
     const data: ChatData = existingData || {
       info: {

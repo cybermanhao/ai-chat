@@ -1,3 +1,4 @@
+// @ts-ignore
 import type { ClientNoticeMessage } from '@/types/chat';
 
 // 错误代码常量

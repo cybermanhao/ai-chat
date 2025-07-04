@@ -160,6 +160,19 @@ export const useDebugAnimation = ({
     });
   }, [id, content, currentStatus, currentContent, isCollapsed, animationActive, showCompletionFlash]);
 
+  // 创建一个自定义的 setIsCollapsed 函数，同时更新 React 状态和全局状态
+  const setIsCollapsedWithUpdate = React.useCallback((collapsed: boolean) => {
+    setIsCollapsed(collapsed);
+    const stableKey = getStableStateKey(id, content);
+    const existingState = debugAnimationStates.get(stableKey);
+    if (existingState) {
+      debugAnimationStates.set(stableKey, {
+        ...existingState,
+        isCollapsed: collapsed
+      });
+    }
+  }, [id, content]);
+
   // 动画控制逻辑
   // TODO: 修复完成动画触发逻辑可能存在的问题
   // 问题：setShowCompletionFlash(true)被调用，但动画不显示
@@ -304,7 +317,7 @@ export const useDebugAnimation = ({
     isCollapsed,
     animationActive,
     showCompletionFlash,
-    setIsCollapsed,
+    setIsCollapsed: setIsCollapsedWithUpdate,
     updateState,
     forceStopAnimation
   };

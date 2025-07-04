@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { Button, Card, Space, Typography, Input, Select, message, InputNumber, Switch } from 'antd';
 import { useSelector, useDispatch } from 'react-redux';
-import { BugOutlined, PlusOutlined, SendOutlined, DeleteOutlined, ToolOutlined } from '@ant-design/icons';
+import { BugOutlined, PlusOutlined, SendOutlined, DeleteOutlined, ToolOutlined, LoadingOutlined } from '@ant-design/icons';
 import type { RootState } from '@/store';
 import type { MessageRole } from '@engine/types/chat';
-import type { ToolCall } from '@engine/stream/streamHandler';
+import type { ChatCompletionMessageToolCall } from 'openai/resources/chat/completions';
 import { addMessage, clearMessages, updateLastAssistantMessage } from '@/store/chatSlice';
+import { showLoading, hideLoading } from '@/store/globalUIStore';
 import './styles.less';
 
 const { Title, Paragraph, Text } = Typography;
@@ -16,6 +17,7 @@ const Debug: React.FC = () => {
   const dispatch = useDispatch();
   const chatData = useSelector((state: RootState) => state.chat.chatData);
   const currentChatId = useSelector((state: RootState) => state.chat.currentChatId);
+  const globalUIState = useSelector((state: RootState) => state.globalUI);
   
   const [toolMessageContent, setToolMessageContent] = useState('这是一个测试工具消息，用于调试UI交互功能。');
   const [selectedMessageType, setSelectedMessageType] = useState<MessageRole>('tool');
@@ -32,6 +34,9 @@ const Debug: React.FC = () => {
   // 动画控制状态
   const [useBackgroundPulse, setUseBackgroundPulse] = useState(false); // 是否使用背景脉冲
   const [animationPhaseCounter, setAnimationPhaseCounter] = useState(0); // 动画相位计数器
+  
+  // 全局加载状态
+  const [memoryLoadingDuration, setMemoryLoadingDuration] = useState(3); // 内存加载持续时间（秒）
 
   // 添加测试消息到当前聊天
   const handleAddTestMessage = () => {
@@ -103,6 +108,38 @@ const Debug: React.FC = () => {
     dispatch(clearMessages({ chatId: currentChatId }));
 
     message.success('已清空当前聊天的所有消息');
+  };
+
+  // 触发全局内存加载
+  const handleTriggerMemoryLoading = () => {
+    const duration = memoryLoadingDuration * 1000; // 转换为毫秒
+    
+    // 开始加载
+    dispatch(showLoading());
+    message.info(`启动全局内存加载，持续 ${memoryLoadingDuration} 秒...`);
+    
+    // 模拟加载过程
+    setTimeout(() => {
+      dispatch(hideLoading());
+      message.success('全局内存加载完成！');
+    }, duration);
+  };
+
+  // 快速触发多次加载（测试叠加效果）
+  const handleTriggerMultipleLoading = () => {
+    const count = 3;
+    message.info(`启动 ${count} 个并发内存加载任务...`);
+    
+    for (let i = 0; i < count; i++) {
+      dispatch(showLoading());
+      
+      setTimeout(() => {
+        dispatch(hideLoading());
+        if (i === count - 1) {
+          message.success('所有内存加载任务完成！');
+        }
+      }, (i + 1) * 2000); // 每个任务持续2秒，但错开结束时间
+    }
   };
 
   // 模拟流式更新
@@ -226,8 +263,7 @@ const Debug: React.FC = () => {
       return;
     }
 
-    const toolCall: ToolCall = {
-      index: 0,
+    const toolCall: ChatCompletionMessageToolCall = {
       id: `call_${Date.now()}`,
       type: 'function',
       function: {
@@ -464,6 +500,63 @@ const Debug: React.FC = () => {
             >
               清空当前聊天消息
             </Button>
+          </Space>
+        </Card>
+
+        <Card title="全局UI状态" size="small" style={{ marginBottom: 16 }}>
+          <Space direction="vertical" style={{ width: '100%' }}>
+            <div>
+              <Text strong>当前加载计数：</Text>
+              <Text code style={{ marginLeft: 8 }}>{globalUIState.loadingCount}</Text>
+              {globalUIState.loadingCount > 0 && (
+                <LoadingOutlined style={{ marginLeft: 8, color: '#1890ff' }} />
+              )}
+            </div>
+            <div>
+              <Text strong>DM模式：</Text>
+              <Text code style={{ marginLeft: 8 }}>{globalUIState.dmMode ? '开启' : '关闭'}</Text>
+            </div>
+            
+            <div>
+              <Text strong>内存加载持续时间（秒）：</Text>
+              <InputNumber
+                value={memoryLoadingDuration}
+                onChange={(value) => setMemoryLoadingDuration(value || 1)}
+                min={1}
+                max={30}
+                style={{ width: '100%', marginTop: 4 }}
+              />
+            </div>
+
+            <Space wrap>
+              <Button
+                type="primary"
+                icon={<LoadingOutlined />}
+                onClick={handleTriggerMemoryLoading}
+              >
+                触发内存加载
+              </Button>
+              
+              <Button
+                onClick={handleTriggerMultipleLoading}
+              >
+                触发多重加载
+              </Button>
+              
+              <Button
+                danger
+                onClick={() => {
+                  // 强制重置加载计数
+                  const currentCount = globalUIState.loadingCount;
+                  for (let i = 0; i < currentCount; i++) {
+                    dispatch(hideLoading());
+                  }
+                  message.success('已强制重置加载状态');
+                }}
+              >
+                重置加载状态
+              </Button>
+            </Space>
           </Space>
         </Card>
 

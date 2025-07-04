@@ -1,13 +1,10 @@
 // engine/service/mcpService.ts
 // MCP 协议层服务，适用于 Node/Electron 等支持进程的环境
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import type { Tool, ListToolsResult } from "@modelcontextprotocol/sdk/types.js";
 
-export interface Tool {
-  name: string;
-  title: string;
-  description: string;
-  type: string;
-}
+// 导出 Tool 类型供其他模块使用
+export type { Tool } from "@modelcontextprotocol/sdk/types.js";
 
 export class MCPService {
   private mcp: any;
@@ -51,8 +48,16 @@ export class MCPService {
 
   async connect() {
     console.log(`[MCPService] 开始连接服务器... URL: ${this.url}, 连接类型: ${this.connectionType}`);
+    
+    // 如果已经连接，先断开
+    if (this.connected) {
+      console.log('[MCPService] 检测到已有连接，先断开...');
+      await this.disconnect();
+    }
+    
+    // 创建新的MCP客户端实例
     this.mcp = new Client({ name: this.clientName, version: this.clientVersion });
-    console.log(`[MCPService] 已创建 MCP 客户端, 名称: ${this.clientName}, 版本: ${this.clientVersion}`);
+    console.log(`[MCPService] 已创建新的 MCP 客户端, 名称: ${this.clientName}, 版本: ${this.clientVersion}`);
 
     try {
       switch (this.connectionType) {
@@ -85,6 +90,9 @@ export class MCPService {
     } catch (error) {
       console.error('[MCPService] 连接失败:', error);
       this.connected = false;
+      // 清理失败的连接
+      this.mcp = null;
+      this.transport = null;
       throw error;
     }
   }
@@ -163,14 +171,30 @@ export class MCPService {
 
   async disconnect() {
     console.log('[MCPService] 开始断开连接...');
-    if (this.transport && this.transport.disconnect) {
-      await this.transport.disconnect();
+    
+    if (!this.connected && !this.mcp) {
+      console.log('[MCPService] 已经断开连接，无需操作');
+      return;
     }
-    if (this.mcp && this.mcp.close) {
-      await this.mcp.close();
+
+    try {
+      // 根据MCP SDK示例，主要是调用mcp.close()
+      if (this.mcp) {
+        console.log('[MCPService] 关闭MCP客户端...');
+        await this.mcp.close();
+        console.log('[MCPService] MCP客户端已关闭');
+      }
+    } catch (error) {
+      console.error('[MCPService] 关闭MCP客户端时出错:', error);
+      // 继续执行后续清理，不要因为一个错误就停止整个断开流程
     }
+
+    // 完全重置状态
     this.connected = false;
-    console.log('[MCPService] 已断开连接');
+    this.transport = null;
+    this.mcp = null;
+    console.log('[MCPService] 连接状态已完全重置');
+    console.log('[MCPService] 断开连接完成');
   }
 }
 

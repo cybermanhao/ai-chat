@@ -82,5 +82,52 @@ pnpm dev
 
 ---
 
+## MCP 服务器会话管理和清理功能
+
+MCP (Model Context Protocol) 服务器现在包含完整的会话管理和自动清理功能。
+
+### 主要特性
+
+- **会话隔离**: 每个客户端获得独立的会话和 transport 实例
+- **自动清理**: 定期清理不活跃的连接，防止内存泄漏
+- **可配置超时**: 通过环境变量配置会话超时和清理间隔
+- **详细日志**: 完整的连接生命周期日志记录
+
+### 配置选项
+
+| 环境变量 | 默认值 | 说明 |
+|----------|--------|------|
+| `MCP_SESSION_TIMEOUT_MS` | 1800000 (30分钟) | 会话超时时间 |
+| `MCP_CLEANUP_INTERVAL_MS` | 300000 (5分钟) | 清理检查间隔 |
+| `MCP_STATUS_REPORT_INTERVAL_MS` | 60000 (1分钟) | 状态报告间隔 |
+
+### 测试脚本
+
+```bash
+# 运行清理功能测试
+npm run test:mcp-cleanup
+
+# 运行完整生命周期测试
+npm run test:mcp-lifecycle
+
+# 运行断连重连测试  
+npm run test:mcp-disconnect
+```
+
+### PowerShell 测试
+
+```powershell
+# 运行清理功能测试
+.\test\run-cleanup-test.ps1
+```
+
+### 相关文档
+
+- [MCP 会话修复文档](docs/MCP_SESSION_FIX.md)
+- [StreamableHTTPServerTransport 分析](docs/StreamableHTTPServerTransport_Analysis.md)
+- [清理功能实现文档](docs/MCP_CLEANUP_IMPLEMENTATION.md)
+
+---
+
 ## 致谢
 

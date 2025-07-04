@@ -10,6 +10,7 @@ import MemeLoading from '@/components/memeLoading';
 import { useSelector, useDispatch } from 'react-redux';
 import type { RootState, AppDispatch } from './store';
 import { resetRuntimeStates } from './store/chatSlice';
+import { useInitializeApp } from '@/hooks/useInitializeApp';
 // [插件系统已禁用] - 注释掉插件相关的导入
 // import { addPlugin } from './store/pluginStore';
 
@@ -19,6 +20,9 @@ function App() {
   // const plugins = useSelector((state: RootState) => state.plugin.plugins);
   const dispatch: AppDispatch = useDispatch();
   const loadingCount = useSelector((state: RootState) => state.globalUI.loadingCount);
+
+  // 初始化应用，加载存储数据
+  useInitializeApp();
 
   // [插件系统已禁用] - 注释掉插件注册逻辑
   // Register default plugins

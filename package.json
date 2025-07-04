@@ -27,7 +27,14 @@
     "test-server:mcp-node": "pnpm run build:mcp-node && node mcp-node/dist/test-server.js",
     "dev:mcp-node": "nodemon --watch mcp-node/src/**/*.ts --watch mcp-node/src/**/*.json --exec \"pnpm run build:mcp-node && node mcp-node/dist/server.js\"",
     "weather-server": "tsc -p mcp-node && node mcp-node/dist/weather-server.js",
-    "weather-test": "vitest run mcp-node/src/test-mcp-service.test.ts"
+    "weather-test": "vitest run mcp-node/src/test-mcp-service.test.ts",
+    "test:mcp-cleanup": "node test/run-cleanup-test.js",
+    "test:mcp-lifecycle": "tsx test/mcp-full-lifecycle-test.ts",
+    "test:mcp-disconnect": "tsx test/mcp-disconnect-test.ts",
+    "test:mcp-registration": "node test/mcp-registration-fix-test.js",
+    "test:mcp-new-tools": "node test/mcp-new-tools-test.js",
+    "create-tool": "node scripts/create-tool.js",
+    "dev:mcp-modular": "nodemon --watch mcp-node/src/**/*.ts --exec \"pnpm run build:mcp-node && node mcp-node/dist/server.js\""
   },
   "author": "",
   "license": "ISC",

@@ -24,6 +24,7 @@ const SystemPromptModal: React.FC<SystemPromptModalProps> = ({
 
   const handleOk = () => {
     onOk(localValue);
+    onCancel(); // 确定后自动关闭Modal
   };
 
   return (

@@ -1,7 +1,7 @@
 // engine/utils/llmConfig.ts
 // LLM 配置相关工具函数
 import type { Tool } from '../types/tool';
-import type { RuntimeMessage } from '../types/chat';
+import type { ChatMessage, EnrichedMessage } from '../types/chat';
 
 export interface LLMConfig {
   model: string;
@@ -23,7 +23,7 @@ export const defaultLLMConfig: LLMConfig = {
 };
 
 export function buildLLMRequestPayload(
-  messages: RuntimeMessage[],
+  messages: EnrichedMessage[],
   options: {
     server?: { tools?: Tool[]; llmConfig?: LLMConfig };
     extraOptions?: Record<string, unknown>;
@@ -32,7 +32,7 @@ export function buildLLMRequestPayload(
   const { server, extraOptions = {} } = options;
   
   // 格式化消息，仅保留 API 需要的字段
-  const formatMessages = (msgs: RuntimeMessage[]) =>
+  const formatMessages = (msgs: EnrichedMessage[]) =>
     msgs.map((msg) => {
       const baseMessage = {
         role: msg.role,

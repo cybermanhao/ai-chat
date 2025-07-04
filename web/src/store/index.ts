@@ -10,6 +10,7 @@ import pluginReducer from './pluginStore';
 import mcpReducer from './mcpStore';
 import llmConfigReducer from './llmConfigSlice';
 import taskLoopMiddleware from './streamManagerMiddleware'; // 重命名后的中间件
+import { storageMiddleware } from './storageMiddleware'; // 添加自定义存储中间件
 
 const persistConfig = {
   key: 'root',
@@ -38,7 +39,7 @@ export const store = configureStore({
         // 忽略 redux-persist 的 action 类型
         ignoredActions: ['persist/PERSIST', 'persist/REHYDRATE'],
       },
-    }).concat(taskLoopMiddleware), // 集成 taskLoopMiddleware
+    }).concat(taskLoopMiddleware, storageMiddleware), // 集成 taskLoopMiddleware 和 storageMiddleware
 });
 
 export const persistor = persistStore(store);

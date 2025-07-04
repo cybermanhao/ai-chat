@@ -1,7 +1,8 @@
 import type { ExtendedChatCompletionChunk } from '../types/openai-extended';
 import type { OpenAI } from 'openai';
+import type { ChatCompletionMessageToolCall } from 'openai/resources/chat/completions';
 
-// ToolCall 类型声明
+// ToolCall 类型声明 - 用于 delta 处理
 export type ToolCall = OpenAI.Chat.Completions.ChatCompletionChunk.Choice.Delta.ToolCall;
 
 // 流状态类型
@@ -12,7 +13,7 @@ export interface EnhancedChunk {
   role: 'assistant';
   content: string;
   reasoning_content: string;
-  tool_calls: ToolCall[];
+  tool_calls: ChatCompletionMessageToolCall[]; // 使用完整的工具调用类型
   phase: StreamPhase;
   isFirstChunk?: boolean;
   isFirstContent?: boolean;
@@ -22,11 +23,11 @@ export interface EnhancedChunk {
 export async function handleResponseStream(
   stream: AsyncIterable<any>,
   onChunk?: (chunk: EnhancedChunk) => void
-): Promise<{ content: string; reasoning_content: string; tool_calls: ToolCall[] }> {
-  const acc: { content: string; reasoning_content: string; tool_calls: ToolCall[] } = {
+): Promise<{ content: string; reasoning_content: string; tool_calls: ChatCompletionMessageToolCall[] }> {
+  const acc: { content: string; reasoning_content: string; tool_calls: ChatCompletionMessageToolCall[] } = {
     content: '',
     reasoning_content: '',
-    tool_calls: [],
+    tool_calls: []
   };
 
   // 状态跟踪变量
@@ -34,8 +35,15 @@ export async function handleResponseStream(
   let hasReceivedContent = false;
   let hasReceivedReasoning = false;
 
-  // 用于分片累积 arguments
-  // 支持多工具并发，每个工具调用按 index/id 聚合
+  // 独立的内存累加量，避免 Redux/Immer 冻结问题
+  const toolCallsAccumulator = new Map<number, {
+    id: string;
+    type: 'function';
+    function: {
+      name: string;
+      arguments: string;
+    };
+  }>();
   for await (const chunk of stream) {
     const choice = chunk.choices?.[0];
     const delta = choice?.delta || {};
@@ -70,25 +78,57 @@ export async function handleResponseStream(
     if (typeof delta.reasoning_content === 'string') acc.reasoning_content += delta.reasoning_content;
 
     // 累加 tool_calls 分片，支持多工具并发和分片聚合
-    if (Array.isArray(delta.tool_calls)) {
-      for (let i = 0; i < delta.tool_calls.length; i++) {
-        const toolCall = delta.tool_calls[i] as ToolCall;
-        if (!acc.tool_calls[i]) {
-          acc.tool_calls[i] = {
-            ...toolCall,
-            function: {
-              name: toolCall.function?.name || '',
-              arguments: toolCall.function?.arguments || ''
-            }
-          };
-        } else {
-          // 累加 arguments
-          if (toolCall.function?.arguments) {
-            acc.tool_calls[i].function!.arguments += toolCall.function.arguments;
+    // 使用独立的内存累加器，避免 Redux/Immer 冻结问题
+    if (Array.isArray(delta.tool_calls) && delta.tool_calls.length > 0) {
+      console.log('[streamHandler] 处理 tool_calls delta:', JSON.stringify(delta.tool_calls, null, 2));
+      
+      const toolCall = delta.tool_calls[0]; // 只处理第一个，简化逻辑
+      const index = toolCall.index ?? 0;
+      console.log('[streamHandler] 处理工具调用 index:', index, 'toolCall:', JSON.stringify(toolCall, null, 2));
+      
+      if (!toolCallsAccumulator.has(index)) {
+        // 新的工具调用开始 - 在独立的累加器中创建
+        const newToolCall = {
+          id: toolCall.id || `call_${Date.now()}_${index}`,
+          type: 'function' as const,
+          function: {
+            name: toolCall.function?.name || '',
+            arguments: toolCall.function?.arguments || ''
           }
-          // 其它字段如 id/name/type 可按需累加/覆盖
+        };
+        toolCallsAccumulator.set(index, newToolCall);
+        console.log('[streamHandler] 在累加器中创建新工具调用:', JSON.stringify(newToolCall, null, 2));
+      } else {
+        // 累积现有工具调用的信息 - 直接修改累加器中的对象
+        const existingCall = toolCallsAccumulator.get(index)!;
+        
+        if (toolCall.id && toolCall.id !== existingCall.id) {
+          console.log('[streamHandler] 更新工具调用 ID:', existingCall.id, '->', toolCall.id);
+          existingCall.id = toolCall.id;
         }
+        if (toolCall.function?.name) {
+          existingCall.function.name = toolCall.function.name;
+        }
+        if (toolCall.function?.arguments !== undefined) {
+          console.log('[streamHandler] 累加 arguments，之前:', JSON.stringify(existingCall.function.arguments), '新增:', JSON.stringify(toolCall.function.arguments));
+          existingCall.function.arguments += toolCall.function.arguments;
+          console.log('[streamHandler] 累加后的 arguments:', JSON.stringify(existingCall.function.arguments));
+        }
+        console.log('[streamHandler] 更新后的累加器工具调用:', JSON.stringify(existingCall, null, 2));
       }
+      
+      // 从累加器创建全新的数组传递给 Redux
+      acc.tool_calls = Array.from(toolCallsAccumulator.values()).map(call => ({
+        id: call.id,
+        type: call.type,
+        function: {
+          name: call.function.name,
+          arguments: call.function.arguments
+        }
+      }));
+      
+      console.log('[streamHandler] 更新后的 acc.tool_calls:', JSON.stringify(acc.tool_calls, null, 2));
+      console.log('[streamHandler] 当前累加器状态:', JSON.stringify(Array.from(toolCallsAccumulator.values()), null, 2));
     }
 
     // 每个 chunk 都调用 onChunk 实现流式更新
@@ -111,7 +151,18 @@ export async function handleResponseStream(
 
     if (choice?.finish_reason === 'stop') break;
   }
+  
+  // 最终返回时，从累加器创建全新的数组
+  acc.tool_calls = Array.from(toolCallsAccumulator.values()).map(call => ({
+    id: call.id,
+    type: call.type,
+    function: {
+      name: call.function.name,
+      arguments: call.function.arguments
+    }
+  }));
+  
+  console.log('[streamHandler] 流处理完成，最终 tool_calls:', JSON.stringify(acc.tool_calls, null, 2));
+  
   return acc;
 }
-
-// 如果 openaisdk 已支持原生 stream，function* 可选，不强制保留。建议仅保留 handleResponseStream。

@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
+import { useSelector } from 'react-redux';
 import { LoadingOutlined, DownOutlined, RightOutlined, EyeOutlined, EyeInvisibleOutlined, CopyOutlined } from '@ant-design/icons';
 import { Button, message } from 'antd';
 import type { MessageRole, UserMessage, AssistantMessage, ToolMessage, ClientNoticeMessage } from '@engine/types/chat';
 import type { ToolCall } from '@engine/stream/streamHandler';
 import { markdownToHtml } from '@engine/utils/markdown';
+import type { RootState } from '@/store';
 
 import AvatarIcon from '@/components/AvatarIcon';
 import ToolCallCard from '../ToolCallCard';
@@ -25,7 +27,7 @@ interface ExtendedAssistantMessage extends AssistantMessage {
   id: string;
   chatId?: string;
   timestamp?: number;
-  tool_calls?: ToolCall[]; // 支持Assistant消息中的工具调用
+  // tool_calls 已在 AssistantMessage 中定义为 ChatCompletionMessageToolCall[]
 }
 
 interface ExtendedToolMessage extends ToolMessage {
@@ -121,6 +123,7 @@ interface MessageCardProps {
   // 支持组合渲染：可传入一组消息（如 assistant+tool），也可单条
   messages: Message[];
   cardStatus?: IMessageCardStatus; // 新增：由外部传入流程状态
+  chatId: string; // 新增：聊天ID，用于获取工具调用状态
 }
 
 const statusMap: Record<IMessageCardStatus, { text: string; icon: React.ReactNode; className: string }> = {
@@ -131,7 +134,10 @@ const statusMap: Record<IMessageCardStatus, { text: string; icon: React.ReactNod
   stable: { text: '', icon: <></>, className: '' },
 };
 
-const MessageCard: React.FC<MessageCardProps> = ({ messages, cardStatus = 'stable' }) => {
+const MessageCard: React.FC<MessageCardProps> = ({ messages, cardStatus = 'stable', chatId }) => {
+  // 从 Redux 获取工具调用状态
+  const toolCallStates = useSelector((state: RootState) => state.chat.toolCallStates[chatId] || {});
+  
   // 状态管理
   const [collapsedReasoning, setCollapsedReasoning] = useState<Record<string, boolean>>({});
   // 默认开启 Markdown 渲染
@@ -177,12 +183,12 @@ const MessageCard: React.FC<MessageCardProps> = ({ messages, cardStatus = 'stabl
       (isAssistantMessage(msg) || isLegacyMessage(msg)) && 'reasoning_content' in msg && msg.reasoning_content
     );
     if (msgWithReasoning && 'reasoning_content' in msgWithReasoning) {
-      console.log('[MessageCard] 检测到 reasoning_content:', {
-        messageId: msgWithReasoning.id,
-        reasoning_length: msgWithReasoning.reasoning_content?.length,
-        reasoning_preview: msgWithReasoning.reasoning_content?.substring(0, 100),
-        role: msgWithReasoning.role
-      });
+      // console.log('[MessageCard] 检测到 reasoning_content:', {
+      //   messageId: msgWithReasoning.id,
+      //   reasoning_length: msgWithReasoning.reasoning_content?.length,
+      //   reasoning_preview: msgWithReasoning.reasoning_content?.substring(0, 100),
+      //   role: msgWithReasoning.role
+      // });
     }
   }, [messages]);
 
@@ -284,24 +290,44 @@ const MessageCard: React.FC<MessageCardProps> = ({ messages, cardStatus = 'stabl
                   })()
                 )}
                 
-                {/* Assistant 消息中的工具调用 */}
+                {/* Assistant 消息中的工具调用 - 只在调用进行中时显示 */}
                 {isAssistant && (
                   (() => {
                     const toolCalls = (isAssistantMessage(msg) && msg.tool_calls) || 
                                      (isLegacyMessage(msg) && msg.tool_calls);
                     return toolCalls && toolCalls.length > 0 ? (
                       <div className="assistant-tool-calls">
-                        {toolCalls.map((toolCall, toolIndex) => (
-                          <ToolCallCard
-                            key={`${msg.id}_tool_${toolIndex}`}
-                            id={`assistant_tool_${msg.id}_${toolIndex}`} // 使用更稳定的ID格式
-                            toolName={toolCall.function?.name || '未知工具'}
-                            content={cardStatus === 'tool_calling' ? '正在调用工具...' : '等待工具结果...'}
-                            toolArguments={toolCall.function?.arguments || ''}
-                            status={cardStatus === 'tool_calling' ? 'calling' : 'success'}
-                            collapsed={true}
-                          />
-                        ))}
+                        {toolCalls.map((toolCall, toolIndex) => {
+                          // 从 Redux 获取工具调用状态
+                          const toolCallState = toolCallStates[toolCall.id || `${msg.id}_${toolIndex}`];
+                          const status = toolCallState?.status || 'calling';
+                          const result = toolCallState?.result || '';
+                          const error = toolCallState?.error;
+                          
+                          // 只在工具调用进行中时显示，调用完成后不显示（由 tool 消息显示结果）
+                          // 新增：如果没有对应的工具调用状态，说明可能是历史消息，也不显示
+                          if (status === 'success' || status === 'error' || !toolCallState) {
+                            return null;
+                          }
+                          
+                          return (
+                            <ToolCallCard
+                              key={`${msg.id}_tool_${toolIndex}`}
+                              id={`assistant_tool_${msg.id}_${toolIndex}`}
+                              toolName={toolCall.function?.name || '未知工具'}
+                              content={
+                                status === 'calling' 
+                                  ? '正在调用工具...' 
+                                  : status === 'error' 
+                                    ? error || '调用失败'
+                                    : result || '调用完成'
+                              }
+                              toolArguments={toolCall.function?.arguments || ''}
+                              status={status}
+                              collapsed={true}
+                            />
+                          );
+                        })}
                       </div>
                     ) : null;
                   })()
@@ -315,7 +341,7 @@ const MessageCard: React.FC<MessageCardProps> = ({ messages, cardStatus = 'stabl
                     toolName={
                       (isToolMessage(msg) && msg.toolName) || 
                       (isLegacyMessage(msg) && msg.toolName) || 
-                      '工具调用'
+                      '工具调用结果'
                     }
                     content={msg.content}
                     toolArguments={
@@ -413,12 +439,30 @@ const MessageCard: React.FC<MessageCardProps> = ({ messages, cardStatus = 'stabl
                   </div>
                 )}
 
-                {/* 消息分隔符 - 不是最后一条消息时显示 */}
+                {/* 消息分隔符 - 智能显示逻辑 */}
                 {!isLastMessage && (
-                  <div className="message-separator">
-                    <div className="separator-line"></div>
-                    <div className="separator-dot"></div>
-                  </div>
+                  (() => {
+                    // 获取下一条消息
+                    const nextMessage = messages[index + 1];
+                    
+                    // 不显示分割线的情况：
+                    // 1. assistant 消息后跟 tool 消息（它们是同一轮对话）
+                    // 2. tool 消息是组内第一个消息（避免在组开头显示分割线）
+                    // 3. 当前消息是 group 的第一个消息且为 tool 类型时，不显示分割线
+                    
+                    const isAssistantToTool = isAssistant && nextMessage?.role === 'tool';
+                    const isFirstMessageInGroup = index === 0;
+                    const isGroupStartingWithTool = isFirstMessageInGroup && isTool;
+                    
+                    const shouldHideSeparator = isAssistantToTool || isGroupStartingWithTool;
+                    
+                    return shouldHideSeparator ? null : (
+                      <div className="message-separator">
+                        <div className="separator-line"></div>
+                        <div className="separator-dot"></div>
+                      </div>
+                    );
+                  })()
                 )}
               </div>
             );

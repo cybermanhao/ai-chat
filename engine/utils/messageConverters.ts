@@ -1,20 +1,24 @@
 // engine/utils/messageConverters.ts
 // 统一管理所有消息类型转换器
-import type { RuntimeMessage, ChatMessage } from '../types/chat';
+import type { ChatMessage, EnrichedMessage } from '../types/chat';
 
 export const ChatMessageConverter = {
-  // RuntimeMessage[] → ChatMessage[]
-  toPersisted(messages: RuntimeMessage[]): ChatMessage[] {
-    // 只保留 user/assistant/system/tool 类型并去除 status 字段
+  // EnrichedMessage[] → ChatMessage[]
+  toPersisted(messages: EnrichedMessage[]): ChatMessage[] {
+    // 只保留 user/assistant/system/tool 类型并去除 metadata 字段
     return messages
       .filter(m =>
         m.role === 'user' || m.role === 'assistant' || m.role === 'system' || m.role === 'tool'
       )
-      .map(({ status, ...msg }) => msg) as ChatMessage[];
+      .map(({ id, timestamp, state, name, usage, ...msg }) => msg) as ChatMessage[];
   },
-  // ChatMessage[] → RuntimeMessage[]
-  toRuntime(messages: ChatMessage[]): RuntimeMessage[] {
-    return messages.map(m => ({ ...m, status: 'stable' }));
+  // ChatMessage[] → EnrichedMessage[]
+  toRuntime(messages: ChatMessage[]): EnrichedMessage[] {
+    return messages.map(m => ({ 
+      ...m, 
+      id: `msg_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`,
+      timestamp: Date.now()
+    }));
   }
 };
 

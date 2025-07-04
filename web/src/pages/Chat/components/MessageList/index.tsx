@@ -115,6 +115,7 @@ const MessageList = React.forwardRef<HTMLDivElement, MessageListProps>(
               key={key} // 使用稳定的 key
               messages={messagesWithChatId}
               cardStatus={shouldShowStatus ? messageCardStatus : 'stable'}
+              chatId={currentChatId || ''}
             />
           );
         })}

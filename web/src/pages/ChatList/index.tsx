@@ -3,8 +3,7 @@ import { Modal, Input, Button, List, message } from 'antd';
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import scrollIntoView from 'scroll-into-view-if-needed';
-import { useSelector, useDispatch } from 'react-redux';
-import { type AppDispatch, type RootState } from '@/store';
+import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { addChat, deleteChat, renameChat, setCurrentChat } from '@/store/chatSlice';
 import type { ChatInfo } from '@engine/types/chat';
 import ChatItem from './components/ChatItem';
@@ -13,10 +12,11 @@ import './styles.less';
 
 const ChatList: React.FC = () => {
   const navigate = useNavigate();
-  const dispatch: AppDispatch = useDispatch();
+  const dispatch = useAppDispatch();
   const { chatId: currentUrlChatId } = useParams<{ chatId: string }>();
 
-  const { chatList, currentChatId } = useSelector((state: RootState) => state.chat);
+  const { chatList, currentChatId } = useAppSelector((state) => state.chat);
+  const llmConfig = useAppSelector((state) => state.llmConfig);
 
   const [isRenameModalVisible, setIsRenameModalVisible] = useState(false);
   const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
@@ -38,9 +38,9 @@ const ChatList: React.FC = () => {
   // 只在初始化时检查并创建默认对话，避免重复创建
   useEffect(() => {
     if (chatList.length === 0) {
-      dispatch(addChat('新对话'));
+      dispatch(addChat({ title: '新对话', llmConfig }));
     }
-  }, [chatList.length, dispatch]); // 只依赖 length，避免频繁触发
+  }, [chatList.length, dispatch, llmConfig]); // 只依赖 length，避免频繁触发
 
   useEffect(() => {
     // 当 Redux store 中的 currentChatId 变化时，自动导航
@@ -51,7 +51,7 @@ const ChatList: React.FC = () => {
 
 
   const handleNewChat = () => {
-    dispatch(addChat('新对话'));
+    dispatch(addChat({ title: '新对话', llmConfig }));
   };
 
   const handleSelect = (id: string) => {
