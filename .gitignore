@@ -8,3 +8,6 @@ engine/dist
 .vscode/
 .openmcp/
 .venv/
+example/
+docs/
+aidocs/
