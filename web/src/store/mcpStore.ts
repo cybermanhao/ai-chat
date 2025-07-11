@@ -2,6 +2,7 @@ import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
 import type { Tool } from '@engine/service/mcpService';
 import { MCPService } from '@engine/service/mcpService';
+import { mcpNotificationService } from '@/services/mcpNotificationService';
 
 // MCP服务实例管理器
 class MCPServiceManager {
@@ -64,9 +65,14 @@ const mcpServiceManager = new MCPServiceManager();
 // 异步 thunk actions
 export const connectServer = createAsyncThunk(
   'mcp/connectServer',
-  async ({ serverId, url }: { serverId: string; url: string }, { rejectWithValue }) => {
+  async ({ serverId, url }: { serverId: string; url: string }, { rejectWithValue, getState }) => {
     try {
       console.log(`[MCPStore] 开始连接服务器 ${serverId}, URL: ${url}`);
+      
+      // 获取服务器名称
+      const state = getState() as { mcp: MCPState };
+      const server = state.mcp.servers.find(s => s.id === serverId);
+      const serverName = server?.name || serverId;
       
       // 创建并连接MCP服务
       const mcpService = mcpServiceManager.createService(serverId, url);
@@ -87,9 +93,25 @@ export const connectServer = createAsyncThunk(
       }));
       
       console.log(`[MCPStore] 服务器 ${serverId} 连接成功，获取到 ${tools.length} 个工具`);
+      
+      // 显示连接成功消息
+      mcpNotificationService.showServerConnected(serverName, tools.length);
+      
       return { serverId, tools };
     } catch (error) {
       console.error(`[MCPStore] 服务器 ${serverId} 连接失败:`, error);
+      
+      // 获取服务器名称用于错误消息
+      const state = getState() as { mcp: MCPState };
+      const server = state.mcp.servers.find(s => s.id === serverId);
+      const serverName = server?.name || serverId;
+      
+      // 显示连接失败消息
+      mcpNotificationService.showServerConnectionFailed(
+        serverName, 
+        error instanceof Error ? error.message : '连接失败'
+      );
+      
       // 清理失败的服务实例
       await mcpServiceManager.removeService(serverId);
       return rejectWithValue(error instanceof Error ? error.message : '连接失败');
@@ -99,18 +121,112 @@ export const connectServer = createAsyncThunk(
 
 export const disconnectServer = createAsyncThunk(
   'mcp/disconnectServer',
-  async (serverId: string, { rejectWithValue }) => {
+  async (serverId: string, { rejectWithValue, getState }) => {
     try {
       console.log(`[MCPStore] 开始断开服务器 ${serverId}`);
+      
+      // 获取服务器名称
+      const state = getState() as { mcp: MCPState };
+      const server = state.mcp.servers.find(s => s.id === serverId);
+      const serverName = server?.name || serverId;
       
       // 断开并移除服务实例
       await mcpServiceManager.removeService(serverId);
       
       console.log(`[MCPStore] 服务器 ${serverId} 断开成功`);
+      
+      // 显示断开连接消息
+      mcpNotificationService.showServerDisconnected(serverName);
+      
       return serverId;
     } catch (error) {
       console.error(`[MCPStore] 服务器 ${serverId} 断开失败:`, error);
+      
+      // 获取服务器名称用于错误消息
+      const state = getState() as { mcp: MCPState };
+      const server = state.mcp.servers.find(s => s.id === serverId);
+      const serverName = server?.name || serverId;
+      
+      // 显示断开连接失败消息
+      mcpNotificationService.showServerDisconnectionFailed(
+        serverName, 
+        error instanceof Error ? error.message : '断开连接失败'
+      );
+      
       return rejectWithValue(error instanceof Error ? error.message : '断开连接失败');
+    }
+  }
+);
+
+// 自动重连之前连接的服务器
+export const reconnectServers = createAsyncThunk(
+  'mcp/reconnectServers',
+  async (_, { getState, dispatch }) => {
+    const state = getState() as { mcp: MCPState };
+    const { servers } = state.mcp;
+    
+    // 找到所有之前连接的服务器（isConnected为true的）
+    const serversToReconnect = servers.filter(server => server.isConnected);
+    
+    if (serversToReconnect.length === 0) {
+      console.log('[MCPStore] 没有需要重连的服务器');
+      mcpNotificationService.showReconnectCompleted({
+        successCount: 0,
+        failureCount: 0,
+        totalCount: 0
+      });
+      return { successCount: 0, failureCount: 0, totalCount: 0 };
+    }
+    
+    console.log(`[MCPStore] 开始自动重连 ${serversToReconnect.length} 个服务器:`, serversToReconnect.map(s => s.name));
+    
+    // 显示重连开始消息
+    const hideLoading = mcpNotificationService.showReconnectStarted(serversToReconnect.length);
+    
+    // 首先清理所有连接状态，避免状态不一致
+    await mcpServiceManager.removeAllServices();
+    
+    // 并发重连所有服务器
+    const reconnectPromises = serversToReconnect.map(server => 
+      dispatch(connectServer({ serverId: server.id, url: server.url }))
+    );
+    
+    try {
+      const results = await Promise.allSettled(reconnectPromises);
+      
+      // 关闭加载提示
+      hideLoading();
+      
+      // 简化统计：检查最终连接状态
+      const finalState = getState() as { mcp: MCPState };
+      const finalServers = finalState.mcp.servers;
+      
+      let successCount = 0;
+      let failureCount = 0;
+      
+      for (const originalServer of serversToReconnect) {
+        const finalServer = finalServers.find(s => s.id === originalServer.id);
+        if (finalServer && finalServer.isConnected) {
+          successCount++;
+        } else {
+          failureCount++;
+        }
+      }
+      
+      console.log(`[MCPStore] 自动重连完成: ${successCount} 个成功, ${failureCount} 个失败`);
+      console.log(`[MCPStore] 重连结果详情:`, results);
+      
+      // 显示重连完成消息
+      const reconnectResult = { successCount, failureCount, totalCount: serversToReconnect.length };
+      console.log(`[MCPStore] 调用 showReconnectCompleted:`, reconnectResult);
+      mcpNotificationService.showReconnectCompleted(reconnectResult);
+      
+      return reconnectResult;
+    } catch (error) {
+      console.error('[MCPStore] 自动重连过程中出错:', error);
+      hideLoading();
+      mcpNotificationService.showError('自动重连过程中发生错误');
+      throw error;
     }
   }
 );
@@ -118,9 +234,14 @@ export const disconnectServer = createAsyncThunk(
 // 工具调用异步thunk
 export const callTool = createAsyncThunk(
   'mcp/callTool',
-  async ({ serverId, toolName, args }: { serverId: string; toolName: string; args: Record<string, any> }, { rejectWithValue }) => {
+  async ({ serverId, toolName, args }: { serverId: string; toolName: string; args: Record<string, any> }, { rejectWithValue, getState }) => {
     try {
       console.log(`[MCPStore] 调用工具 ${toolName} on server ${serverId}, 参数:`, args);
+      
+      // 获取服务器名称
+      const state = getState() as { mcp: MCPState };
+      const server = state.mcp.servers.find(s => s.id === serverId);
+      const serverName = server?.name || serverId;
       
       const mcpService = mcpServiceManager.getService(serverId);
       if (!mcpService) {
@@ -134,9 +255,26 @@ export const callTool = createAsyncThunk(
       }
       
       console.log(`[MCPStore] 工具 ${toolName} 调用成功:`, result.data);
+      
+      // 显示工具调用成功消息
+      mcpNotificationService.showToolCallSuccess(toolName, serverName);
+      
       return { serverId, toolName, args, result: result.data };
     } catch (error) {
       console.error(`[MCPStore] 工具 ${toolName} 调用失败:`, error);
+      
+      // 获取服务器名称用于错误消息
+      const state = getState() as { mcp: MCPState };
+      const server = state.mcp.servers.find(s => s.id === serverId);
+      const serverName = server?.name || serverId;
+      
+      // 显示工具调用失败消息
+      mcpNotificationService.showToolCallFailed(
+        toolName, 
+        serverName, 
+        error instanceof Error ? error.message : '工具调用失败'
+      );
+      
       return rejectWithValue(error instanceof Error ? error.message : '工具调用失败');
     }
   }

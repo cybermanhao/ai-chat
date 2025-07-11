@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { List, Button, Modal, Form, Input, Collapse, Switch, message as antdMessage } from 'antd';
-import { PlusOutlined, ApiOutlined, DisconnectOutlined, PoweroffOutlined } from '@ant-design/icons';
+import { PlusOutlined, ApiOutlined } from '@ant-design/icons';
 import { useSelector, useDispatch } from 'react-redux';
 import type { RootState, AppDispatch } from '@/store';
 import { addServer, removeServer, setActiveServer, connectServer, disconnectServer } from '@/store/mcpStore';

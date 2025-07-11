@@ -19,6 +19,12 @@ const Debug: React.FC = () => {
   const currentChatId = useSelector((state: RootState) => state.chat.currentChatId);
   const globalUIState = useSelector((state: RootState) => state.globalUI);
   
+  // MCP 相关状态
+  const mcpState = useSelector((state: RootState) => state.mcp);
+  const mcpServers = mcpState.servers;
+  const connectedServers = mcpServers.filter(s => s.isConnected);
+  const availableTools = mcpServers.reduce((acc, server) => acc + server.tools.length, 0);
+
   const [toolMessageContent, setToolMessageContent] = useState('这是一个测试工具消息，用于调试UI交互功能。');
   const [selectedMessageType, setSelectedMessageType] = useState<MessageRole>('tool');
   
@@ -311,7 +317,7 @@ const Debug: React.FC = () => {
                 <Option value="user">� User 消息</Option>
                 <Option value="assistant">🤖 Assistant 消息</Option>
                 <Option value="tool">🔧 Tool 消息</Option>
-                <Option value="client-notice">� Client Notice 消息</Option>
+                <Option value="client-notice">� Client Notice 消消息</Option>
               </Select>
             </div>
             
@@ -392,7 +398,6 @@ const Debug: React.FC = () => {
                 placeholder="0表示立即完成"
               />
             </div>
-
             <div>
               <Text strong>默认折叠状态：</Text>
               <Switch
@@ -560,6 +565,236 @@ const Debug: React.FC = () => {
           </Space>
         </Card>
 
+        <Card title="MCP 服务器测试" size="small" style={{ marginBottom: 16 }}>
+          <Space direction="vertical" style={{ width: '100%' }}>
+            <div>
+              <Text strong>MCP 实时状态：</Text>
+              <div style={{ marginTop: 8, padding: 8, backgroundColor: '#f5f5f5', borderRadius: 4 }}>
+                <div><Text>服务器总数：<Text code>{mcpServers.length}</Text></Text></div>
+                <div><Text>已连接服务器：<Text code>{connectedServers.length}</Text></Text></div>
+                <div><Text>可用工具数：<Text code>{availableTools}</Text></Text></div>
+                <div><Text>活跃服务器：<Text code>{mcpState.activeServerId || '无'}</Text></Text></div>
+              </div>
+            </div>
+
+            <div>
+              <Text strong>MCP 消息提示测试：</Text>
+              <Space wrap style={{ marginTop: 8 }}>
+                <Button 
+                  size="small"
+                  onClick={() => {
+                    import('@/services/mcpNotificationService').then(({ mcpNotificationService }) => {
+                      mcpNotificationService.showServerConnected('测试服务器', 5);
+                    });
+                  }}
+                >
+                  连接成功
+                </Button>
+                <Button 
+                  size="small"
+                  onClick={() => {
+                    import('@/services/mcpNotificationService').then(({ mcpNotificationService }) => {
+                      mcpNotificationService.showServerConnectionFailed('测试服务器', '连接超时');
+                    });
+                  }}
+                >
+                  连接失败
+                </Button>
+                <Button 
+                  size="small"
+                  onClick={() => {
+                    import('@/services/mcpNotificationService').then(({ mcpNotificationService }) => {
+                      mcpNotificationService.showServerDisconnected('测试服务器');
+                    });
+                  }}
+                >
+                  断开连接
+                </Button>
+              </Space>
+            </div>
+
+            <div>
+              <Text strong>重连测试：</Text>
+              <Space wrap style={{ marginTop: 8 }}>
+                <Button 
+                  size="small"
+                  onClick={() => {
+                    import('@/services/mcpNotificationService').then(({ mcpNotificationService }) => {
+                      mcpNotificationService.showReconnectCompleted({
+                        successCount: 3,
+                        failureCount: 0,
+                        totalCount: 3
+                      });
+                    });
+                  }}
+                >
+                  全部成功
+                </Button>
+                <Button 
+                  size="small"
+                  onClick={() => {
+                    import('@/services/mcpNotificationService').then(({ mcpNotificationService }) => {
+                      mcpNotificationService.showReconnectCompleted({
+                        successCount: 2,
+                        failureCount: 1,
+                        totalCount: 3
+                      });
+                    });
+                  }}
+                >
+                  部分成功
+                </Button>
+                <Button 
+                  size="small"
+                  onClick={() => {
+                    import('@/services/mcpNotificationService').then(({ mcpNotificationService }) => {
+                      mcpNotificationService.showReconnectCompleted({
+                        successCount: 0,
+                        failureCount: 3,
+                        totalCount: 3
+                      });
+                    });
+                  }}
+                >
+                  全部失败
+                </Button>
+              </Space>
+            </div>
+
+            <div>
+              <Text strong>工具调用测试：</Text>
+              <Space wrap style={{ marginTop: 8 }}>
+                <Button 
+                  size="small"
+                  onClick={() => {
+                    import('@/services/mcpNotificationService').then(({ mcpNotificationService }) => {
+                      mcpNotificationService.showToolCallSuccess('search_web', '测试服务器');
+                    });
+                  }}
+                >
+                  工具成功
+                </Button>
+                <Button 
+                  size="small"
+                  onClick={() => {
+                    import('@/services/mcpNotificationService').then(({ mcpNotificationService }) => {
+                      mcpNotificationService.showToolCallFailed('search_web', '测试服务器', '网络超时');
+                    });
+                  }}
+                >
+                  工具失败
+                </Button>
+              </Space>
+            </div>
+
+            <div>
+              <Text strong>实际重连功能：</Text>
+              <Space wrap style={{ marginTop: 8 }}>
+                <Button 
+                  type="primary"
+                  size="small"
+                  onClick={() => {
+                    import('@/test/mcpReconnectTest').then(({ testMCPReconnect }) => {
+                      testMCPReconnect();
+                    });
+                  }}
+                >
+                  测试实际重连
+                </Button>
+                <Button 
+                  size="small"
+                  onClick={() => {
+                    import('@/test/mcpReconnectTest').then(({ testReconnectMessage }) => {
+                      testReconnectMessage();
+                    });
+                  }}
+                >
+                  测试重连消息
+                </Button>
+              </Space>
+            </div>
+
+            <div>
+              <Text strong>MCP 状态信息：</Text>
+              <div style={{ marginTop: 8 }}>
+                <Button 
+                  size="small"
+                  onClick={() => {
+                    import('@/store').then(({ store }) => {
+                      const state = store.getState();
+                      const servers = state.mcp.servers;
+                      const connectedServers = servers.filter(s => s.isConnected);
+                      console.log('MCP 服务器状态:', {
+                        总数: servers.length,
+                        已连接: connectedServers.length,
+                        服务器列表: servers.map(s => ({
+                          id: s.id,
+                          名称: s.name,
+                          连接状态: s.isConnected ? '已连接' : '未连接',
+                          工具数量: s.tools.length
+                        }))
+                      });
+                      message.info(`MCP 状态：${servers.length} 个服务器，${connectedServers.length} 个已连接`);
+                    });
+                  }}
+                >
+                  查看 MCP 状态
+                </Button>
+                <Button 
+                  size="small"
+                  onClick={() => {
+                    import('@/store').then(({ store }) => {
+                      import('@/store/mcpStore').then(({ reconnectServers }) => {
+                        store.dispatch(reconnectServers());
+                      });
+                    });
+                  }}
+                >
+                  手动触发重连
+                </Button>
+              </div>
+            </div>
+
+            <div>
+              <Text strong>调试工具：</Text>
+              <div style={{ marginTop: 8 }}>
+                <Button 
+                  size="small"
+                  onClick={() => {
+                    // 创建一个模拟的 MCP 服务器用于测试
+                    import('@/store').then(({ store }) => {
+                      import('@/store/mcpStore').then(({ addServer }) => {
+                        const testServer = {
+                          name: '调试测试服务器',
+                          url: 'http://localhost:3999'
+                        };
+                        store.dispatch(addServer(testServer));
+                        message.success('已添加测试服务器到 MCP 列表');
+                      });
+                    });
+                  }}
+                >
+                  添加测试服务器
+                </Button>
+                <Button 
+                  size="small"
+                  onClick={() => {
+                    // 清理所有 MCP 连接
+                    import('@/store').then(({ store }) => {
+                      import('@/store/mcpStore').then(({ clearAllConnections }) => {
+                        store.dispatch(clearAllConnections());
+                        message.success('已清理所有 MCP 连接');
+                      });
+                    });
+                  }}
+                >
+                  清理所有连接
+                </Button>
+              </div>
+            </div>
+          </Space>
+        </Card>
+
         <Card title="开发者工具" size="small">
           <Space direction="vertical" style={{ width: '100%' }}>
             <Button
@@ -572,154 +807,16 @@ const Debug: React.FC = () => {
             
             <Button
               onClick={() => {
-                const script = document.createElement('script');
-                script.textContent = `
-                  // 快速调试工具
-                  window.debugTools = {
-                    addToolMessage: (content = '调试工具消息') => {
-                      const state = window.__REDUX_STORE__.getState();
-                      const currentChatId = state.chat.currentChatId;
-                      if (!currentChatId) return console.error('没有活跃聊天');
-                      
-                      window.__REDUX_STORE__.dispatch({
-                        type: 'chat/addMessage',
-                        payload: {
-                          chatId: currentChatId,
-                          message: {
-                            id: 'debug-tool-' + Date.now(),
-                            content,
-                            role: 'tool',
-                            tool_call_id: 'debug_tool_call_' + Date.now(),
-                            timestamp: Date.now(),
-                          }
-                        }
-                      });
-                    },
-                    addAssistantMessage: (content = '调试助手消息', reasoning = '调试思考过程') => {
-                      const state = window.__REDUX_STORE__.getState();
-                      const currentChatId = state.chat.currentChatId;
-                      if (!currentChatId) return console.error('没有活跃聊天');
-                      
-                      window.__REDUX_STORE__.dispatch({
-                        type: 'chat/addMessage',
-                        payload: {
-                          chatId: currentChatId,
-                          message: {
-                            id: 'debug-assistant-' + Date.now(),
-                            content,
-                            role: 'assistant',
-                            reasoning_content: reasoning,
-                            timestamp: Date.now(),
-                          }
-                        }
-                      });
-                    },
-                    addUserMessage: (content = '调试用户消息') => {
-                      const state = window.__REDUX_STORE__.getState();
-                      const currentChatId = state.chat.currentChatId;
-                      if (!currentChatId) return console.error('没有活跃聊天');
-                      
-                      window.__REDUX_STORE__.dispatch({
-                        type: 'chat/addMessage',
-                        payload: {
-                          chatId: currentChatId,
-                          message: {
-                            id: 'debug-user-' + Date.now(),
-                            content,
-                            role: 'user',
-                            timestamp: Date.now(),
-                          }
-                        }
-                      });
-                    },
-                    addNoticeMessage: (content = '调试通知消息', noticeType = 'info') => {
-                      const state = window.__REDUX_STORE__.getState();
-                      const currentChatId = state.chat.currentChatId;
-                      if (!currentChatId) return console.error('没有活跃聊天');
-                      
-                      window.__REDUX_STORE__.dispatch({
-                        type: 'chat/addMessage',
-                        payload: {
-                          chatId: currentChatId,
-                          message: {
-                            id: 'debug-notice-' + Date.now(),
-                            content,
-                            role: 'client-notice',
-                            noticeType,
-                            timestamp: Date.now(),
-                          }
-                        }
-                      });
-                    },
-                    clearMessages: () => {
-                      const state = window.__REDUX_STORE__.getState();
-                      const currentChatId = state.chat.currentChatId;
-                      if (!currentChatId) return console.error('没有活跃聊天');
-                      
-                      window.__REDUX_STORE__.dispatch({
-                        type: 'chat/clearMessages',
-                        payload: { chatId: currentChatId }
-                      });
-                    },
-                    addAssistantWithToolCall: (toolName = 'search_web', toolArgs = '{"query": "测试查询"}', content = '我需要调用工具来帮助您。') => {
-                      const state = window.__REDUX_STORE__.getState();
-                      const currentChatId = state.chat.currentChatId;
-                      if (!currentChatId) return console.error('没有活跃聊天');
-                      
-                      const toolCall = {
-                        index: 0,
-                        id: 'call_' + Date.now(),
-                        type: 'function',
-                        function: {
-                          name: toolName,
-                          arguments: toolArgs,
-                        },
-                      };
-                      
-                      window.__REDUX_STORE__.dispatch({
-                        type: 'chat/addMessage',
-                        payload: {
-                          chatId: currentChatId,
-                          message: {
-                            id: 'debug-assistant-tool-' + Date.now(),
-                            content,
-                            role: 'assistant',
-                            tool_calls: [toolCall],
-                            timestamp: Date.now(),
-                          }
-                        }
-                      });
-                    },
-                    addToolCallResult: (toolCallId, content = '工具调用结果', success = true) => {
-                      const state = window.__REDUX_STORE__.getState();
-                      const currentChatId = state.chat.currentChatId;
-                      if (!currentChatId) return console.error('没有活跃聊天');
-                      
-                      window.__REDUX_STORE__.dispatch({
-                        type: 'chat/addMessage',
-                        payload: {
-                          chatId: currentChatId,
-                          message: {
-                            id: 'debug-tool-result-' + Date.now(),
-                            content: success ? content : '工具调用失败：' + content,
-                            role: 'tool',
-                            tool_call_id: toolCallId,
-                            timestamp: Date.now(),
-                          }
-                        }
-                      });
-                    }
-                  };
-                  console.log('调试工具已加载到 window.debugTools，可用方法：');
-                  console.log('- debugTools.addUserMessage(content)');
-                  console.log('- debugTools.addAssistantMessage(content, reasoning)');
-                  console.log('- debugTools.addToolMessage(content)');
-                  console.log('- debugTools.addNoticeMessage(content, noticeType)');
-                  console.log('- debugTools.addAssistantWithToolCall(toolName, toolArgs, content)');
-                  console.log('- debugTools.addToolCallResult(toolCallId, content, success)');
-                  console.log('- debugTools.clearMessages()');
-                `;
-                document.head.appendChild(script);
+                // 简化的调试工具注入
+                (window as any).debugTools = {
+                  addToolMessage: (content = '调试工具消息') => {
+                    console.log('添加工具消息:', content);
+                  },
+                  clearMessages: () => {
+                    console.log('清理消息');
+                  }
+                };
+                console.log('调试工具已加载到 window.debugTools');
                 message.success('调试工具已注入到控制台');
               }}
             >

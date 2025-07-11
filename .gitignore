@@ -6,3 +6,5 @@ engine/dist
 *.tsbuildinfo
 # VSCode workspace cache
 .vscode/
+.openmcp/
+.venv/

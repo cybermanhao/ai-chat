@@ -11,6 +11,13 @@ export interface MCPServerConfig {
   /** 状态报告间隔（毫秒），默认1分钟 */
   statusReportIntervalMs: number;
   
+  // TODO: 添加心跳包相关配置
+  /** 心跳包间隔（毫秒），默认30秒 */
+  // heartbeatIntervalMs: number;
+  
+  /** 心跳包超时时间（毫秒），默认10秒 */
+  // heartbeatTimeoutMs: number;
+  
   /** 服务器端口 */
   port: number;
   
@@ -28,6 +35,9 @@ export const DEFAULT_CONFIG: MCPServerConfig = {
   sessionTimeoutMs: 30 * 60 * 1000, // 30分钟
   cleanupIntervalMs: 5 * 60 * 1000,  // 5分钟
   statusReportIntervalMs: 60 * 1000,  // 1分钟
+  // TODO: 添加心跳包默认配置
+  // heartbeatIntervalMs: 30 * 1000,   // 30秒
+  // heartbeatTimeoutMs: 10 * 1000,    // 10秒
   port: 8000,
   host: "127.0.0.1",
   mcpPath: "/mcp"

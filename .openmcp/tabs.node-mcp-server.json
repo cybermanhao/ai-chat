@@ -1,6 +1,6 @@
 {
   "clientId": "bccbb270-b270-5bb2701a5ff-8bb2701a5ff610d-f610d706",
-  "currentIndex": 2,
+  "currentIndex": 4,
   "tabs": [
     {
       "name": "交互测试",
@@ -917,6 +917,595 @@
             }
           }
         ],
+        "settings": {
+          "modelIndex": 0,
+          "enableTools": [
+            {
+              "name": "weather",
+              "description": "根据城市天气预报的城市编码 (int)，获取指定城市的天气信息",
+              "inputSchema": {
+                "type": "object",
+                "properties": {
+                  "city_code": {
+                    "type": "number",
+                    "description": "城市编码"
+                  }
+                },
+                "required": [
+                  "city_code"
+                ]
+              },
+              "enabled": true
+            },
+            {
+              "name": "calculator",
+              "description": "简单计算器工具，支持基本的四则运算",
+              "inputSchema": {
+                "type": "object",
+                "properties": {
+                  "operation": {
+                    "type": "string",
+                    "description": "运算类型(add/subtract/multiply/divide)"
+                  },
+                  "a": {
+                    "type": "number",
+                    "description": "第一个数"
+                  },
+                  "b": {
+                    "type": "number",
+                    "description": "第二个数"
+                  }
+                },
+                "required": [
+                  "operation",
+                  "a",
+                  "b"
+                ]
+              },
+              "enabled": true
+            },
+            {
+              "name": "math",
+              "description": "执行基础数学运算，支持加减乘除",
+              "inputSchema": {
+                "type": "object",
+                "properties": {
+                  "operation": {
+                    "type": "string",
+                    "description": "运算类型"
+                  },
+                  "numbers": {
+                    "type": "array",
+                    "description": "至少需要两个数字的数组",
+                    "items": {
+                      "type": "number"
+                    }
+                  }
+                },
+                "required": [
+                  "operation",
+                  "numbers"
+                ]
+              },
+              "enabled": true
+            },
+            {
+              "name": "test",
+              "description": "用来测试",
+              "inputSchema": {
+                "type": "object",
+                "properties": {
+                  "params": {
+                    "type": "object",
+                    "properties": {
+                      "start": {
+                        "type": "string"
+                      },
+                      "end": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "start",
+                      "end"
+                    ]
+                  },
+                  "test1": {
+                    "type": "string"
+                  },
+                  "test2": {},
+                  "test3": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "params",
+                  "test1"
+                ]
+              },
+              "enabled": true
+            },
+            {
+              "name": "bing_search",
+              "description": "使用 Bing 搜索引擎搜索网络内容",
+              "inputSchema": {
+                "type": "object",
+                "properties": {
+                  "query": {
+                    "type": "string",
+                    "description": "搜索查询"
+                  },
+                  "count": {
+                    "type": "number",
+                    "description": "搜索结果数量"
+                  },
+                  "market": {
+                    "type": "string",
+                    "description": "搜索市场/语言"
+                  }
+                },
+                "required": [
+                  "query"
+                ]
+              },
+              "enabled": true
+            },
+            {
+              "name": "datetime",
+              "description": "获取当前日期和时间，支持多种格式和时区",
+              "inputSchema": {
+                "type": "object",
+                "properties": {
+                  "format": {
+                    "type": "string",
+                    "description": "输出格式"
+                  },
+                  "timezone": {
+                    "type": "string",
+                    "description": "时区（可选）"
+                  }
+                },
+                "required": []
+              },
+              "enabled": true
+            },
+            {
+              "name": "text_processor",
+              "description": "文本处理工具，支持字符统计、大小写转换、编码解码等操作",
+              "inputSchema": {
+                "type": "object",
+                "properties": {
+                  "text": {
+                    "type": "string",
+                    "description": "要处理的文本"
+                  },
+                  "operation": {
+                    "type": "string",
+                    "description": "操作类型"
+                  },
+                  "encoding": {
+                    "type": "string",
+                    "description": "编码类型（仅用于encode/decode操作）"
+                  }
+                },
+                "required": [
+                  "text",
+                  "operation"
+                ]
+              },
+              "enabled": true
+            }
+          ],
+          "enableWebSearch": false,
+          "temperature": 0.6,
+          "contextLength": 100,
+          "systemPrompt": "",
+          "enableXmlWrapper": false,
+          "parallelToolCalls": true
+        }
+      }
+    },
+    {
+      "name": "交互测试",
+      "icon": "icon-robot",
+      "type": "blank",
+      "componentIndex": 3,
+      "storage": {
+        "activeNames": [
+          0
+        ],
+        "messages": [
+          {
+            "role": "user",
+            "content": "123123+345345",
+            "extraInfo": {
+              "created": 1751607695681,
+              "state": "success",
+              "serverName": "deepseek",
+              "enableXmlWrapper": false
+            }
+          },
+          {
+            "role": "assistant",
+            "content": "",
+            "tool_calls": [
+              {
+                "id": "call_0_6808074a-466b-4eb5-9236-8227c8a4108e",
+                "index": 0,
+                "type": "function",
+                "function": {
+                  "name": "calculator",
+                  "arguments": "{\"operation\":\"add\",\"a\":123123,\"b\":345345}"
+                }
+              }
+            ],
+            "extraInfo": {
+              "created": 1751607700917,
+              "state": "success",
+              "serverName": "deepseek",
+              "enableXmlWrapper": false
+            }
+          },
+          {
+            "role": "tool",
+            "index": 0,
+            "tool_call_id": "call_0_6808074a-466b-4eb5-9236-8227c8a4108e",
+            "content": [
+              {
+                "type": "text",
+                "text": "{\n  \"calculation\": \"123123 + 345345 = 468468\",\n  \"result\": 468468,\n  \"operation\": \"add\",\n  \"operands\": {\n    \"a\": 123123,\n    \"b\": 345345\n  }\n}"
+              }
+            ],
+            "extraInfo": {
+              "created": 1751607700949,
+              "state": "success",
+              "serverName": "deepseek",
+              "usage": {
+                "prompt_tokens": 955,
+                "completion_tokens": 27,
+                "total_tokens": 982,
+                "prompt_tokens_details": {
+                  "cached_tokens": 896
+                },
+                "prompt_cache_hit_tokens": 896,
+                "prompt_cache_miss_tokens": 59
+              },
+              "enableXmlWrapper": false
+            }
+          },
+          {
+            "role": "assistant",
+            "content": "123123 + 345345 = 468468",
+            "extraInfo": {
+              "created": 1751607705949,
+              "state": "success",
+              "serverName": "deepseek",
+              "usage": {
+                "prompt_tokens": 1062,
+                "completion_tokens": 10,
+                "total_tokens": 1072,
+                "prompt_tokens_details": {
+                  "cached_tokens": 960
+                },
+                "prompt_cache_hit_tokens": 960,
+                "prompt_cache_miss_tokens": 102
+              },
+              "enableXmlWrapper": false
+            }
+          },
+          {
+            "role": "user",
+            "content": "帮我查查关于会展的新闻，我明天去杭州，明天天气怎么样",
+            "extraInfo": {
+              "created": 1751607739387,
+              "state": "success",
+              "serverName": "deepseek",
+              "enableXmlWrapper": false
+            }
+          },
+          {
+            "role": "assistant",
+            "content": "",
+            "tool_calls": [
+              {
+                "id": "call_0_154699b7-41c3-44af-ba8f-932ad82c8a32",
+                "index": 0,
+                "type": "function",
+                "function": {
+                  "name": "bing_search",
+                  "arguments": "{\"query\":\"会展 新闻\",\"count\":5}"
+                }
+              },
+              {
+                "id": "call_1_9a611822-0c11-4a92-93bf-20f8021dbc36",
+                "index": 1,
+                "type": "function",
+                "function": {
+                  "name": "weather",
+                  "arguments": "{\"city_code\":101210101}"
+                }
+              }
+            ],
+            "extraInfo": {
+              "created": 1751607742798,
+              "state": "success",
+              "serverName": "deepseek",
+              "enableXmlWrapper": false
+            }
+          },
+          {
+            "role": "tool",
+            "index": 0,
+            "tool_call_id": "call_0_154699b7-41c3-44af-ba8f-932ad82c8a32",
+            "content": [
+              {
+                "type": "text",
+                "text": "❌ 错误：未配置 Bing Search API 密钥。请设置环境变量 BING_SEARCH_API_KEY。\n\n获取方式：\n1. 访问 https://portal.azure.com/\n2. 创建 Bing Search v7 资源\n3. 获取 API 密钥\n4. 设置环境变量：BING_SEARCH_API_KEY=your_api_key"
+              }
+            ],
+            "extraInfo": {
+              "created": 1751607742825,
+              "state": "success",
+              "serverName": "deepseek",
+              "usage": {
+                "prompt_tokens": 1091,
+                "completion_tokens": 43,
+                "total_tokens": 1134,
+                "prompt_tokens_details": {
+                  "cached_tokens": 1024
+                },
+                "prompt_cache_hit_tokens": 1024,
+                "prompt_cache_miss_tokens": 67
+              },
+              "enableXmlWrapper": false
+            }
+          },
+          {
+            "role": "tool",
+            "index": 1,
+            "tool_call_id": "call_1_9a611822-0c11-4a92-93bf-20f8021dbc36",
+            "content": [
+              {
+                "type": "text",
+                "text": "{\n  \"城市中文名\": \"杭州\",\n  \"城市英文名\": \"hangzhou\",\n  \"城市编码\": \"101210101\",\n  \"当前气温\": \"36.5°C\",\n  \"风向\": \"\",\n  \"风力\": \"\",\n  \"湿度\": \"44%\",\n  \"空气质量指数\": \"54\",\n  \"天气状况\": \"阴\"\n}"
+              }
+            ],
+            "extraInfo": {
+              "created": 1751607742977,
+              "state": "success",
+              "serverName": "deepseek",
+              "usage": {
+                "prompt_tokens": 1091,
+                "completion_tokens": 43,
+                "total_tokens": 1134,
+                "prompt_tokens_details": {
+                  "cached_tokens": 1024
+                },
+                "prompt_cache_hit_tokens": 1024,
+                "prompt_cache_miss_tokens": 67
+              },
+              "enableXmlWrapper": false
+            }
+          },
+          {
+            "role": "assistant",
+            "content": "### 杭州明天天气\n- **当前气温**: 36.5°C\n- **天气状况**: 阴\n- **湿度**: 44%\n- **空气质量指数**: 54\n\n由于未配置 Bing Search API 密钥，我无法为您查询关于会展的新闻。如果您需要，可以按照以下步骤获取 API 密钥：\n1. 访问 [Azure 门户](https://portal.azure.com/)。\n2. 创建 Bing Search v7 资源。\n3. 获取 API 密钥并设置环境变量 `BING_SEARCH_API_KEY=your_api_key`。",
+            "extraInfo": {
+              "created": 1751607752303,
+              "state": "success",
+              "serverName": "deepseek",
+              "usage": {
+                "prompt_tokens": 1339,
+                "completion_tokens": 123,
+                "total_tokens": 1462,
+                "prompt_tokens_details": {
+                  "cached_tokens": 1088
+                },
+                "prompt_cache_hit_tokens": 1088,
+                "prompt_cache_miss_tokens": 251
+              },
+              "enableXmlWrapper": false
+            }
+          }
+        ],
+        "settings": {
+          "modelIndex": 0,
+          "enableTools": [
+            {
+              "name": "weather",
+              "description": "根据城市天气预报的城市编码 (int)，获取指定城市的天气信息",
+              "inputSchema": {
+                "type": "object",
+                "properties": {
+                  "city_code": {
+                    "type": "number",
+                    "description": "城市编码"
+                  }
+                },
+                "required": [
+                  "city_code"
+                ]
+              },
+              "enabled": true
+            },
+            {
+              "name": "calculator",
+              "description": "简单计算器工具，支持基本的四则运算",
+              "inputSchema": {
+                "type": "object",
+                "properties": {
+                  "operation": {
+                    "type": "string",
+                    "description": "运算类型(add/subtract/multiply/divide)"
+                  },
+                  "a": {
+                    "type": "number",
+                    "description": "第一个数"
+                  },
+                  "b": {
+                    "type": "number",
+                    "description": "第二个数"
+                  }
+                },
+                "required": [
+                  "operation",
+                  "a",
+                  "b"
+                ]
+              },
+              "enabled": true
+            },
+            {
+              "name": "math",
+              "description": "执行基础数学运算，支持加减乘除",
+              "inputSchema": {
+                "type": "object",
+                "properties": {
+                  "operation": {
+                    "type": "string",
+                    "description": "运算类型"
+                  },
+                  "numbers": {
+                    "type": "array",
+                    "description": "至少需要两个数字的数组",
+                    "items": {
+                      "type": "number"
+                    }
+                  }
+                },
+                "required": [
+                  "operation",
+                  "numbers"
+                ]
+              },
+              "enabled": true
+            },
+            {
+              "name": "test",
+              "description": "用来测试",
+              "inputSchema": {
+                "type": "object",
+                "properties": {
+                  "params": {
+                    "type": "object",
+                    "properties": {
+                      "start": {
+                        "type": "string"
+                      },
+                      "end": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "start",
+                      "end"
+                    ]
+                  },
+                  "test1": {
+                    "type": "string"
+                  },
+                  "test2": {},
+                  "test3": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "params",
+                  "test1"
+                ]
+              },
+              "enabled": true
+            },
+            {
+              "name": "bing_search",
+              "description": "使用 Bing 搜索引擎搜索网络内容",
+              "inputSchema": {
+                "type": "object",
+                "properties": {
+                  "query": {
+                    "type": "string",
+                    "description": "搜索查询"
+                  },
+                  "count": {
+                    "type": "number",
+                    "description": "搜索结果数量"
+                  },
+                  "market": {
+                    "type": "string",
+                    "description": "搜索市场/语言"
+                  }
+                },
+                "required": [
+                  "query"
+                ]
+              },
+              "enabled": true
+            },
+            {
+              "name": "datetime",
+              "description": "获取当前日期和时间，支持多种格式和时区",
+              "inputSchema": {
+                "type": "object",
+                "properties": {
+                  "format": {
+                    "type": "string",
+                    "description": "输出格式"
+                  },
+                  "timezone": {
+                    "type": "string",
+                    "description": "时区（可选）"
+                  }
+                },
+                "required": []
+              },
+              "enabled": true
+            },
+            {
+              "name": "text_processor",
+              "description": "文本处理工具，支持字符统计、大小写转换、编码解码等操作",
+              "inputSchema": {
+                "type": "object",
+                "properties": {
+                  "text": {
+                    "type": "string",
+                    "description": "要处理的文本"
+                  },
+                  "operation": {
+                    "type": "string",
+                    "description": "操作类型"
+                  },
+                  "encoding": {
+                    "type": "string",
+                    "description": "编码类型（仅用于encode/decode操作）"
+                  }
+                },
+                "required": [
+                  "text",
+                  "operation"
+                ]
+              },
+              "enabled": true
+            }
+          ],
+          "enableWebSearch": false,
+          "temperature": 0.6,
+          "contextLength": 100,
+          "systemPrompt": "",
+          "enableXmlWrapper": false,
+          "parallelToolCalls": true
+        }
+      }
+    },
+    {
+      "name": "交互测试",
+      "icon": "icon-robot",
+      "type": "blank",
+      "componentIndex": 3,
+      "storage": {
+        "activeNames": [
+          0
+        ],
+        "messages": [],
         "settings": {
           "modelIndex": 0,
           "enableTools": [

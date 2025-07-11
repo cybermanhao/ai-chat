@@ -1,3 +1,7 @@
+//此文件废弃
+//@ts-ignore
+
+
 import type { ChatInfo, ChatMessage, ChatData, EnrichedMessage } from '@/types/chat'
 import { persistData, loadPersistedData, type Storage } from '@/utils/storage'
 import { STORAGE_KEYS } from '@/config/storage'
