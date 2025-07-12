@@ -199,13 +199,6 @@ export class MCPService {
 }
 
 /**
- * [步骤记录] 2025-06-24
- * 下一步：准备在 web/src/services/mcpService.ts 中 re-export callToolWithStatus，
- * 以便 web 层直接调用 engine 层的通用工具调用方法。
- * 这样 web 只需 import { callToolWithStatus } from '@/services/mcpService' 即可。
- */
-
-/**
  * 通用工具调用，自动处理 loading/done/error 状态
  * @param mcp MCPService 实例
  * @param name 工具名
