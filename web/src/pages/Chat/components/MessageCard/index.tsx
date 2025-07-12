@@ -250,6 +250,31 @@ const MessageCard: React.FC<MessageCardProps> = ({ messages, cardStatus = 'stabl
         {/* 统一的头像 */}
         <div className="message-header">
           <AvatarIcon {...groupAvatarProps} />
+          {/* 右上角操作按钮 */}
+          {messages.some(msg => msg.role === 'assistant') && (
+            <div className="message-card-actions">
+              {/* 只对每条 assistant 消息分别控制按钮状态 */}
+              {messages.filter(msg => msg.role === 'assistant').map(msg => (
+                <React.Fragment key={msg.id}>
+                  <Button
+                    type="text"
+                    size="small"
+                    icon={markdownEnabled[msg.id] ? <EyeInvisibleOutlined /> : <EyeOutlined />}
+                    onClick={() => toggleMarkdown(msg.id)}
+                    title={markdownEnabled[msg.id] ? '关闭 Markdown 渲染' : '开启 Markdown 渲染'}
+                    style={{ marginRight: 4 }}
+                  />
+                  <Button
+                    type="text"
+                    size="small"
+                    icon={<CopyOutlined />}
+                    onClick={() => handleCopy(msg.content)}
+                    title="复制内容"
+                  />
+                </React.Fragment>
+              ))}
+            </div>
+          )}
         </div>
         
         {/* 消息内容容器 */}
@@ -377,26 +402,6 @@ const MessageCard: React.FC<MessageCardProps> = ({ messages, cardStatus = 'stabl
                 {/* 主内容渲染 - 带控制按钮 */}
                 {msg.content && !isTool && (
                   <div className="main-content-container">
-                    {/* 控制按钮（仅对 assistant 消息显示） */}
-                    {isAssistant && (
-                      <div className="message-content-header">
-                        <Button
-                          type="text"
-                          size="small"
-                          icon={markdownEnabled[msg.id] ? <EyeInvisibleOutlined /> : <EyeOutlined />}
-                          onClick={() => toggleMarkdown(msg.id)}
-                          title={markdownEnabled[msg.id] ? '关闭 Markdown 渲染' : '开启 Markdown 渲染'}
-                        />
-                        <Button
-                          type="text"
-                          size="small"
-                          icon={<CopyOutlined />}
-                          onClick={() => handleCopy(msg.content)}
-                          title="复制内容"
-                        />
-                      </div>
-                    )}
-                    
                     {/* 内容区域 */}
                     {isUser || isClientNotice ? (
                       <div className="main-content">

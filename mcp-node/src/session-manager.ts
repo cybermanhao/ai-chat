@@ -5,7 +5,7 @@ import { MCPServerConfig } from "./config.js";
  */
 export interface SessionData {
   sessionId: string;
-  transport: any;
+  transport: any; // 保持为 any，兼容 mcp-service.ts 的动态加载
   lastActivity: number;
   createdAt: number;
 }
@@ -90,6 +90,10 @@ export class SessionManager {
     const session = this.sessions.get(sessionId);
     if (session) {
       try {
+        // 防止递归：先移除 onclose
+        if (session.transport && typeof session.transport.onclose === 'function') {
+          session.transport.onclose = null;
+        }
         // 尝试关闭transport
         if (typeof session.transport.close === 'function') {
           session.transport.close();

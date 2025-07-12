@@ -75,10 +75,20 @@
     .message-header {
       flex-shrink: 0;
       padding-top: 0; // 头像与内容顶部对齐
+      position: relative;
       
       .avatar-icon {
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
       }
+    }
+
+    .message-card-actions {
+      position: absolute;
+      top: 8px;
+      right: 16px;
+      display: flex;
+      gap: 4px;
+      z-index: 2;
     }
 
     .message-content-wrapper {
