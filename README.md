@@ -205,3 +205,6 @@ npm run test:mcp-disconnect
 
 ## 致谢
 
+本项目的核心机制在架构设计和实现思路上，借鉴了 [openmcp](https://github.com/openmcp) 项目的诸多优秀理念（如事件驱动机制）。特别感谢 [锦恢](https://github.com/LSTM-Kirigaya) 和 [太平羊羊](https://github.com/li1553770945) 两位开源作者，不仅在技术上给予了我指导，也在精神上给予了我极大的鼓励。
+
+>nn 本项目遵循 Apache License 2.0 开源协议，相关代码修改已在本仓库中标注。
