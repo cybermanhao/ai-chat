@@ -230,6 +230,151 @@
     [
       {
         "connectionType": "STREAMABLE_HTTP",
+        "command": "mcp",
+        "args": [
+          "run",
+          "http-server-sse.py"
+        ],
+        "url": "http://127.0.0.1:8000/mcp",
+        "cwd": "c:/code/zz-ai-chat/mcp-python/example",
+        "oauth": "123",
+        "clientName": "openmcp.connect.STREAMABLE_HTTP",
+        "clientVersion": "0.0.1",
+        "env": {
+          "HOME": "C:\\Users\\32467",
+          "LOGNAME": "32467",
+          "PATH": "c:\\Users\\32467\\AppData\\Local\\Programs\\cursor\\resources\\app\\bin;C:\\Program Files (x86)\\Microsoft\\Edge\\Application;C:\\WINDOWS\\system32;C:\\WINDOWS;C:\\WINDOWS\\System32\\Wbem;C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\;C:\\WINDOWS\\System32\\OpenSSH\\;C:\\Program Files (x86)\\NVIDIA Corporation\\PhysX\\Common;C:\\Program Files\\NVIDIA Corporation\\NVIDIA NvDLISR;C:\\Program Files\\Git\\cmd;;C:\\Program Files\\nodejs;C:\\Program Files\\Bandizip\\;C:\\ProgramData\\anaconda3\\Scripts;;C:\\Program Files\\nodejs;;C:\\Program Files\\nodejs;C:\\cmake-4.0.2-windows-x86_64\\cmake-4.0.2-windows-x86_64\\bin;C:\\Program Files\\Docker\\Docker\\resources\\bin;C:\\Users\\32467\\AppData\\Local\\Programs\\Python\\Python313\\;C:\\Users\\32467\\AppData\\Local\\Programs\\Python\\Python313\\Scripts\\;C:\\Users\\32467\\AppData\\Local\\Programs\\Python\\Python313\\;C:\\Users\\32467\\AppData\\Local\\Programs\\Python\\Launcher\\;C:\\Users\\32467\\AppData\\Local\\Microsoft\\WindowsApps;C:\\Users\\32467\\AppData\\Local\\nvm;C:\\nvm4w\\nodejs;C:\\Users\\32467\\AppData\\Local\\Programs\\Ollama;C:\\Users\\32467\\.lmstudio\\bin;C:\\Us;C:\\Program Files\\TortoiseSVN\\bin;C:\\Program Files\\JetBrains\\IntelliJ IDEA 2025.1.2\\bin;C:\\Users\\32467\\AppData\\Local\\Programs\\cursor\\resources\\app\\bin;C:\\Users\\32467\\AppData\\Local\\Programs\\Microsoft VS Code\\bin",
+          "SHELL": "C:\\WINDOWS\\system32\\cmd.exe",
+          "TERM": "未设置 (Windows 默认终端)",
+          "USER": "32467"
+        },
+        "serverInfo": {
+          "name": "测试mcp server",
+          "version": "1.9.2"
+        },
+        "name": "测试mcp server",
+        "version": "1.9.2"
+      }
+    ],
+    [
+      {
+        "connectionType": "STREAMABLE_HTTP",
+        "command": "mcp",
+        "args": [
+          "run",
+          "http-server-streamable.py"
+        ],
+        "url": "http://127.0.0.1:8000/mcp",
+        "cwd": "c:/code/zz-ai-chat/mcp-python/example",
+        "oauth": "123",
+        "clientName": "openmcp.connect.STREAMABLE_HTTP",
+        "clientVersion": "0.0.1",
+        "env": {
+          "HOME": "C:\\Users\\32467",
+          "LOGNAME": "32467",
+          "PATH": "c:\\Users\\32467\\AppData\\Local\\Programs\\cursor\\resources\\app\\bin;C:\\Program Files (x86)\\Microsoft\\Edge\\Application;C:\\WINDOWS\\system32;C:\\WINDOWS;C:\\WINDOWS\\System32\\Wbem;C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\;C:\\WINDOWS\\System32\\OpenSSH\\;C:\\Program Files (x86)\\NVIDIA Corporation\\PhysX\\Common;C:\\Program Files\\NVIDIA Corporation\\NVIDIA NvDLISR;C:\\Program Files\\Git\\cmd;;C:\\Program Files\\nodejs;C:\\Program Files\\Bandizip\\;C:\\ProgramData\\anaconda3\\Scripts;;C:\\Program Files\\nodejs;;C:\\Program Files\\nodejs;C:\\cmake-4.0.2-windows-x86_64\\cmake-4.0.2-windows-x86_64\\bin;C:\\Program Files\\Docker\\Docker\\resources\\bin;C:\\Users\\32467\\AppData\\Local\\Programs\\Python\\Python313\\;C:\\Users\\32467\\AppData\\Local\\Programs\\Python\\Python313\\Scripts\\;C:\\Users\\32467\\AppData\\Local\\Programs\\Python\\Python313\\;C:\\Users\\32467\\AppData\\Local\\Programs\\Python\\Launcher\\;C:\\Users\\32467\\AppData\\Local\\Microsoft\\WindowsApps;C:\\Users\\32467\\AppData\\Local\\nvm;C:\\nvm4w\\nodejs;C:\\Users\\32467\\AppData\\Local\\Programs\\Ollama;C:\\Users\\32467\\.lmstudio\\bin;C:\\Us;C:\\Program Files\\TortoiseSVN\\bin;C:\\Program Files\\JetBrains\\IntelliJ IDEA 2025.1.2\\bin;C:\\Users\\32467\\AppData\\Local\\Programs\\cursor\\resources\\app\\bin;C:\\Users\\32467\\AppData\\Local\\Programs\\Microsoft VS Code\\bin",
+          "SHELL": "C:\\WINDOWS\\system32\\cmd.exe",
+          "TERM": "未设置 (Windows 默认终端)",
+          "USER": "32467"
+        },
+        "serverInfo": {
+          "name": "测试mcp server",
+          "version": "1.9.2"
+        },
+        "name": "测试mcp server",
+        "version": "1.9.2"
+      }
+    ],
+    [
+      {
+        "connectionType": "STDIO",
+        "command": "mcp",
+        "args": [
+          "run",
+          "http-server-streamable.py"
+        ],
+        "url": "",
+        "cwd": "{workspace}/mcp-python/example",
+        "oauth": "",
+        "clientName": "openmcp.connect.STDIO",
+        "clientVersion": "0.0.1",
+        "env": {
+          "HOME": "C:\\Users\\32467",
+          "LOGNAME": "32467",
+          "PATH": "c:\\Users\\32467\\AppData\\Local\\Programs\\cursor\\resources\\app\\bin;C:\\Program Files (x86)\\Microsoft\\Edge\\Application;C:\\WINDOWS\\system32;C:\\WINDOWS;C:\\WINDOWS\\System32\\Wbem;C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\;C:\\WINDOWS\\System32\\OpenSSH\\;C:\\Program Files (x86)\\NVIDIA Corporation\\PhysX\\Common;C:\\Program Files\\NVIDIA Corporation\\NVIDIA NvDLISR;C:\\Program Files\\Git\\cmd;;C:\\Program Files\\nodejs;C:\\Program Files\\Bandizip\\;C:\\ProgramData\\anaconda3\\Scripts;;C:\\Program Files\\nodejs;;C:\\Program Files\\nodejs;C:\\cmake-4.0.2-windows-x86_64\\cmake-4.0.2-windows-x86_64\\bin;C:\\Program Files\\Docker\\Docker\\resources\\bin;C:\\Users\\32467\\AppData\\Local\\Programs\\Python\\Python313\\;C:\\Users\\32467\\AppData\\Local\\Programs\\Python\\Python313\\Scripts\\;C:\\Users\\32467\\AppData\\Local\\Programs\\Python\\Python313\\;C:\\Users\\32467\\AppData\\Local\\Programs\\Python\\Launcher\\;C:\\Users\\32467\\AppData\\Local\\Microsoft\\WindowsApps;C:\\Users\\32467\\AppData\\Local\\nvm;C:\\nvm4w\\nodejs;C:\\Users\\32467\\AppData\\Local\\Programs\\Ollama;C:\\Users\\32467\\.lmstudio\\bin;C:\\Us;C:\\Program Files\\TortoiseSVN\\bin;C:\\Program Files\\JetBrains\\IntelliJ IDEA 2025.1.2\\bin;C:\\Users\\32467\\AppData\\Local\\Programs\\cursor\\resources\\app\\bin;C:\\Users\\32467\\AppData\\Local\\Programs\\Microsoft VS Code\\bin",
+          "SHELL": "C:\\WINDOWS\\system32\\cmd.exe",
+          "TERM": "未设置 (Windows 默认终端)",
+          "USER": "32467"
+        },
+        "serverInfo": {
+          "name": "测试mcp server",
+          "version": "1.9.2"
+        },
+        "name": "测试mcp server",
+        "version": "1.9.2"
+      }
+    ],
+    [
+      {
+        "connectionType": "STDIO",
+        "command": "mcp",
+        "args": [
+          "run",
+          "main.py"
+        ],
+        "url": "",
+        "cwd": "{workspace}/mcp-python/example",
+        "oauth": "",
+        "clientName": "openmcp.connect.STDIO",
+        "clientVersion": "0.0.1",
+        "env": {
+          "HOME": "C:\\Users\\32467",
+          "LOGNAME": "32467",
+          "PATH": "c:\\Users\\32467\\AppData\\Local\\Programs\\cursor\\resources\\app\\bin;C:\\Program Files (x86)\\Microsoft\\Edge\\Application;C:\\WINDOWS\\system32;C:\\WINDOWS;C:\\WINDOWS\\System32\\Wbem;C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\;C:\\WINDOWS\\System32\\OpenSSH\\;C:\\Program Files (x86)\\NVIDIA Corporation\\PhysX\\Common;C:\\Program Files\\NVIDIA Corporation\\NVIDIA NvDLISR;C:\\Program Files\\Git\\cmd;;C:\\Program Files\\nodejs;C:\\Program Files\\Bandizip\\;C:\\ProgramData\\anaconda3\\Scripts;;C:\\Program Files\\nodejs;;C:\\Program Files\\nodejs;C:\\cmake-4.0.2-windows-x86_64\\cmake-4.0.2-windows-x86_64\\bin;C:\\Program Files\\Docker\\Docker\\resources\\bin;C:\\Users\\32467\\AppData\\Local\\Programs\\Python\\Python313\\;C:\\Users\\32467\\AppData\\Local\\Programs\\Python\\Python313\\Scripts\\;C:\\Users\\32467\\AppData\\Local\\Programs\\Python\\Python313\\;C:\\Users\\32467\\AppData\\Local\\Programs\\Python\\Launcher\\;C:\\Users\\32467\\AppData\\Local\\Microsoft\\WindowsApps;C:\\Users\\32467\\AppData\\Local\\nvm;C:\\nvm4w\\nodejs;C:\\Users\\32467\\AppData\\Local\\Programs\\Ollama;C:\\Users\\32467\\.lmstudio\\bin;C:\\Us;C:\\Program Files\\TortoiseSVN\\bin;C:\\Program Files\\JetBrains\\IntelliJ IDEA 2025.1.2\\bin;C:\\Users\\32467\\AppData\\Local\\Programs\\cursor\\resources\\app\\bin;C:\\Users\\32467\\AppData\\Local\\Programs\\Microsoft VS Code\\bin",
+          "SHELL": "C:\\WINDOWS\\system32\\cmd.exe",
+          "TERM": "未设置 (Windows 默认终端)",
+          "USER": "32467"
+        },
+        "serverInfo": {
+          "name": "锦恢的 MCP Server",
+          "version": "1.9.2"
+        },
+        "name": "锦恢的 MCP Server",
+        "version": "1.9.2"
+      }
+    ],
+    [
+      {
+        "connectionType": "STDIO",
+        "command": "mcp",
+        "args": [
+          "run",
+          "http-server-streamable.py"
+        ],
+        "url": "",
+        "cwd": "{workspace}/mcp-python/example",
+        "oauth": "",
+        "clientName": "openmcp.connect.STDIO",
+        "clientVersion": "0.0.1",
+        "env": {
+          "HOME": "C:\\Users\\32467",
+          "LOGNAME": "32467",
+          "PATH": "c:\\Users\\32467\\AppData\\Local\\Programs\\cursor\\resources\\app\\bin;C:\\Program Files (x86)\\Microsoft\\Edge\\Application;C:\\WINDOWS\\system32;C:\\WINDOWS;C:\\WINDOWS\\System32\\Wbem;C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\;C:\\WINDOWS\\System32\\OpenSSH\\;C:\\Program Files (x86)\\NVIDIA Corporation\\PhysX\\Common;C:\\Program Files\\NVIDIA Corporation\\NVIDIA NvDLISR;C:\\Program Files\\Git\\cmd;;C:\\Program Files\\nodejs;C:\\Program Files\\Bandizip\\;C:\\ProgramData\\anaconda3\\Scripts;;C:\\Program Files\\nodejs;;C:\\Program Files\\nodejs;C:\\cmake-4.0.2-windows-x86_64\\cmake-4.0.2-windows-x86_64\\bin;C:\\Program Files\\Docker\\Docker\\resources\\bin;C:\\Users\\32467\\AppData\\Local\\Programs\\Python\\Python313\\;C:\\Users\\32467\\AppData\\Local\\Programs\\Python\\Python313\\Scripts\\;C:\\Users\\32467\\AppData\\Local\\Programs\\Python\\Python313\\;C:\\Users\\32467\\AppData\\Local\\Programs\\Python\\Launcher\\;C:\\Users\\32467\\AppData\\Local\\Microsoft\\WindowsApps;C:\\Users\\32467\\AppData\\Local\\nvm;C:\\nvm4w\\nodejs;C:\\Users\\32467\\AppData\\Local\\Programs\\Ollama;C:\\Users\\32467\\.lmstudio\\bin;C:\\Us;C:\\Program Files\\TortoiseSVN\\bin;C:\\Program Files\\JetBrains\\IntelliJ IDEA 2025.1.2\\bin;C:\\Users\\32467\\AppData\\Local\\Programs\\cursor\\resources\\app\\bin;C:\\Users\\32467\\AppData\\Local\\Programs\\Microsoft VS Code\\bin",
+          "SHELL": "C:\\WINDOWS\\system32\\cmd.exe",
+          "TERM": "未设置 (Windows 默认终端)",
+          "USER": "32467"
+        },
+        "serverInfo": {
+          "name": "测试mcp server",
+          "version": "1.9.2"
+        },
+        "name": "测试mcp server",
+        "version": "1.9.2"
+      }
+    ],
+    [
+      {
+        "connectionType": "STREAMABLE_HTTP",
         "command": "",
         "args": [],
         "url": "http://127.0.0.1:8000/mcp",
