@@ -8,7 +8,11 @@ type Tool = { name: string; description: string };
 describe('MCPService streamable http tool list', () => {
   it('should fetch tool list from MCP Python server', async () => {
     const mcp = new MCPService(STREAMABLE_URL, 'STREAMABLE_HTTP');
-    const { data, error } = await mcp.listTools();
+    const result = await Promise.race([
+      mcp.listTools(),
+      new Promise<{ data: null; error: string }>(resolve => setTimeout(() => resolve({ data: null, error: 'timeout' }), 5000))
+    ]);
+    const { data, error } = result as { data: any; error: any };
     // eslint-disable-next-line no-console
     console.log('Tool list:', data, error);
     let tools: Tool[] = [];
@@ -19,6 +23,10 @@ describe('MCPService streamable http tool list', () => {
     }
     expect(Array.isArray(tools)).toBe(true);
     const toolNames = tools.map((t) => t.name);
+    expect(toolNames.length).toBeGreaterThan(0);
     expect(toolNames).toEqual(expect.arrayContaining(['test', 'weather']));
+    if (error) {
+      console.error('MCPService error:', error);
+    }
   });
 });

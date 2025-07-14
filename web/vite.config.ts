@@ -13,8 +13,8 @@ export default defineConfig({
     alias: [
       { find: '@', replacement: path.resolve(__dirname, './src') },
       { find: '@engine', replacement: path.resolve(__dirname, '../engine') },
-      { find: 'node:stream', replacement: path.resolve(__dirname, './empty-module.js') },
-      { find: 'stream', replacement: path.resolve(__dirname, './empty-module.js') },
+      // { find: 'node:stream', replacement: path.resolve(__dirname, './empty-module.js') },
+      // { find: 'stream', replacement: path.resolve(__dirname, './empty-module.js') },
     ],
   },
   css: {
