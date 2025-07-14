@@ -10,8 +10,8 @@ import uvicorn
 mcp = FastMCP(
     '测试mcp server',
     version="11.45.14",
-    host="127.0.0.1",
-    port=8000
+
+    json_response=True
 )
 
 @mcp.resource(
@@ -94,7 +94,7 @@ def get_weather_by_code(city_code: int) -> str:
     return str(city_weather)
 
 if __name__ == '__main__':
-    app = mcp.streamable_http_app()
+    app = mcp.streamable_http_app()  # 开启 JSON 响应模式
     app.add_middleware(
         CORSMiddleware,
         allow_origins=["http://localhost:3000"],  # 或 ["*"]
@@ -102,5 +102,5 @@ if __name__ == '__main__':
         allow_methods=["*"],
         allow_headers=["*"]
     )
-    uvicorn.run(app, host="127.0.0.1", port=8000)
+    uvicorn.run(app, host="127.0.0.1", port=8864)
 

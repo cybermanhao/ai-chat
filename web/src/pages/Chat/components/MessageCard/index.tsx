@@ -234,6 +234,9 @@ const MessageCard: React.FC<MessageCardProps> = ({ messages, cardStatus = 'stabl
     return 'info';
   };
 
+  // 找到主 assistant 消消息（优先第一个）
+  const mainAssistantMsg = messages.find(msg => msg.role === 'assistant');
+
   return (
     <div className={`message-card-group ${isGroupUser ? 'group-user' : isGroupAssistant ? 'group-assistant' : isGroupTool ? 'group-tool' : 'group-notice'}`}>
       {/* 状态栏 */}
@@ -244,39 +247,12 @@ const MessageCard: React.FC<MessageCardProps> = ({ messages, cardStatus = 'stabl
           </div>
         )}
       </div>
-      
       {/* 统一的卡片容器 */}
       <div className="unified-message-card">
-        {/* 统一的头像 */}
+        {/* 统一的头像（不再显示操作按钮） */}
         <div className="message-header">
           <AvatarIcon {...groupAvatarProps} />
-          {/* 右上角操作按钮 */}
-          {messages.some(msg => msg.role === 'assistant') && (
-            <div className="message-card-actions">
-              {/* 只对每条 assistant 消息分别控制按钮状态 */}
-              {messages.filter(msg => msg.role === 'assistant').map(msg => (
-                <React.Fragment key={msg.id}>
-                  <Button
-                    type="text"
-                    size="small"
-                    icon={markdownEnabled[msg.id] ? <EyeInvisibleOutlined /> : <EyeOutlined />}
-                    onClick={() => toggleMarkdown(msg.id)}
-                    title={markdownEnabled[msg.id] ? '关闭 Markdown 渲染' : '开启 Markdown 渲染'}
-                    style={{ marginRight: 4 }}
-                  />
-                  <Button
-                    type="text"
-                    size="small"
-                    icon={<CopyOutlined />}
-                    onClick={() => handleCopy(msg.content)}
-                    title="复制内容"
-                  />
-                </React.Fragment>
-              ))}
-            </div>
-          )}
         </div>
-        
         {/* 消息内容容器 */}
         <div className={`message-content-wrapper ${messages.some(msg => msg.role === 'client-notice') ? `notice-${getNoticeType(messages.find(msg => msg.role === 'client-notice')!)}` : ''}`}>
           {messages.map((msg, index) => {
@@ -288,7 +264,7 @@ const MessageCard: React.FC<MessageCardProps> = ({ messages, cardStatus = 'stabl
             
             // 渲染每条消息的内容（不含头像）
             return (
-              <div key={msg.id} className={`message-content-item ${msg.role}`}>
+              <div key={msg.id} className={`message-content-item ${msg.role}`}> 
                 {/* reasoning_content 渲染：思考过程，在主内容之前显示 */}
                 {(isAssistant || (isLegacyMessage(msg) && msg.reasoning_content)) && (
                   (() => {
@@ -314,7 +290,6 @@ const MessageCard: React.FC<MessageCardProps> = ({ messages, cardStatus = 'stabl
                     ) : null;
                   })()
                 )}
-                
                 {/* Assistant 消息中的工具调用 - 只在调用进行中时显示 */}
                 {isAssistant && (
                   (() => {
@@ -357,12 +332,11 @@ const MessageCard: React.FC<MessageCardProps> = ({ messages, cardStatus = 'stabl
                     ) : null;
                   })()
                 )}
-                
                 {/* tool 内容渲染 - 使用 ToolCallCard 组件 */}
                 {isTool && msg.content && (
                   <ToolCallCard
                     key={`tool-card-${msg.id}`}
-                    id={`tool_${msg.id}`} // 使用更稳定的ID格式
+                    id={`tool_${msg.id}`}
                     toolName={
                       (isToolMessage(msg) && msg.toolName) || 
                       (isLegacyMessage(msg) && msg.toolName) || 
@@ -398,10 +372,29 @@ const MessageCard: React.FC<MessageCardProps> = ({ messages, cardStatus = 'stabl
                     }
                   />
                 )}
-                
-                {/* 主内容渲染 - 带控制按钮 */}
+                {/* 主内容渲染 - assistant 消息右上角显示按钮 */}
                 {msg.content && !isTool && (
-                  <div className="main-content-container">
+                  <div className="main-content-container" style={{ position: 'relative' }}>
+                    {/* 只针对 assistant 消息显示按钮 */}
+                    {isAssistant && (
+                      <div className="message-card-actions" style={{ position: 'absolute', top: 0, right: 0, zIndex: 2 }}>
+                        <Button
+                          type="text"
+                          size="small"
+                          icon={markdownEnabled[msg.id] ? <EyeInvisibleOutlined /> : <EyeOutlined />}
+                          onClick={() => toggleMarkdown(msg.id)}
+                          title={markdownEnabled[msg.id] ? '关闭 Markdown 渲染' : '开启 Markdown 渲染'}
+                          style={{ marginRight: 4 }}
+                        />
+                        <Button
+                          type="text"
+                          size="small"
+                          icon={<CopyOutlined />}
+                          onClick={() => handleCopy(msg.content)}
+                          title="复制内容"
+                        />
+                      </div>
+                    )}
                     {/* 内容区域 */}
                     {isUser || isClientNotice ? (
                       <div className="main-content">
@@ -409,10 +402,15 @@ const MessageCard: React.FC<MessageCardProps> = ({ messages, cardStatus = 'stabl
                       </div>
                     ) : (
                       <div className="main-content">
-                        {markdownEnabled[msg.id] ? (
-                          <div className="markdown-content" dangerouslySetInnerHTML={{ __html: markdownToHtml(msg.content) }} />
+                        {/* assistant 消息受 markdownEnabled 控制 */}
+                        {isAssistant ? (
+                          markdownEnabled[msg.id] ? (
+                            <div className="markdown-content" dangerouslySetInnerHTML={{ __html: markdownToHtml(msg.content) }} />
+                          ) : (
+                            <div className="text-content">{msg.content}</div>
+                          )
                         ) : (
-                          <div className="text-content">{msg.content}</div>
+                          <div className="markdown-content" dangerouslySetInnerHTML={{ __html: markdownToHtml(msg.content) }} />
                         )}
                       </div>
                     )}
