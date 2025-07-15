@@ -26,6 +26,9 @@ export interface MCPServerConfig {
   
   /** MCP 端点路径 */
   mcpPath: string;
+
+  /** 工具列表，支持自动注入工具 */
+  tools?: any[];
 }
 
 /**

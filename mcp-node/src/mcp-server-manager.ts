@@ -25,22 +25,22 @@ export class MCPServerManager {
   /**
    * 创建并设置一个新的 MCP 服务器实例
    */
-  public async createServerInstance(): Promise<Server> {
+  public async createServerInstance(customTools?: any[]): Promise<Server> {
     const serverInstance = new Server(this.serverInfo, {
       capabilities: {
         tools: {}
       }
     });
-    await this.setupServerInstance(serverInstance);
+    await this.setupServerInstance(serverInstance, customTools);
     return serverInstance;
   }
 
   /**
    * 设置服务器实例，注册所有工具、资源和提示
    */
-  private async setupServerInstance(serverInstance: Server): Promise<void> {
+  private async setupServerInstance(serverInstance: Server, customTools?: any[]): Promise<void> {
     // 使用功能注册器注册所有功能
-    await MCPFunctionRegistry.registerAll(serverInstance);
+    await MCPFunctionRegistry.registerAll(serverInstance, customTools);
   }
 
   /**

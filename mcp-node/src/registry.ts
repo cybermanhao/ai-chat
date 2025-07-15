@@ -19,8 +19,28 @@ import {
   dateTimeToolSchema,
   dateTimeToolHandler,
   textToolSchema,
-  textToolHandler
+  textToolHandler,
+  getAllBuiltinTools
 } from "./tools/index.js";
+
+function normalizeTools(tools: any[]): any[] {
+  // 支持 defineTool 风格和 tools 目录风格
+  return tools.map(t => {
+    if (t.handler && t.inputSchema && t.name) {
+      // defineTool 风格
+      return t;
+    } else if (t.schema && t.handler) {
+      // tools 目录风格（如 {schema, handler}）
+      return {
+        name: t.schema.name,
+        description: t.schema.description,
+        inputSchema: t.schema.inputSchema,
+        handler: t.handler
+      };
+    }
+    return t;
+  });
+}
 
 /**
  * MCP 功能注册器 - 使用正确的 MCP SDK API
@@ -31,21 +51,32 @@ export class MCPFunctionRegistry {
   /**
    * 注册所有功能到 MCP 服务器
    */
-  public static async registerAll(serverInstance: Server): Promise<void> {
-    // 注册工具列表处理器
-    this.registerToolsListHandler(serverInstance);
-    
-    // 注册工具调用处理器
-    this.registerToolCallHandler(serverInstance);
-    
+  public static async registerAll(serverInstance: Server, customTools?: any[]): Promise<void> {
+    let allTools: any[] = [];
+    if (customTools && customTools.length) {
+      allTools = normalizeTools(customTools);
+    } else {
+      allTools = getAllBuiltinTools();
+    }
+    this.registerToolsListHandler(serverInstance, allTools);
+    this.registerToolCallHandler(serverInstance, allTools);
     console.log("[MCPFunctionRegistry] 所有功能注册完成 (使用正确的 MCP SDK API)");
   }
 
   /**
    * 注册工具列表处理器
    */
-  private static registerToolsListHandler(serverInstance: Server): void {
+  private static registerToolsListHandler(serverInstance: Server, customTools?: any[]): void {
     serverInstance.setRequestHandler(ListToolsRequestSchema, async () => {
+      if (customTools && customTools.length) {
+        return {
+          tools: customTools.map(t => ({
+            name: t.name,
+            description: t.description,
+            inputSchema: t.inputSchema
+          }))
+        };
+      }
       return {
         tools: [
           {
@@ -91,39 +122,36 @@ export class MCPFunctionRegistry {
   /**
    * 注册工具调用处理器
    */
-  private static registerToolCallHandler(serverInstance: Server): void {
+  private static registerToolCallHandler(serverInstance: Server, customTools?: any[]): void {
     serverInstance.setRequestHandler(CallToolRequestSchema, async (request, extra) => {
       const { name, arguments: args } = request.params;
-      
       console.log(`[MCPFunctionRegistry] 调用工具: ${name}`, args);
-
       if (!args) {
         throw new Error("工具参数未提供");
       }
-
+      if (customTools && customTools.length) {
+        const tool = customTools.find(t => t.name === name);
+        if (tool && typeof tool.handler === 'function') {
+          return await tool.handler(args);
+        }
+        throw new Error(`Unknown tool: ${name}`);
+      }
       try {
         switch (name) {
           case weatherToolSchema.name:
             return await weatherToolHandler(args as any);
-            
           case calculatorToolSchema.name:
             return await calculatorToolHandler(args as any);
-            
           case mathToolSchema.name:
             return await mathToolHandler(args as any);
-            
           case testToolSchema.name:
             return await testToolHandler(args as any);
-            
           case bingSearchSchema.name:
             return await bingSearchHandler(args as any);
-            
           case dateTimeToolSchema.name:
             return await dateTimeToolHandler(args as any);
-            
           case textToolSchema.name:
             return await textToolHandler(args as any);
-            
           default:
             throw new Error(`Unknown tool: ${name}`);
         }

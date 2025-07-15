@@ -1,4 +1,4 @@
-import { defineTool, createMcpServer } from './dist/index.js';
+import { defineTool, createMcpServer } from './index.js';
 
 const echoTool = defineTool({
   name: 'echo',
@@ -8,7 +8,7 @@ const echoTool = defineTool({
     properties: { text: { type: 'string' } },
     required: ['text']
   },
-  handler: async ({ text }) => ({
+  handler: async ({ text }: { text: string }) => ({
     content: [{ type: 'text', text }]
   })
 });
@@ -21,7 +21,7 @@ const addTool = defineTool({
     properties: { a: { type: 'number' }, b: { type: 'number' } },
     required: ['a', 'b']
   },
-  handler: async ({ a, b }) => ({
+  handler: async ({ a, b }: { a: number; b: number }) => ({
     content: [{ type: 'text', text: String(a + b) }]
   })
 });
@@ -29,4 +29,4 @@ const addTool = defineTool({
 createMcpServer({
   tools: [echoTool, addTool],
   port: 8000
-}); 
+});

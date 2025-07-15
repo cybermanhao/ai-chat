@@ -15,8 +15,9 @@ export class MCPService {
   private mcpServerManager: MCPServerManager;
   private StreamableHTTPServerTransport: any;
   private sharedServerInstance: any; // 共享的 MCP 服务器实例
+  private customTools?: any[];
 
-  constructor(serverInfo?: MCPServerInfo, config?: MCPServerConfig) {
+  constructor(serverInfo?: MCPServerInfo, config?: MCPServerConfig, customTools?: any[]) {
     this.config = config || loadConfig();
     this.httpServer = new HTTPServer(this.config);
     this.sessionManager = new SessionManager(this.config);
@@ -28,6 +29,7 @@ export class MCPService {
     };
     
     this.mcpServerManager = new MCPServerManager(serverInfo || defaultServerInfo);
+    this.customTools = customTools;
   }
 
   /**
@@ -40,7 +42,7 @@ export class MCPService {
     await this.loadTransport();
     
     // 创建共享的 MCP 服务器实例（只创建一次）
-    this.sharedServerInstance = await this.mcpServerManager.createServerInstance();
+    this.sharedServerInstance = await this.mcpServerManager.createServerInstance(this.customTools);
     console.log("[MCPService] 共享 MCP 服务器实例创建完成");
     
     // 注册路由处理器
