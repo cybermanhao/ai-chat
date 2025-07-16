@@ -34,6 +34,8 @@ export interface MemeLoadingProps {
    * false: loadingSignal 为 boolean
    */
   queueMode?: boolean;
+  /** 是否高斯模糊遮罩，默认 true */
+  blur?: boolean;
 }
 
 const MemeLoading: React.FC<MemeLoadingProps> = ({
@@ -45,6 +47,7 @@ const MemeLoading: React.FC<MemeLoadingProps> = ({
   safemod = false, // 默认关闭 safemod
   boostDuration = 0.1, // 默认0.1秒
   queueMode = false, // 默认非队列模式
+  blur = true, // 默认高斯模糊
 }) => {
   const [status, setStatus] = useState<'load' | 'boot' | 'off'>('off');
   const [currentMeme, setCurrentMeme] = useState('');
@@ -136,7 +139,14 @@ const MemeLoading: React.FC<MemeLoadingProps> = ({
   const visibleMeme = safemod ? '' : currentMeme + (isDone && status === 'load' ? (blink ? '_' : ' ') : '_');
 
   return (
-    <div className="meme-loading" style={{ visibility, backgroundColor }}>
+    <div
+      className={['meme-loading', blur ? 'meme-loading--blur' : ''].filter(Boolean).join(' ')}
+      style={{
+        visibility,
+        backgroundColor,
+        // 只用类控制模糊，style不再直接加blur
+      }}
+    >
       <div className="meme">{safemod ? '' : visibleMeme}</div>
       {/* 我真的没有故意设置成 '_' */}
     </div>

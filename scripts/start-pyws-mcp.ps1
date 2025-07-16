@@ -20,6 +20,6 @@ Start-Sleep -Seconds 2
 
 # 3. 启动 Node.js MCP 注册服务
 Write-Host "启动 Node.js MCP 注册服务..."
-Start-Process powershell -WorkingDirectory $nodeDir -ArgumentList "-NoExit", "-Command", "tsc -p ../mcp-node; node dist/example-ws-python-tools.js" -WindowStyle Minimized
+Start-Process powershell -WorkingDirectory $nodeDir -ArgumentList "-NoExit", "-Command", "tsc -p ../mcp-node; node dist/example-ws-python-tools.js" -WindowStyle Normal
 
 Write-Host "All services started."

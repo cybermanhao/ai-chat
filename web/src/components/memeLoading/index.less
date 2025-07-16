@@ -1,18 +1,25 @@
-.meme-loading{
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    background-color:rgba(56, 60, 70, 0.2); 
-    z-index: 1000; /* 确保遮罩在最顶层 */
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    .meme{
-        margin: auto;
-        font-size: 80px;
-        font-weight: 400;
-        color: #ffffff;
-    }
+@import './meme-loading-blur.less';
+
+.meme-loading {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(56, 60, 70, 0.2);
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  .meme {
+    margin: auto;
+    font-size: 80px;
+    font-weight: 400;
+    color: #ffffff;
+  }
+}
+
+.meme-loading--blur {
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
 }

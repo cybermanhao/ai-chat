@@ -4,11 +4,15 @@ import type { PayloadAction } from '@reduxjs/toolkit';
 interface GlobalUIState {
   loadingCount: number;
   dmMode: boolean;
+  memeLoadingVisible: boolean;
+  memeLoadingBlur: boolean;
 }
 
 const initialState: GlobalUIState = {
   loadingCount: 0,
   dmMode: false,
+  memeLoadingVisible: false,
+  memeLoadingBlur: false, // 默认关闭高斯模糊
 };
 
 const globalUISlice = createSlice({
@@ -24,8 +28,14 @@ const globalUISlice = createSlice({
     setDMMode(state, action: PayloadAction<boolean>) {
       state.dmMode = action.payload;
     },
+    setMemeLoadingVisible(state, action: PayloadAction<boolean>) {
+      state.memeLoadingVisible = action.payload;
+    },
+    setMemeLoadingBlur(state, action: PayloadAction<boolean>) {
+      state.memeLoadingBlur = action.payload;
+    },
   },
 });
 
-export const { showLoading, hideLoading, setDMMode } = globalUISlice.actions;
+export const { showLoading, hideLoading, setDMMode, setMemeLoadingVisible, setMemeLoadingBlur } = globalUISlice.actions;
 export default globalUISlice.reducer;

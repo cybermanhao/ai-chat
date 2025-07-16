@@ -28,6 +28,7 @@ function App() {
   // const plugins = useSelector((state: RootState) => state.plugin.plugins);
   const dispatch: AppDispatch = useDispatch();
   const loadingCount = useSelector((state: RootState) => state.globalUI.loadingCount);
+  const memeLoadingBlur = useSelector((state: RootState) => state.globalUI.memeLoadingBlur);
   
   // 创建消息API实例
   const [messageApi, contextHolder] = message.useMessage();
@@ -115,7 +116,7 @@ function App() {
       >
         <RouterProvider router={router} />
       </ConfigProvider>
-      <MemeLoading loadingSignal={loadingCount > 0} />
+      <MemeLoading loadingSignal={loadingCount > 0} blur={memeLoadingBlur} />
     </>
   )
 }

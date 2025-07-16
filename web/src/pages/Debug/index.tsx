@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import { Button, Card, Space, Typography, Input, Select, message, InputNumber, Switch } from 'antd';
-import { useSelector, useDispatch } from 'react-redux';
 import { BugOutlined, PlusOutlined, SendOutlined, DeleteOutlined, ToolOutlined, LoadingOutlined } from '@ant-design/icons';
 import type { RootState } from '@/store';
 import type { MessageRole } from '@engine/types/chat';
 import type { ChatCompletionMessageToolCall } from 'openai/resources/chat/completions';
 import { addMessage, clearMessages, updateLastAssistantMessage } from '@/store/chatSlice';
 import { showLoading, hideLoading } from '@/store/globalUIStore';
+import MemeLoading from '@/components/memeLoading';
+import { useSelector, useDispatch } from 'react-redux';
+import { setMemeLoadingVisible, setMemeLoadingBlur } from '@/store/globalUIStore';
 import './styles.less';
 
 const { Title, Paragraph, Text } = Typography;
@@ -43,6 +45,8 @@ const Debug: React.FC = () => {
   
   // 全局加载状态
   const [memoryLoadingDuration, setMemoryLoadingDuration] = useState(3); // 内存加载持续时间（秒）
+  const [showMemeLoading, setShowMemeLoading] = useState(false);
+  const [memeBlur, setMemeBlur] = useState(true);
 
   // 添加测试消息到当前聊天
   const handleAddTestMessage = () => {
@@ -562,6 +566,21 @@ const Debug: React.FC = () => {
                 重置加载状态
               </Button>
             </Space>
+
+            <div>
+              <Text strong>开启高斯模糊：</Text>
+              <Switch
+                checked={globalUIState.memeLoadingBlur}
+                onChange={(checked) => dispatch(setMemeLoadingBlur(checked))}
+                style={{ marginLeft: 8 }}
+              />
+              <Text type="secondary" style={{ fontSize: 12, marginLeft: 8 }}>
+                {globalUIState.memeLoadingBlur ? '已开启' : '已关闭'}（全局遮罩和Debug面板同步）
+              </Text>
+            </div>
+            {globalUIState.memeLoadingVisible && (
+              <MemeLoading loadingSignal blur={globalUIState.memeLoadingBlur} />
+            )}
           </Space>
         </Card>
 
