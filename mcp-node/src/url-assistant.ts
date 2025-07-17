@@ -77,5 +77,6 @@ console.log('[MCP SDK] 注册的RAG工具:', [queryUrlTool.name, termMatchTool.n
 createMcpServer({
     tools: [queryUrlTool, termMatchTool],
     port: 10093,
+    host: '0.0.0.0',
     mcpPath: '/mcp'
 });

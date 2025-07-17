@@ -144,5 +144,6 @@ console.log('[MCP SDK] 注册的工具:', [
 createMcpServer({
   tools: [reverseTool, palindromeTool, greetingTool, translateTool, testTool, weatherTool],
   port: 10092,
+  host: '0.0.0.0',
   mcpPath: '/mcp'
 });

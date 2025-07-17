@@ -12,7 +12,7 @@
   "scripts": {
     "generate:avatars": "node --experimental-specifier-resolution=node --no-warnings scripts/generate-avatars.js",
     "dev:web": "pnpm run generate:avatars && vite --config web/vite.config.ts",
-    "build:web": "pnpm run generate:avatars && tsc -b web && vite build --config web/vite.config.ts",
+    "build:web": "pnpm run generate:avatars && tsc -b web && vite build --config web/vite.config.ts --host 0.0.0.0",
     "build:engine": "pnpm tsc -b engine",
     "build:mcp-node": "tsc -b mcp-node",
     "start:mcp-node": "tsc -p mcp-node && node mcp-node/dist/server.js",

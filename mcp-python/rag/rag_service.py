@@ -33,4 +33,4 @@ async def ws_main(ws: WebSocket):
 
 if __name__ == "__main__":
     logger.info("Starting RAGService WebSocket server on 127.0.0.1:9200")
-    uvicorn.run(app, host="127.0.0.1", port=9200)
+    uvicorn.run(app, host="0.0.0.0", port=9200)

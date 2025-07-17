@@ -42,7 +42,7 @@ export const DEFAULT_CONFIG: MCPServerConfig = {
   // heartbeatIntervalMs: 30 * 1000,   // 30秒
   // heartbeatTimeoutMs: 10 * 1000,    // 10秒
   port: 8000,
-  host: "127.0.0.1",
+  host: "0.0.0.0",
   mcpPath: "/mcp"
 };
 
