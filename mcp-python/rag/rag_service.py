@@ -4,7 +4,7 @@ from fastapi import FastAPI, WebSocket
 import uvicorn
 from typing import List, Dict, Any
 from ws_tools import ws_tool, ws_endpoint
-from vector_service import retrieve_mock as vector_retrieve
+from vector_service import rag_query
 
 app = FastAPI()
 
@@ -24,8 +24,10 @@ class Document:
 @ws_tool('retrieve')
 async def retrieve(question: str, top_k: int = 5, store: str = 'url') -> List[Dict]:
     logger.info(f"RAGService 检索: question={question}, top_k={top_k}")
-    # 直接调用 vector_service 的 retrieve
-    return await vector_retrieve(question, top_k, store)
+    # 使用真正的向量模糊检索
+    result = await rag_query(question, store=store, top_k=top_k)
+    # rag_query 返回的是 {'results': [...]}
+    return result.get('results', [])
 
 @app.websocket("/ws")
 async def ws_main(ws: WebSocket):

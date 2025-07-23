@@ -2,6 +2,7 @@ import logging
 from fastapi import WebSocket
 import inspect
 import json
+from starlette.websockets import WebSocketDisconnect
 
 WS_TOOL_REGISTRY = {}
 
@@ -25,7 +26,9 @@ async def ws_endpoint(ws: WebSocket, logger=None):
             handler = WS_TOOL_REGISTRY.get(func)
             if handler:
                 sig = inspect.signature(handler)
-                params = {k: req[k] for k in sig.parameters if k in req}
+                # 优先从 params 字段取参数，否则用顶层参数
+                params_source = req.get('params', req)
+                params = {k: params_source[k] for k in sig.parameters if k in params_source}
                 result = await handler(**params)
                 if logger:
                     logger.info(f"{func} result: {result}")
@@ -34,7 +37,14 @@ async def ws_endpoint(ws: WebSocket, logger=None):
                 if logger:
                     logger.warning(f"Unknown function: {func}")
                 await ws.send_text(json.dumps({'error': 'Unknown function'}))
+        except WebSocketDisconnect:
+            if logger:
+                logger.info("WebSocket disconnected")
+            break
         except Exception as e:
             if logger:
                 logger.error(f"Error handling request: {e}", exc_info=True)
-            await ws.send_text(json.dumps({'error': str(e)}))
+            try:
+                await ws.send_text(json.dumps({'error': str(e)}))
+            except Exception:
+                pass

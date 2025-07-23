@@ -32,7 +32,8 @@ class RagWsClient {
                         resolve(res.result);
                     } catch (e) { reject(e); }
                 });
-                this.ws.send(JSON.stringify({ func, ...params }));
+                // 发送 { func, params } 格式，兼容服务端
+                this.ws.send(JSON.stringify({ func, params }));
             };
             if (this.ready) send();
             else this.queue.push(send);
@@ -51,6 +52,7 @@ const queryUrlTool = defineTool({
         required: ['natural_language_input']
     },
     handler: async ({ natural_language_input }: { natural_language_input: string }) => {
+        console.log('[DEBUG] query_url called with input:', natural_language_input);
         const result = await ragWsClient.call('query_url', { natural_language_input });
         console.log('[DEBUG] query_url result:', result);
         return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };

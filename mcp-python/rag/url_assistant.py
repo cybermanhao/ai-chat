@@ -19,8 +19,14 @@ logger = logging.getLogger(__name__)
 from rag_service import retrieve  # 假设 rag_service.py 在同目录或包下
 # 注意：Python 文件名不能有中划线，应为 rag_service.py
 
+async def rag_term_match_tool(text: str, top_k: int = 3):
+    # 示例实现：直接调用 retrieve，或自定义 term 匹配逻辑
+    # 这里假设 retrieve 支持 term 检索
+    return await retrieve(text, top_k=top_k, store="term")
+
 @ws_tool('query_url')
 async def query_url(natural_language_input: str) -> List[Dict]:
+    logger.info(f"query_url called with input: {natural_language_input}")
     try:
         result = await retrieve(natural_language_input, top_k=1, store="url")
         logger.info(f"query_url via ragservice result: {result}")
@@ -44,5 +50,6 @@ async def ws_main(ws: WebSocket):
     await ws_endpoint(ws, logger)
 
 if __name__ == "__main__":
+    # 只启动服务，不运行测试，避免阻塞 WebSocket 服务
     logger.info("Starting URL Assistant WebSocket server on 127.0.0.1:9101")
     uvicorn.run(app, host="0.0.0.0", port=9101)
