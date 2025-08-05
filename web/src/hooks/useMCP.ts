@@ -15,7 +15,7 @@ import {
   selectActiveServer,
   selectConnectedServers,
   selectAvailableTools,
-  mcpServiceManager,
+  mcpClientManager,
   type MCPTool
 } from '../store/mcpStore';
 
@@ -41,7 +41,7 @@ export interface UseMCPReturn {
   getEnabledTools: (serverId?: string) => MCPTool[];
 
   // 直接访问服务
-  getMCPService: (serverId: string) => ReturnType<typeof mcpServiceManager.getService>;
+  getMCPClient: (serverId: string) => ReturnType<typeof mcpClientManager.getService>;
 }
 
 /**
@@ -100,8 +100,8 @@ export function useMCP(): UseMCPReturn {
   }, [servers, availableTools]);
 
   // 直接访问服务
-  const getMCPService = useCallback((serverId: string) => {
-    return mcpServiceManager.getService(serverId);
+  const getMCPClient = useCallback((serverId: string) => {
+    return mcpClientManager.getService(serverId);
   }, []);
 
   return {
@@ -126,6 +126,6 @@ export function useMCP(): UseMCPReturn {
     getEnabledTools,
 
     // 直接访问服务
-    getMCPService,
+    getMCPClient,
   };
 }

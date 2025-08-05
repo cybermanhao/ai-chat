@@ -76,9 +76,16 @@ const termMatchTool = defineTool({
 
 console.log('[MCP SDK] 注册的RAG工具:', [queryUrlTool.name, termMatchTool.name]);
 
+const serverInfo = {
+    name: '展之ai智能服务',
+    version: '1.0.0',
+    description: '集成基于rag的url跳转助手，提供自然语言查询和术语匹配功能',
+};
+
 createMcpServer({
     tools: [queryUrlTool, termMatchTool],
     port: 10093,
     host: '0.0.0.0',
-    mcpPath: '/mcp'
+    mcpPath: '/mcp',
+    serverInfo
 });

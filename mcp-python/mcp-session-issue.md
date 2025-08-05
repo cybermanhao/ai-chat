@@ -42,7 +42,7 @@ await mcp.connect(transport);
 **Test Case (`mcp-streamable-browser.test.ts`):**
 ```typescript
 import { describe, it, expect } from 'vitest';
-import { MCPService } from '../../../engine/service/mcpService';
+import { MCPClient } from '../../../engine/service/mcpService';
 
 describe('MCPService streamable http tool list', () => {
   it('should fetch tool list from MCP Python server', async () => {

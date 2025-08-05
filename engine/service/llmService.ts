@@ -38,7 +38,7 @@ export async function streamLLMChat({
   // imageService, // 预留图片 glue
   customFetch,
   signal,
-  assistantMessageId, // 新增：传入固定的 assistant 消息 ID
+  assistantMessageId, // 新增：传入固定的 assistant 消 Messages ID
 }: {
   chatId?: string; // 可选，便于跟踪会话
   baseURL: string;
@@ -318,3 +318,40 @@ export async function streamLLMChat({
 export function abortLLMStream() {
   currentStream = null;
 }
+
+// 平台适配对象：web下直接调用streamLLMChat，统一事件分发
+export const llmService = {
+  /**
+   * 统一协议消息发送，web下直接调用 streamLLMChat
+   * @param type 消息类型（仅支持 message/llm/chat）
+   * @param payload LLM请求参数
+   * @param callback 统一事件回调 { type, ... }
+   */
+  send(type: string, payload: any, callback: (msg: any) => void) {
+    if (type !== 'message/llm/chat') {
+      console.warn('llmService.send: 仅支持 message/llm/chat');
+      return;
+    }
+    streamLLMChat({
+      ...payload,
+      onChunk: (data: any) => callback({ type: 'chunk', ...data }),
+      onDone: (data: any) => callback({ type: 'done', ...data }),
+      onError: (err: any) => callback({ type: 'error', ...err }),
+      onAbort: (info: any) => callback({ type: 'abort', ...info }),
+      onToolCall: (toolCall: any) => callback({ type: 'toolcall', ...toolCall }),
+    });
+  },
+
+  /**
+   * 中断 LLM 推理（可选实现）
+   */
+  abort(type: string, payload: any, callback: (msg: any) => void) {
+    // 如有 abort 能力可实现，否则留空
+    // abortLLMStream();
+    callback({ type: 'abort', ...payload });
+  }
+};
+
+// 用法示例：
+// llmService.send('message/llm/chat', payload, (msg) => { ... })
+// llmService.abort('message/llm/abort', payload, (msg) => { ... })

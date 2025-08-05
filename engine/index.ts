@@ -27,9 +27,9 @@ export * from './stream';
 export * from './managers';
 
 // 导出核心服务（避免 Tool 类型冲突）
-export { MCPService } from './service/mcpService';
+export { MCPClient } from './service/mcpClient';
 export { streamLLMChat, abortLLMStream } from './service/llmService';
-export type { Tool as MCPTool } from './service/mcpService';
+export type { Tool as MCPTool } from './service/mcpClient';
 
 // 导出核心工具函数
 export { 

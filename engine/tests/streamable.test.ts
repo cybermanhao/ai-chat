@@ -1,11 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { MCPService } from '../service/mcpService';
+import { MCPClient } from '../service/mcpClient';
 
 const STREAMABLE_URL = 'http://127.0.0.1:8000/mcp';
 
-describe('MCPService streamable http tool list', () => {
+describe('mcpClient streamable http tool list', () => {
   it('should fetch tool list from MCP Python server', async () => {
-    const mcp = new MCPService(STREAMABLE_URL, 'STREAMABLE_HTTP');
+    const mcp = new MCPClient(STREAMABLE_URL, 'STREAMABLE_HTTP');
     const { data, error } = await mcp.listTools();
     // 打印工具列表
     // eslint-disable-next-line no-console

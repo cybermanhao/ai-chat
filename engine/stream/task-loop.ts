@@ -1,11 +1,34 @@
 // engine/stream/task-loop.ts
 // 任务循环（task-loop）：负责消息生成任务的全生命周期、流式状态、事件订阅，彻底解耦 UI/Redux
 // 支持 onChunk、onDone、onError、onStatus、onAdd、onUpdate 等回调
+// TaskLoop：负责管理一个聊天会话的消息流、工具链自动推理、事件分发等核心逻辑
+// 用法说明：
+// 1. 每个聊天会话建议 new 一个 TaskLoop 实例，传入 chatId、历史消息、配置、mcpClient。
+// 2. 每次用户输入时，调用 taskLoop.start(input)，自动处理大模型推理和工具调用链。
+// 3. 内部通过 epoch 轮次自动处理工具调用，直到本次输入的推理链全部完成。
+// 4. 支持事件订阅（subscribe），可监听 add/update/toolcall/toolresult/status/error/done 等事件。
+// 5. 完全解耦 UI/Redux，业务层只需订阅事件和调用 start/abortTask。
+// 6. 消息历史自动维护，支持多轮工具链和流式推理。
+// 7. 工具调用由 mcpClient 注入，支持多端 glue。
+// 8. 兼容 system 消息、历史恢复、异常处理等场景。
+//
+// 典型流程：
+// - 用户输入 -> start(input)
+// - 大模型推理（streamLLMChat）
+// - 检测到工具调用 -> 处理工具调用 -> 工具结果加入消息流
+// - 自动进入下一轮 epoch，继续推理，直到无工具调用或达到最大轮数
+// - 事件流通知 UI 层更新
+//
+// 设计目标：最大化业务逻辑复用，彻底解耦 glue/adapter 层，支持 Web/Electron/SSC 多端。
+//
+// 详细事件流机制、工具链自动化、异常处理等见相关文档和注释。
 import { streamLLMChat } from '../service/llmService';
 import type { EnrichedMessage, IMessageCardStatus } from '../types/chat';
 import type { ToolCall, EnhancedChunk } from './streamHandler';
 import { generateUserMessageId } from '../utils/messageIdGenerator';
-import { MCPService } from '../service/mcpService';
+import { MCPClient } from '../service/mcpClient';
+import { MessageBridge, type MessageBridgeOptions } from '../service/messagebridge';
+import { createMessageBridge } from '../service/messageBridgeInstance';
 
 export type TaskLoopEvent =
   | { type: 'add'; message: EnrichedMessage; cardStatus?: IMessageCardStatus }
@@ -30,24 +53,28 @@ export class TaskLoop {
   private messages: EnrichedMessage[] = [];
   private config: any;
   private abortController: AbortController | null = null;
-  private mcpService: MCPService | null = null;
+  private mcpClient: MCPClient | null = null;
+  // engine 层如需 messageBridge 实例，可在此创建（参数可为 null 或 TODO 注释，实际 glue 由 web 层注入）
+  private messageBridge: MessageBridge;
 
-  constructor(opts: { chatId: string; history?: EnrichedMessage[]; config?: any; mcpService?: MCPService }) {
+  constructor(opts: { chatId: string; history?: EnrichedMessage[]; config?: any; mcpClient?: MCPClient; messageBridgeOptions?: MessageBridgeOptions }) {
     this.chatId = opts.chatId;
     // 深拷贝历史消息，完全避免 Redux immutable 中间件的干扰
     // 使用 Array.from + 深拷贝确保数组完全可变
     this.messages = opts.history ? Array.from(JSON.parse(JSON.stringify(opts.history))) : [];
     this.config = opts.config;
-    this.mcpService = opts.mcpService || null; // 由外部注入 MCP 服务
-    
+    this.mcpClient = opts.mcpClient || null;
+    // 直接使用全局 messageBridge 实例
+    this.messageBridge = createMessageBridge({ env: 'web', mcpClient: this.mcpClient, llmService: null });
+
     // 确保始终包含 system 消消息，这对工具调用很重要
     this.ensureSystemMessage();
     
     // 确保数组是可扩展的
     console.log('[TaskLoop] Constructor - Array extensible:', Object.isExtensible(this.messages));
     console.log('[TaskLoop] Constructor - messages length:', this.messages.length);
-    console.log('[TaskLoop] Constructor - MCP 服务注入状态:', this.mcpService ? '已注入' : '未注入');
-    if (this.mcpService) {
+    console.log('[TaskLoop] Constructor - MCP 服务注入状态:', this.mcpClient ? '已注入' : '未注入');
+    if (this.mcpClient) {
       console.log('[TaskLoop] Constructor - MCP 服务实例存在，工具调用功能可用');
     } else {
       console.log('[TaskLoop] Constructor - MCP 服务未注入，工具调用功能不可用');
@@ -143,7 +170,23 @@ export class TaskLoop {
     } else {
       this.messages.push(userMessage);
     }
-    console.log('[TaskLoop] Successfully added user message');
+    
+    // 按照架构设计：TaskLoop管理消息创建，发出用户消息事件
+    this.emit({ type: 'add', message: userMessage, cardStatus: 'stable' });
+    console.log('[TaskLoop] Successfully added user message and emitted add event');
+    
+    // 立即创建助手消息占位符（MessageCard group占位）
+    const assistantPlaceholder: EnrichedMessage = {
+      id: this.config.assistantMessageId || `assistant-${Date.now()}`,
+      role: 'assistant',
+      content: '',
+      timestamp: Date.now(),
+    };
+    
+    // 发出助手占位消息事件
+    this.emit({ type: 'add', message: assistantPlaceholder, cardStatus: 'connecting' });
+    console.log('[TaskLoop] Created assistant placeholder and emitted add event');
+    
     const MAX_EPOCHS = 8;
     for (let epoch = 0; epoch < MAX_EPOCHS; ++epoch) {
       const taskId = `task-${Date.now()}-${epoch}`;
@@ -156,7 +199,7 @@ export class TaskLoop {
         // 发出状态事件：连接中（初始状态）
         this.emit({ type: 'status', taskId, status: 'connecting', cardStatus: 'connecting' });
         
-        // 解包 config 字段，逐项传递给 streamLLMChat，避免直接传递 config 对象
+        // 解包 config 字段，逐项传递给 messageBridge
         const { baseURL, apiKey, model, temperature, tools, parallelToolCalls, ...restConfig } = this.config || {};
         
         console.log('[TaskLoop] 解包的配置参数:');
@@ -167,7 +210,8 @@ export class TaskLoop {
         console.log('[TaskLoop] parallelToolCalls:', parallelToolCalls);
         console.log('[TaskLoop] restConfig:', restConfig);
         
-        await streamLLMChat({
+        // 通过 messageBridge 发送 LLM 请求
+        this.messageBridge.chatLLM({
           chatId: this.chatId,
           messages: this.messages,
           baseURL,
@@ -175,65 +219,49 @@ export class TaskLoop {
           model,
           temperature,
           tools,
-          parallelToolCalls, // 明确传递这个参数
-          ...restConfig, // 允许额外参数透传
+          parallelToolCalls,
+          ...restConfig,
           signal: this.abortController.signal,
-          assistantMessageId: this.config.assistantMessageId, // 传递固定的 assistant 消息 ID
-          onChunk: (chunk: EnhancedChunk) => {
-            // 使用 StreamHandler 提供的 phase 信息来更新状态
-            let cardStatus: IMessageCardStatus = 'stable';
-            let statusText = '';
+          assistantMessageId: this.config.assistantMessageId,
+        });
+
+        // 注册协议事件监听（只处理协议事件，不处理 UI 本地事件）
+        const protocolEvents: Array<'chunk'|'status'|'toolcall'|'toolresult'|'done'|'error'|'abort'> = ['chunk','status','toolcall','toolresult','done','error','abort'];
+        protocolEvents.forEach(eventType => {
+          this.messageBridge.on(eventType, (payload: any) => {
+            console.log(`[TaskLoop] 收到MessageBridge协议事件: ${eventType}`, payload);
             
-            switch (chunk.phase) {
-              case 'connecting':
-                cardStatus = 'connecting';
-                statusText = 'connecting';
-                break;
-              case 'thinking':
-                cardStatus = 'thinking';
-                statusText = 'thinking';
-                break;
-              case 'generating':
-                cardStatus = 'generating';
-                statusText = 'generating';
-                break;
-              case 'tool_calling':
-                cardStatus = 'tool_calling';
-                statusText = 'tool_calling';
-                break;
+            // 协议事件转换为UI事件
+            if (eventType === 'chunk') {
+              // chunk协议事件 → update UI事件
+              this.emit({ 
+                type: 'update', 
+                message: {
+                  role: payload.role,
+                  content: payload.content,
+                  reasoning_content: payload.reasoning_content,
+                  tool_calls: payload.tool_calls,
+                },
+                cardStatus: payload.phase === 'thinking' ? 'thinking' : 
+                           payload.phase === 'generating' ? 'generating' :
+                           payload.phase === 'tool_calling' ? 'tool_calling' : 'generating'
+              });
+            } else {
+              // 其他协议事件直接转发到UI
+              this.emit({ ...payload, type: eventType });
             }
             
-            // 发出状态更新事件
-            this.emit({ type: 'status', taskId, status: statusText, cardStatus });
-            
-            // 发出内容更新事件
-            // console.log('[TaskLoop] 发送 update 事件:', {
-            //   content_length: chunk.content?.length || 0,
-            //   reasoning_content_length: chunk.reasoning_content?.length || 0,
-            //   phase: chunk.phase,
-            //   role: chunk.role
-            // });
-            this.emit({ type: 'update', message: chunk, cardStatus });
-          },
-          onToolCall: (toolCall: any) => {
-            console.log('[TaskLoop] ============ onToolCall 被触发! ============');
-            console.log('[TaskLoop] 工具调用详情:', JSON.stringify(toolCall, null, 2));
-            this.emit({ type: 'toolcall', toolCall, cardStatus: 'tool_calling' });
-            needToolCall = true;
-            console.log('[TaskLoop] 设置 needToolCall = true');
-          },
-          onDone: (result: any) => {
-            if (!aborted) {
-              this.emit({ type: 'done', taskId, result, cardStatus: 'stable' });
-              
-              // 不再在这里添加 assistant 消息，因为消息已经在 update 事件中创建和更新了
+            // 业务逻辑处理
+            if (eventType === 'toolcall') {
+              needToolCall = true;
+              console.log('[TaskLoop] 设置 needToolCall = true (toolcall 事件已由 messageBridge 分发)');
+            }
+            if (eventType === 'done' && !aborted) {
               // 只需要确保 result 被添加到本地消息历史中用于后续的工具调用轮次
-              const assistantMessage = result as EnrichedMessage;
+              const assistantMessage = payload as EnrichedMessage;
               if (assistantMessage && 
                   assistantMessage.role === 'assistant' && 
-                  (assistantMessage.content || ('tool_calls' in assistantMessage && assistantMessage.tool_calls))) {
-                
-                // 安全地添加助手消息到本地历史
+                  (assistantMessage.content || ('tool_calls' in assistantMessage && (assistantMessage as any).tool_calls))) {
                 if (!Object.isExtensible(this.messages)) {
                   console.log('[TaskLoop] Array not extensible for assistant message, creating new array');
                   this.messages = [...this.messages, assistantMessage];
@@ -250,13 +278,9 @@ export class TaskLoop {
                 console.warn('[TaskLoop] 跳过无效的助手消息:', assistantMessage);
               }
             }
-          },
-          onError: (err: any) => {
-            if (!aborted) {
-              this.emit({ type: 'error', taskId, error: String(err), cardStatus: 'stable' });
-            }
-          }
+          });
         });
+        // UI 本地事件（add/update）仍由 TaskLoop 内部 emit
       } catch (err) {
         if (!aborted) {
           this.emit({ type: 'error', taskId, error: String(err) });
@@ -267,7 +291,7 @@ export class TaskLoop {
       
       console.log('[TaskLoop] ========== Epoch', epoch, '完成 ==========');
       console.log('[TaskLoop] needToolCall:', needToolCall);
-      console.log('[TaskLoop] mcpService exists:', !!this.mcpService);
+      console.log('[TaskLoop] mcpClient exists:', !!this.mcpClient);
       console.log('[TaskLoop] 当前消息历史长度:', this.messages.length);
       console.log('[TaskLoop] 最后一条消息:', this.messages[this.messages.length - 1]);
       
@@ -275,7 +299,7 @@ export class TaskLoop {
         console.log('[TaskLoop] ========== 进入工具调用分支 ==========');
         
         // 自动工具链调用逻辑
-        if (!this.mcpService) {
+        if (!this.mcpClient) {
           console.warn('[TaskLoop] 需要工具调用但 MCP 服务未注入，跳过工具调用');
           break;
         }
@@ -346,7 +370,7 @@ export class TaskLoop {
             console.log(`[TaskLoop] 即将调用工具: ${toolCall.function.name}`, args);
             
             try {
-              const result = await this.mcpService!.callTool(toolCall.function.name, args);
+              const result = await this.mcpClient!.callTool(toolCall.function.name, args);
               console.log('[TaskLoop] 工具调用结果:', JSON.stringify(result, null, 2));
               
               // 构造工具结果消息
@@ -446,6 +470,11 @@ export class TaskLoop {
   }
 
   abortTask() {
+    // 通过 MessageBridge 发送中断协议，适配多端
+    if (this.messageBridge) {
+      this.messageBridge.abortLLM();
+    }
+    // 保留本地 abortController.abort()，确保本地流中断
     if (this.abortController) {
       this.abortController.abort();
       // 触发中断事件，可自定义 taskId
@@ -456,6 +485,30 @@ export class TaskLoop {
   // ...可扩展 abortTask、getTaskStatus 等
 }
 
+/**
+ * TaskLoop 用法示例：
+ *
+ * // 创建 TaskLoop 实例（web端环境）
+ * const taskLoop = new TaskLoop({
+ *   chatId: 'chat-xxx',
+ *   history: [],
+ *   config: { model: 'gpt-4', ... },
+ *   mcpClient: mcpClientInstance
+ *   // 可选：messageBridgeOptions: { env: 'web', mcpClient: mcpClientInstance }
+ * });
+ *
+ * // 订阅事件（UI层）
+ * taskLoop.subscribe((event) => {
+ *   // 处理 add/update/toolcall/toolresult/status/done/error 事件
+ *   // 如：更新 UI、消息流、工具链状态等
+ * });
+ *
+ * // 启动推理任务
+ * taskLoop.start('用户输入内容');
+ *
+ * // 中断任务
+ * taskLoop.abortTask();
+ */
 // 修改原因：
 // 1. 支持多轮对话和自动工具链，需每个会话/聊天 new 一个 TaskLoop 实例，内部维护自己的消息和状态。
 // 2. 旧的单例导出已废弃，防止多会话状态混乱。

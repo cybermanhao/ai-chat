@@ -21,7 +21,7 @@
    - ✅ 不可变状态更新（内置Immer）
 
 3. **基础服务层框架** 🔄
-   - MCPService类框架
+   - MCPClient类框架
    - MCPTool类型定义
    - 传输层抽象设计
 
@@ -29,7 +29,7 @@
 
 #### 1. MCP连接服务实现 (高优先级)
 ```typescript
-// 需要在 web/src/services/mcpService.ts 中实现
+// 需要在 web/src/services/mcpClient.ts 中实现
 class MCPConnectionService {
   async connectToServer(serverId: string, url: string): Promise<ConnectionResult>
   async disconnectFromServer(serverId: string): Promise<void>
@@ -66,7 +66,7 @@ export const disconnectServer = createAsyncThunk(...)  // ✅ 完成
 ### 1. 服务层重构
 ```
 web/src/services/
-├── mcpService.ts           (主要MCP服务)
+├── mcpClient.ts           (主要MCP服务)
 ├── mcpTransport.ts         (传输层抽象)
 ├── mcpConnectionManager.ts (连接管理器)
 └── mcpToolRegistry.ts      (工具注册表)

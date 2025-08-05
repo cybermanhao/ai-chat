@@ -6,7 +6,7 @@ import type { RootState, AppDispatch } from '@/store';
 import { addServer, removeServer, setActiveServer, connectServer, disconnectServer } from '@/store/mcpStore';
 import './styles.less';
 import ToolManagerModal from '@/components/Modal/ToolManagerModal';
-import type { MCPTool } from '@/services/mcpService';
+import type { MCPTool } from '@/services/mcpClient';
 
 interface ServerFormData {
   name: string;

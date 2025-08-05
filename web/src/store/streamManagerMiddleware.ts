@@ -9,7 +9,7 @@ import { TaskLoop } from '@engine/stream/task-loop';
 import { llms } from '@engine/utils/llms';
 // import { createStreamingPatch } from './utils/messageDiff'; // 注释掉差分更新逻辑
 import { generateUserMessageId } from '@engine/utils/messageIdGenerator';
-import { selectAvailableTools, mcpServiceManager } from './mcpStore';
+import { selectAvailableTools, mcpClientManager } from './mcpStore';
 // import { StreamingPerformanceMonitor } from './utils/performanceMonitor'; // 注释掉性能监控
 
 // LLM 任务参数类型，便于类型推导和后续扩展
@@ -146,17 +146,8 @@ const taskLoopMiddleware: Middleware = (storeAPI: any) => next => async action =
     console.log('[TaskLoop] 发现可用的 MCP 工具:', availableMCPTools.length, '个');
     console.log('[TaskLoop] 转换为 OpenAI 格式的工具:', openAITools.length, '个');
     
-    // 追加用户消息
-    const userMessage: EnrichedMessage = {
-      id: generateUserMessageId(),
-      role: 'user',
-      content: input,
-      timestamp: Date.now(),
-    };
-    storeAPI.dispatch(addMessage({ chatId, message: userMessage }));
+    // 设置生成状态（消息创建由TaskLoop管理）
     storeAPI.dispatch(setIsGenerating({ chatId, value: true }));
-    
-    // 不再预先添加 assistant 占位消息，而是等待流式响应来决定
     
     // 多实例 TaskLoop
     let taskLoop = taskLoopMap.get(chatId);
@@ -180,6 +171,9 @@ const taskLoopMiddleware: Middleware = (storeAPI: any) => next => async action =
       parallelToolCalls: params.chatConfig?.parallelToolCalls ?? true,
     };
     
+    // 生成助手消息ID，用于TaskLoop内部消息管理
+    const assistantMessageId = `assistant-${Date.now()}`;
+    
     // 每次都重新创建TaskLoop以使用最新的llmConfig配置
     // 因为用户可能在UI中更改了模型、API Key等设置
     if (taskLoop) {
@@ -201,18 +195,18 @@ const taskLoopMiddleware: Middleware = (storeAPI: any) => next => async action =
     // 获取活跃的 MCP 服务
     const currentState = storeAPI.getState();
     const activeServer = currentState.mcp?.servers?.find(s => s.id === currentState.mcp?.activeServerId);
-    const mcpService = activeServer?.isConnected 
-      ? mcpServiceManager.getService(activeServer.id) 
+    const mcpClient = activeServer?.isConnected 
+      ? mcpClientManager.getService(activeServer.id) 
       : undefined;
     
     console.log('[TaskLoop] 活跃 MCP 服务器:', activeServer?.name || '无');
-    console.log('[TaskLoop] MCP 服务注入状态:', mcpService ? '已注入' : '未注入');
+    console.log('[TaskLoop] MCP 服务注入状态:', mcpClient ? '已注入' : '未注入');
     
     taskLoop = new TaskLoop({
       chatId,
       history: JSON.parse(JSON.stringify(messagesWithSystemPrompt)), // 使用包含系统提示词的消息历史
       config: llmConfig, // 传入完整的 LLM 配置而不是 chatConfig
-      mcpService, // 注入 MCP 服务
+      mcpClient, // 注入 MCP 服务
     });
     taskLoopMap.set(chatId, taskLoop);
     // 事件流 glue
@@ -230,32 +224,18 @@ const taskLoopMiddleware: Middleware = (storeAPI: any) => next => async action =
           timestamp: event.message.timestamp || Date.now(),
         };
         storeAPI.dispatch(addMessage({ chatId, message: enrichedMsg }));
-        // 默认设置为连接中状态（如果没有指定 cardStatus）
-        if (!event.cardStatus) {
-          storeAPI.dispatch(setMessageCardStatus({ chatId, status: 'connecting' }));
+        // 设置 cardStatus（如果事件中指定了）
+        if (event.cardStatus) {
+          storeAPI.dispatch(setMessageCardStatus({ chatId, status: event.cardStatus }));
         }
       } else if (event.type === 'update') {
-        // 如果是第一次更新且还没有assistant消息，先创建一个
-        const state = storeAPI.getState();
-        const currentMessages = state.chat.chatData[chatId]?.messages || [];
-        const lastMessage = currentMessages[currentMessages.length - 1];
-        
-        // 如果最后一条消息不是assistant消息，说明还没有创建助手消息，需要先创建
-        if (!lastMessage || lastMessage.role !== 'assistant') {
-          const assistantMessage: EnrichedMessage = {
-            id: event.message.id || `assistant-${Date.now()}`,
-            role: 'assistant' as const,
-            content: event.message.content || '',
-            timestamp: event.message.timestamp || Date.now(),
-            reasoning_content: (event.message as any).reasoning_content,
-            tool_calls: (event.message as any).tool_calls,
-            prefix: (event.message as any).prefix,
-          };
-          storeAPI.dispatch(addMessage({ chatId, message: assistantMessage }));
-          console.log('[StreamManagerMiddleware] 创建新的 assistant 消息:', assistantMessage.id);
+        // 直接更新现有的 assistant 消息（占位符已经在前面创建）
+        storeAPI.dispatch(patchLastAssistantMessage({ chatId, patch: event.message }));
+        // 状态转换：从 connecting -> thinking/generating
+        if (event.cardStatus) {
+          storeAPI.dispatch(setMessageCardStatus({ chatId, status: event.cardStatus }));
         } else {
-          // 更新现有的 assistant 消息
-          storeAPI.dispatch(patchLastAssistantMessage({ chatId, patch: event.message }));
+          storeAPI.dispatch(setMessageCardStatus({ chatId, status: 'generating' }));
         }
       } else if (event.type === 'toolcall') {
         // 处理工具调用事件
@@ -322,8 +302,11 @@ const taskLoopMiddleware: Middleware = (storeAPI: any) => next => async action =
         // monitor.logStats();
       }
     });
+    // 启动TaskLoop，但不立即取消订阅
     await taskLoop.start(input);
-    unsubscribe();
+    
+    // 注意：不立即unsubscribe()，让事件能继续流转到UI
+    // unsubscribe将在done/error事件中调用，或者TaskLoop实例被替换时调用
     
     // 清理缓存和 TaskLoop（可选，根据业务需求决定是否保持长连接）
     // taskLoopMap.delete(chatId);

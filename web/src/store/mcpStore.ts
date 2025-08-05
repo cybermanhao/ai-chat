@@ -1,18 +1,20 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
-import type { Tool } from '@engine/service/mcpService';
-import { MCPService } from '@engine/service/mcpService';
+import type { Tool } from '@engine/service/mcpClient';
+import { MCPClient } from '@engine/service/mcpClient';
 import { mcpNotificationService } from '@/services/mcpNotificationService';
+import { messageBridge } from '@engine/service/messageBridgeInstance';
+import { llmService } from '@engine/service/llmService';
 
 // MCP服务实例管理器
-class MCPServiceManager {
-  private services = new Map<string, MCPService>();
+class MCPClientManager {
+  private services = new Map<string, MCPClient>();
 
-  getService(serverId: string): MCPService | undefined {
+  getService(serverId: string): MCPClient | undefined {
     return this.services.get(serverId);
   }
 
-  createService(serverId: string, url: string): MCPService {
+  createService(serverId: string, url: string): MCPClient {
     // 如果已存在，先清理
     const existing = this.services.get(serverId);
     if (existing) {
@@ -20,7 +22,7 @@ class MCPServiceManager {
     }
 
     // 创建新的服务实例
-    const service = new MCPService(url);
+    const service = new MCPClient(url);
     this.services.set(serverId, service);
     return service;
   }
@@ -29,132 +31,88 @@ class MCPServiceManager {
     const service = this.services.get(serverId);
     if (service) {
       try {
-        console.log(`[MCPServiceManager] 断开服务 ${serverId}`);
+        console.log(`[MCPClientManager] 断开服务 ${serverId}`);
         await service.disconnect();
-        console.log(`[MCPServiceManager] 服务 ${serverId} 断开成功`);
+        console.log(`[MCPClientManager] 服务 ${serverId} 断开成功`);
       } catch (error) {
-        console.error(`[MCPServiceManager] 断开服务 ${serverId} 时出错:`, error);
+        console.error(`[MCPClientManager] 断开服务 ${serverId} 时出错:`, error);
         // 即使断开失败，也要从管理器中移除
       } finally {
         this.services.delete(serverId);
-        console.log(`[MCPServiceManager] 服务 ${serverId} 已从管理器中移除`);
+        console.log(`[MCPClientManager] 服务 ${serverId} 已从管理器中移除`);
       }
     }
   }
 
   async removeAllServices(): Promise<void> {
-    console.log('[MCPServiceManager] 开始清理所有服务...');
+    console.log('[MCPClientManager] 开始清理所有服务...');
     const promises = Array.from(this.services.entries()).map(async ([serverId, service]) => {
       try {
-        console.log(`[MCPServiceManager] 断开服务 ${serverId}`);
+        console.log(`[MCPClientManager] 断开服务 ${serverId}`);
         await service.disconnect();
-        console.log(`[MCPServiceManager] 服务 ${serverId} 断开成功`);
+        console.log(`[MCPClientManager] 服务 ${serverId} 断开成功`);
       } catch (error) {
-        console.error(`[MCPServiceManager] 断开服务 ${serverId} 时出错:`, error);
+        console.error(`[MCPClientManager] 断开服务 ${serverId} 时出错:`, error);
       }
     });
     await Promise.all(promises);
     this.services.clear();
-    console.log('[MCPServiceManager] 所有服务已清理完成');
+    console.log('[MCPClientManager] 所有服务已清理完成');
   }
 }
 
 // 全局服务管理器实例
-const mcpServiceManager = new MCPServiceManager();
+const mcpClientManager = new MCPClientManager();
+
+// 启动时注入真实依赖和环境
+messageBridge['mcpClient'] = mcpClientManager;
+messageBridge['llmService'] = llmService;
+messageBridge['env'] = 'web';
 
 // 异步 thunk actions
 export const connectServer = createAsyncThunk(
   'mcp/connectServer',
-  async ({ serverId, url }: { serverId: string; url: string }, { rejectWithValue, getState }) => {
-    try {
-      console.log(`[MCPStore] 开始连接服务器 ${serverId}, URL: ${url}`);
-      
-      // 获取服务器名称
-      const state = getState() as { mcp: MCPState };
-      const server = state.mcp.servers.find(s => s.id === serverId);
-      const serverName = server?.name || serverId;
-      
-      // 创建并连接MCP服务
-      const mcpService = mcpServiceManager.createService(serverId, url);
-      await mcpService.connect();
-      
-      // 获取工具列表
-      console.log(`[MCPStore] 获取服务器 ${serverId} 的工具列表`);
-      const toolsResult = await mcpService.listTools();
-      
-      if (toolsResult.error) {
-        throw new Error(toolsResult.error);
-      }
-      
-      // 转换为MCPTool格式，添加enabled字段
-      const tools: MCPTool[] = toolsResult.data.map(tool => ({
-        ...tool,
-        enabled: true // 默认启用所有工具
-      }));
-      
-      console.log(`[MCPStore] 服务器 ${serverId} 连接成功，获取到 ${tools.length} 个工具`);
-      
-      // 显示连接成功消息
-      mcpNotificationService.showServerConnected(serverName, tools.length);
-      
-      return { serverId, tools };
-    } catch (error) {
-      console.error(`[MCPStore] 服务器 ${serverId} 连接失败:`, error);
-      
-      // 获取服务器名称用于错误消息
-      const state = getState() as { mcp: MCPState };
-      const server = state.mcp.servers.find(s => s.id === serverId);
-      const serverName = server?.name || serverId;
-      
-      // 显示连接失败消息
-      mcpNotificationService.showServerConnectionFailed(
-        serverName, 
-        error instanceof Error ? error.message : '连接失败'
-      );
-      
-      // 清理失败的服务实例
-      await mcpServiceManager.removeService(serverId);
-      return rejectWithValue(error instanceof Error ? error.message : '连接失败');
-    }
+  async ({ serverId, url }: { serverId: string; url: string }, { rejectWithValue }) => {
+    return new Promise<{ serverId: string; tools: any[] }>((resolve, reject) => {
+      messageBridge.connectMCP(serverId, url);
+      const onDone = (payload: any) => {
+        if (payload.serverId === serverId) {
+          messageBridge.off('done', onDone);
+          resolve({ serverId, tools: payload.tools });
+        }
+      };
+      const onError = (payload: any) => {
+        if (payload.serverId === serverId) {
+          messageBridge.off('error', onError);
+          reject(rejectWithValue(payload.error));
+        }
+      };
+      messageBridge.on('done', onDone);
+      messageBridge.on('error', onError);
+    });
   }
 );
 
 export const disconnectServer = createAsyncThunk(
   'mcp/disconnectServer',
-  async (serverId: string, { rejectWithValue, getState }) => {
-    try {
-      console.log(`[MCPStore] 开始断开服务器 ${serverId}`);
-      
-      // 获取服务器名称
-      const state = getState() as { mcp: MCPState };
-      const server = state.mcp.servers.find(s => s.id === serverId);
-      const serverName = server?.name || serverId;
-      
-      // 断开并移除服务实例
-      await mcpServiceManager.removeService(serverId);
-      
-      console.log(`[MCPStore] 服务器 ${serverId} 断开成功`);
-      
-      // 显示断开连接消息
-      mcpNotificationService.showServerDisconnected(serverName);
-      
-      return serverId;
-    } catch (error) {
-      console.error(`[MCPStore] 服务器 ${serverId} 断开失败:`, error);
-      
-      // 获取服务器名称用于错误消息
-      const state = getState() as { mcp: MCPState };
-      const server = state.mcp.servers.find(s => s.id === serverId);
-      const serverName = server?.name || serverId;
-      
-      // 显示断开连接失败消息
-      mcpNotificationService.showServerDisconnectionFailed(
-        serverName, 
-        error instanceof Error ? error.message : '断开连接失败'
-      );
-      
-      return rejectWithValue(error instanceof Error ? error.message : '断开连接失败');
-    }
+  async (serverId: string, { rejectWithValue }) => {
+    return new Promise<string>((resolve, reject) => {
+      messageBridge.disconnectMCP(serverId);
+      const onDone = (payload: any) => {
+        if (payload.serverId === serverId) {
+          messageBridge.off('done', onDone);
+          resolve(serverId);
+        }
+      };
+      const onError = (payload: any) => {
+        if (payload.serverId === serverId) {
+          messageBridge.off('error', onError);
+          reject(rejectWithValue(payload.error));
+        }
+      };
+      messageBridge.on('done', onDone);
+      messageBridge.on('error', onError);
+    });
   }
 );
 
@@ -184,7 +142,7 @@ export const reconnectServers = createAsyncThunk(
     const hideLoading = mcpNotificationService.showReconnectStarted(serversToReconnect.length);
     
     // 首先清理所有连接状态，避免状态不一致
-    await mcpServiceManager.removeAllServices();
+    await mcpClientManager.removeAllServices();
     
     // 并发重连所有服务器
     const reconnectPromises = serversToReconnect.map(server => 
@@ -243,12 +201,12 @@ export const callTool = createAsyncThunk(
       const server = state.mcp.servers.find(s => s.id === serverId);
       const serverName = server?.name || serverId;
       
-      const mcpService = mcpServiceManager.getService(serverId);
-      if (!mcpService) {
+      const mcpClient = mcpClientManager.getService(serverId);
+      if (!mcpClient) {
         throw new Error(`服务器 ${serverId} 未连接`);
       }
       
-      const result = await mcpService.callTool(toolName, args);
+      const result = await mcpClient.callTool(toolName, args);
       
       if (result.error) {
         throw new Error(result.error);
@@ -300,7 +258,7 @@ export const selectAvailableTools = (state: { mcp: MCPState }) => {
 };
 
 // 导出服务管理器，供其他组件使用
-export { mcpServiceManager };
+export { mcpClientManager };
 
 // 扩展的工具接口，包含启用状态
 export interface MCPTool extends Tool {
@@ -349,7 +307,7 @@ const mcpSlice = createSlice({
         state.activeServerId = undefined;
       }
       // 异步清理MCP服务实例
-      mcpServiceManager.removeService(action.payload).catch(console.error);
+      mcpClientManager.removeService(action.payload).catch(console.error);
     },
     setActiveServer(state, action: PayloadAction<string | undefined>) {
       state.activeServerId = action.payload;
@@ -384,7 +342,7 @@ const mcpSlice = createSlice({
       }));
       state.activeServerId = undefined;
       // 异步清理所有MCP服务实例
-      mcpServiceManager.removeAllServices().catch(console.error);
+      mcpClientManager.removeAllServices().catch(console.error);
     },
     // 清除服务器错误状态
     clearServerError(state, action: PayloadAction<string>) {
@@ -404,13 +362,16 @@ const mcpSlice = createSlice({
         }
       })
       .addCase(connectServer.fulfilled, (state, action) => {
-        const { serverId, tools } = action.payload;
+        const payload = action.payload as any;
+        if (payload && typeof payload === 'object' && 'serverId' in payload && 'tools' in payload) {
+          const { serverId, tools } = payload;
         const server = state.servers.find(s => s.id === serverId);
         if (server) {
           server.isConnected = true;
           server.loading = false;
           server.tools = tools;
-          server.error = undefined; // 清除错误状态
+            server.error = undefined;
+          }
         }
       })
       .addCase(connectServer.rejected, (state, action) => {
@@ -428,12 +389,15 @@ const mcpSlice = createSlice({
         }
       })
       .addCase(disconnectServer.fulfilled, (state, action) => {
-        const server = state.servers.find(s => s.id === action.payload);
+        const payload = action.payload as any;
+        if (typeof payload === 'string') {
+          const server = state.servers.find(s => s.id === payload);
         if (server) {
           server.isConnected = false;
           server.loading = false;
           server.tools = [];
-          server.error = undefined; // 清除错误状态
+            server.error = undefined;
+          }
         }
       })
       .addCase(disconnectServer.rejected, (state, action) => {

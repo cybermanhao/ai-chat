@@ -309,6 +309,193 @@ const Debug: React.FC = () => {
       </div>
 
       <div className="debug-content">
+        {/* MessageBridge 测试面板 - 最上方 */}
+        <Card title="🧪 MessageBridge 测试" size="small" style={{ marginBottom: 16 }}>
+          <Space direction="vertical" style={{ width: '100%' }}>
+            <Text type="secondary">
+              测试 TaskLoop → MessageBridge → llmService 集成状态
+            </Text>
+            <Space>
+              <Button
+                type="primary"
+                size="small"
+                onClick={async () => {
+                  console.log('=== MessageBridge 测试开始 ===');
+                  
+                  try {
+                    const { createMessageBridge } = await import('@engine/service/messageBridgeInstance');
+                    const { llmService } = await import('@engine/service/llmService');
+                    
+                    console.log('✅ 模块导入成功');
+                    
+                    // 创建实例
+                    const messageBridge = createMessageBridge('web', {
+                      mcpClient: null,
+                      llmService: llmService,
+                    });
+                    
+                    console.log('✅ MessageBridge 实例创建成功');
+                    
+                    // 测试事件系统
+                    let eventReceived = false;
+                    messageBridge.on('status', (payload: any) => {
+                      console.log('📨 收到事件:', payload);
+                      eventReceived = true;
+                    });
+                    
+                    messageBridge.emit('status', { status: 'test', timestamp: Date.now() });
+                    
+                    setTimeout(() => {
+                      if (eventReceived) {
+                        message.success('✅ MessageBridge 事件系统正常！');
+                        console.log('✅ MessageBridge 测试完成');
+                      } else {
+                        message.error('❌ MessageBridge 事件系统异常');
+                      }
+                    }, 100);
+                    
+                  } catch (error) {
+                    console.error('❌ MessageBridge 测试失败:', error);
+                    message.error(`MessageBridge 测试失败: ${error instanceof Error ? error.message : String(error)}`);
+                  }
+                }}
+              >
+                测试 MessageBridge
+              </Button>
+              
+              <Button
+                size="small"
+                onClick={async () => {
+                  console.log('=== TaskLoop 测试开始 ===');
+                  
+                  try {
+                    const { TaskLoop } = await import('@engine/stream/task-loop');
+                    
+                    const taskLoop = new TaskLoop({
+                      chatId: 'debug-test',
+                      history: [],
+                      config: {
+                        model: 'test-model',
+                        temperature: 0.7
+                      },
+                      mcpClient: null
+                    });
+                    
+                    console.log('✅ TaskLoop 实例创建成功');
+                    
+                    let eventCount = 0;
+                    const unsubscribe = taskLoop.subscribe((event: any) => {
+                      eventCount++;
+                      console.log(`📦 TaskLoop 事件 ${eventCount}:`, event.type);
+                    });
+                    
+                    setTimeout(() => {
+                      unsubscribe();
+                      message.success(`✅ TaskLoop 创建成功！`);
+                      console.log('✅ TaskLoop 测试完成');
+                    }, 500);
+                    
+                  } catch (error) {
+                    console.error('❌ TaskLoop 测试失败:', error);
+                    message.error(`TaskLoop 测试失败: ${error instanceof Error ? error.message : String(error)}`);
+                  }
+                }}
+              >
+                测试 TaskLoop
+              </Button>
+              
+              <Button
+                type="dashed"
+                size="small"
+                onClick={async () => {
+                  console.log('=== 真实 LLM 调用测试开始 ===');
+                  
+                  try {
+                    // 获取当前 LLM 配置
+                    const store = (window as any).__REDUX_STORE__;
+                    if (!store) {
+                      throw new Error('Redux store 未找到');
+                    }
+                    
+                    const state = store.getState();
+                    const llmConfig = state.llmConfig;
+                    const activeLLMId = llmConfig.activeLLMId;
+                    const apiKey = llmConfig.apiKeys[activeLLMId];
+                    
+                    if (!apiKey) {
+                      message.error('请先在设置中配置 API Key');
+                      return;
+                    }
+                    
+                    console.log('✅ 获取到 LLM 配置:', { activeLLMId, hasApiKey: !!apiKey });
+                    
+                    const { TaskLoop } = await import('@engine/stream/task-loop');
+                    const { llms } = await import('@engine/utils/llms');
+                    
+                    const activeLLM = llms.find(l => l.id === activeLLMId);
+                    if (!activeLLM) {
+                      throw new Error(`未找到 LLM 配置: ${activeLLMId}`);
+                    }
+                    
+                    const taskLoop = new TaskLoop({
+                      chatId: 'real-llm-test',
+                      history: [],
+                      config: {
+                        baseURL: activeLLM.baseUrl,  // 修正字段名
+                        apiKey: apiKey,
+                        model: activeLLM.models[0],
+                        temperature: 0.7,
+                        maxTokens: 100
+                      },
+                      mcpClient: null
+                    });
+                    
+                    console.log('✅ TaskLoop 实例创建成功，开始真实 LLM 调用');
+                    
+                    let eventLog: string[] = [];
+                    let responseContent = '';
+                    
+                    const unsubscribe = taskLoop.subscribe((event: any) => {
+                      console.log(`📦 真实 LLM 事件:`, event.type, event);
+                      eventLog.push(`${event.type}: ${JSON.stringify(event).substring(0, 100)}`);
+                      
+                      if (event.type === 'add' && event.message?.role === 'assistant') {
+                        responseContent = event.message.content || '';
+                      }
+                      
+                      if (event.type === 'update' && event.message?.content) {
+                        responseContent = event.message.content;
+                      }
+                      
+                      if (event.type === 'done') {
+                        unsubscribe();
+                        message.success(`✅ 真实 LLM 调用成功！响应长度: ${responseContent.length}`);
+                        console.log('📋 事件日志:', eventLog);
+                        console.log('💬 最终响应:', responseContent);
+                      }
+                      
+                      if (event.type === 'error') {
+                        unsubscribe();
+                        message.error(`❌ LLM 调用失败: ${event.error}`);
+                        console.log('📋 错误事件日志:', eventLog);
+                      }
+                    });
+                    
+                    // 发起真实的 LLM 调用
+                    taskLoop.start('你好，这是一个测试消息，请简短回复。');
+                    
+                  } catch (error) {
+                    console.error('❌ 真实 LLM 测试失败:', error);
+                    message.error(`真实 LLM 测试失败: ${error instanceof Error ? error.message : String(error)}`);
+                  }
+                }}
+              >
+                🤖 真实 LLM 测试
+              </Button>
+            </Space>
+          </Space>
+        </Card>
+
         <Card title="消息测试" size="small" style={{ marginBottom: 16 }}>
           <Space direction="vertical" style={{ width: '100%' }}>
             <div>

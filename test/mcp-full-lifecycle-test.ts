@@ -4,7 +4,7 @@
  * 测试连接、工具调用、断开连接的完整流程
  */
 
-import { MCPService } from '../engine/service/mcpService';
+import { MCPClient } from '../engine/service/mcpService';
 
 interface TestResult {
   name: string;

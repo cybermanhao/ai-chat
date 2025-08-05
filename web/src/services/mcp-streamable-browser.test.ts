@@ -1,13 +1,13 @@
 import { describe, it, expect } from 'vitest';
-import { MCPService } from '../../../engine/service/mcpService';
+import { MCPClient } from '../../../engine/service/mcpClient';
 
 const STREAMABLE_URL = 'http://127.0.0.1:8000/mcp';
 
 type Tool = { name: string; description: string };
 
-describe('MCPService streamable http tool list', () => {
+describe('MCPClient streamable http tool list', () => {
   it('should fetch tool list from MCP Python server', async () => {
-    const mcp = new MCPService(STREAMABLE_URL, 'STREAMABLE_HTTP');
+    const mcp = new MCPClient(STREAMABLE_URL, 'STREAMABLE_HTTP');
     const result = await Promise.race([
       mcp.listTools(),
       new Promise<{ data: null; error: string }>(resolve => setTimeout(() => resolve({ data: null, error: 'timeout' }), 5000))
@@ -26,7 +26,7 @@ describe('MCPService streamable http tool list', () => {
     expect(toolNames.length).toBeGreaterThan(0);
     expect(toolNames).toEqual(expect.arrayContaining(['test', 'weather']));
     if (error) {
-      console.error('MCPService error:', error);
+      console.error('MCPClient error:', error);
     }
   });
 });

@@ -1,7 +1,8 @@
 import { MCPService } from "./mcp-service";
 import { MCPServerConfig } from "./config";
+import type { MCPServerInfo } from "./mcp-server-manager";
 
-export async function createMcpServer(config: Partial<MCPServerConfig>) {
+export async function createMcpServer(config: Partial<MCPServerConfig> & { serverInfo?: MCPServerInfo }) {
   if (!config.tools || !Array.isArray(config.tools)) {
     throw new Error("请传入 tools 数组");
   }
@@ -16,7 +17,7 @@ export async function createMcpServer(config: Partial<MCPServerConfig>) {
     tools: config.tools,
     // 可补充其他默认项
   };
-  const mcpService = new MCPService(undefined, defaultConfig, config.tools);
+  const mcpService = new MCPService(config.serverInfo, defaultConfig, config.tools);
   await mcpService.start();
   return mcpService;
 }

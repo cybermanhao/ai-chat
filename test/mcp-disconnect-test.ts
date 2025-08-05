@@ -1,5 +1,5 @@
 // test/mcp-disconnect-test.ts
-import { MCPService } from '../engine/service/mcpService';
+import { MCPClient } from '../engine/service/mcpService';
 
 async function testMCPDisconnect() {
   console.log('=== MCP 断开连接测试 ===\n');

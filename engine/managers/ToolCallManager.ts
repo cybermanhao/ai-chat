@@ -6,7 +6,7 @@
 import { ChatMessageManager } from './MessageManager';
 
 export interface ToolCallHandlerOptions {
-  mcpServiceInstance: any;
+  mcpClientInstance: any;
   updateLastMessage: (patch: Partial<RuntimeMessage>) => void;
   addMessage: (msg: RuntimeMessage) => void;
 }
@@ -16,7 +16,7 @@ export async function handleToolCall(
   toolArgs: Record<string, unknown>,
   options: ToolCallHandlerOptions
 ) {
-  const { mcpServiceInstance, updateLastMessage, addMessage } = options;
+  const { mcpClientInstance, updateLastMessage, addMessage } = options;
   try {
     // 状态流转交由 glue 层
     updateLastMessage({
@@ -30,7 +30,7 @@ export async function handleToolCall(
       }]
     });
     // 调用 MCP 服务
-    const result = await mcpServiceInstance.callTool(toolName, toolArgs);
+    const result = await mcpClientInstance.callTool(toolName, toolArgs);
     // 工具调用结果消息
     const toolResultMessage = ChatMessageManager.createAssistantMessage(
       `Tool call result: ${JSON.stringify(result)}`
