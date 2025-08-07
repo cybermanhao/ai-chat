@@ -129,3 +129,4 @@ web-server.log
 *.pid
 
 vue2-ssc-demo/src/lib
+mcp-python\rag
