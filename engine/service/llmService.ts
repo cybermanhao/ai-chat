@@ -229,18 +229,21 @@ export async function streamLLMChat({
 
   const stream = await client.chat.completions.create(requestParams, { signal });
 
-  // 适配 glue：用 handleResponseStream 处理流，onChunk/onDone/onError/onToolCall 传递对象化内容
+  // 使用streamHandler处理完整逻辑，由MessageBridge负责增量处理
   try {
     // 记录已触发的工具调用，避免重复触发
     const triggeredToolCalls = new Set<string>();
     
     const result = await handleResponseStream(stream, (chunk) => {
-      // 添加更详细的调试信息（但不在流式传输过程中检查工具调用）
-      // console.log('[streamLLMChat] 收到 chunk，类型:', typeof chunk, 'tool_calls存在:', !!chunk.tool_calls);
-      
-      // 继续调用原始的 onChunk
+      // 继续调用原始的 onChunk（传递streamHandler累积的完整内容）
       if (onChunk) {
-        onChunk(chunk);
+        onChunk({
+          type: 'chunk',
+          content: chunk.content,
+          reasoning_content: chunk.reasoning_content,
+          tool_calls: chunk.tool_calls,
+          phase: chunk.phase
+        });
       }
     });
     

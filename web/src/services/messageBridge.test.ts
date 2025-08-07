@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { createMessageBridge } from '@engine/service/messageBridgeInstance';
+import { createMessageBridge } from '@engine/service/messageBridgeFactoryV2';
 import { llmService } from '@engine/service/llmService';
 
 describe('MessageBridge Web Integration', () => {
@@ -7,8 +7,8 @@ describe('MessageBridge Web Integration', () => {
   
   beforeEach(() => {
     // 为每个测试创建新的 MessageBridge 实例
-    messageBridge = createMessageBridge('web', {
-      mcpClient: null, // 测试中暂时不需要 MCP
+    messageBridge = createMessageBridge({
+      mcpClient: undefined, // 测试中暂时不需要 MCP
       llmService: llmService,
     });
   });
@@ -114,7 +114,7 @@ describe('TaskLoop Integration', () => {
         model: 'test-model',
         temperature: 0.7
       },
-      mcpClient: null
+      mcpClient: undefined
     });
     
     expect(taskLoop).toBeDefined();
@@ -131,7 +131,7 @@ describe('TaskLoop Integration', () => {
       chatId: 'test-chat',
       history: [],
       config: { model: 'test-model' },
-      mcpClient: null
+      mcpClient: undefined
     });
     
     // 订阅事件

@@ -1,0 +1,20 @@
+{
+  "name": "vue2-ssc-demo",
+  "version": "1.0.0",
+  "description": "Vue2 demo for TaskLoop SSC mode",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "vue": "^2.7.14",
+    "vue-router": "^3.6.5",
+    "vuex": "^3.6.2",
+    "axios": "^1.6.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue2": "^2.3.1",
+    "vite": "^5.0.0"
+  }
+}

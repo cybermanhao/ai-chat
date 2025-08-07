@@ -3,10 +3,13 @@ import { app, BrowserWindow, ipcMain } from 'electron';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { spawn } from 'child_process';
-// 新增导入
-import { createMessageBridge } from '../engine/dist/service/messageBridgeInstance.js';
-import { MCPClient } from '../engine/dist/service/mcpClient.js';
-import * as llmService from '../engine/dist/service/llmService.js';
+// 新增导入 (CommonJS)
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+const { createMessageBridge } = require('../engine/dist/service/messageBridgeFactoryV2.js');
+const { createProtocolAdapter, ServerMessageHandler } = require('../engine/dist/service/protocolAdapters.js');
+const { MCPClient } = require('../engine/dist/service/mcpClient.js');
+const llmService = require('../engine/dist/service/llmService.js');
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -76,65 +79,28 @@ ipcMain.handle('start-task', async (event, params) => {
 // 新增流式聊天处理
 // 初始化 MessageBridge
 const mcpClient = new MCPClient();
-const messageBridge = createMessageBridge('electron', { mcpClient, llmService });
+const messageBridge = createMessageBridge({ mcpClient, llmService });
 
-// 实现流式聊天 IPC 处理
+// 实现流式聊天 IPC 处理 - 使用统一架构
 ipcMain.on('chat:stream', async (event, { streamId, ...payload }) => {
   try {
     // 通知渲染进程流开始
     event.sender.send(`chat:stream:start:${streamId}`);
 
-    // 通过 MessageBridge 发送请求
-    messageBridge.send('message/llm/chat', payload);
-
-    // 注册所有事件监听器
-    const eventHandlers = {
-      status: (msg) => {
-        event.sender.send(`chat:stream:status:${streamId}`, msg);
-      },
-      chunk: (msg) => {
-        event.sender.send(`chat:stream:chunk:${streamId}`, msg);
-      },
-      done: (msg) => {
-        event.sender.send(`chat:stream:done:${streamId}`, msg);
-        // 完成后清理事件监听器
-        cleanupEventHandlers();
-      },
-      error: (msg) => {
-        event.sender.send(`chat:stream:error:${streamId}`, msg);
-        // 错误后清理事件监听器
-        cleanupEventHandlers();
-      },
-      abort: (msg) => {
-        event.sender.send(`chat:stream:abort:${streamId}`, msg);
-        // 中断后清理事件监听器
-        cleanupEventHandlers();
-      },
-      toolcall: (msg) => {
-        event.sender.send(`chat:stream:toolcall:${streamId}`, msg);
-      },
-      toolresult: (msg) => {
-        event.sender.send(`chat:stream:toolresult:${streamId}`, msg);
-      }
-    };
-
-    // 注册事件监听器
-    Object.entries(eventHandlers).forEach(([eventType, handler]) => {
-      messageBridge.on(eventType, handler);
-    });
-
-    // 清理函数
-    const cleanupEventHandlers = () => {
-      Object.entries(eventHandlers).forEach(([eventType, handler]) => {
-        messageBridge.off(eventType, handler);
-      });
-    };
+    // 创建IPC协议适配器
+    const protocolAdapter = createProtocolAdapter('ipc', event, streamId);
+    
+    // 创建统一的消息处理器
+    const messageHandler = new ServerMessageHandler(protocolAdapter, messageBridge);
 
     // 监听中断请求
     ipcMain.once(`chat:stream:abort:${streamId}`, () => {
-      messageBridge.send('message/llm/abort', { streamId });
-      cleanupEventHandlers();
+      messageHandler.handleLLMAbort({ streamId });
     });
+
+    // 使用统一的处理逻辑
+    await messageHandler.handleLLMChat(payload);
+
   } catch (error) {
     event.sender.send(`chat:stream:error:${streamId}`, { error: String(error) });
   }

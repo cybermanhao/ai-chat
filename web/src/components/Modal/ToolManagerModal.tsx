@@ -23,9 +23,9 @@ const ToolManagerModal: React.FC<ToolManagerModalProps> = ({ open, onClose, them
 
   // 计算统计信息
   const connectedServers = servers.filter(s => s.isConnected);
-  const totalTools = servers.reduce((acc, server) => acc + server.tools.length, 0);
+  const totalTools = servers.reduce((acc, server) => acc + (server.tools?.length || 0), 0);
   const enabledTools = servers.reduce((acc, server) => 
-    acc + server.tools.filter(tool => tool.enabled).length, 0
+    acc + (server.tools?.filter(tool => tool.enabled)?.length || 0), 0
   );
 
   return (
@@ -121,10 +121,10 @@ const ToolManagerModal: React.FC<ToolManagerModalProps> = ({ open, onClose, them
                       错误: {server.error}
                     </div>
                   )}
-                  {server.tools.length > 0 ? (
+                  {(server.tools?.length || 0) > 0 ? (
                     <List
                       size="small"
-                      dataSource={server.tools}
+                      dataSource={server.tools || []}
                       renderItem={(tool: MCPTool) => {
                         const isActive = selectedTool?.tool.name === tool.name && selectedTool?.serverId === server.id;
                         return (

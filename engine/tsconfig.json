@@ -2,17 +2,17 @@
   "extends": "../tsconfig.json",
   "compilerOptions": {
     "outDir": "./dist",
-    "rootDir": "./",
     "composite": true,
     "declaration": true,
     "declarationMap": true,
     "emitDeclarationOnly": false,
-    "module": "ESNext",
-    "target": "ESNext",
+    "module": "CommonJS",
+    "target": "ES2020",
     "moduleResolution": "Node",
     "noImplicitAny": false,
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true
   },
-  "include": ["./**/*.ts"]
+  "include": ["./**/*.ts"],
+  "exclude": ["./dist/**/*"]
 }

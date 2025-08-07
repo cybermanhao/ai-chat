@@ -1,21 +1,37 @@
 import { MessageBridge, type MessageBridgeOptions } from './messagebridge';
 import { llmService } from './llmService';
+import { detectRuntimeMode } from '../utils/envDetect';
 
 // 创建 MessageBridge 实例的工厂函数
-export function createMessageBridge(envOrOptions: string | MessageBridgeOptions, options?: any): MessageBridge {
+export function createMessageBridge(envOrOptions?: string | MessageBridgeOptions, options?: any): MessageBridge {
   let bridgeOptions: MessageBridgeOptions;
   
-  // 兼容两种调用方式：
-  // 1. createMessageBridge('web', { mcpClient, llmService })
-  // 2. createMessageBridge({ env: 'web', mcpClient, llmService })
-  if (typeof envOrOptions === 'string') {
+  // 支持多种调用方式：
+  // 1. createMessageBridge() - 自动检测环境，默认为web
+  // 2. createMessageBridge('web', { mcpClient, llmService })
+  // 3. createMessageBridge({ env: 'web', mcpClient, llmService })
+  if (!envOrOptions) {
+    // 自动检测环境，默认为web
+    const detectedEnv = detectRuntimeMode();
+    bridgeOptions = {
+      env: detectedEnv === 'web' ? 'web' : detectedEnv, // web是默认，其他环境才替换
+      ...options,
+    };
+  } else if (typeof envOrOptions === 'string') {
     bridgeOptions = {
       env: envOrOptions,
       ...options,
     };
   } else {
     bridgeOptions = envOrOptions;
+    // 如果没有明确指定环境，进行自动检测，默认web
+    if (!bridgeOptions.env) {
+      const detectedEnv = detectRuntimeMode();
+      bridgeOptions.env = detectedEnv === 'web' ? 'web' : detectedEnv;
+    }
   }
+  
+  console.log(`[MessageBridge] 检测到运行环境: ${bridgeOptions.env}`);
   
   // 根据环境创建适配的 llmService
   const adaptedLLMService = createLLMServiceAdapter(bridgeOptions.env, bridgeOptions.llmService);
@@ -107,22 +123,125 @@ function createElectronLLMServiceAdapter(baseLLMService?: any) {
   }
 }
 
-// SSC HTTP 适配器（预留）
+// SSC HTTP 适配器
 function createSSCLLMServiceAdapter(baseLLMService?: any) {
+  // SSC模式下的HTTP端点配置
+  // 在浏览器环境中，通过globalThis获取配置或使用默认值
+  const SSC_BASE_URL = (globalThis as any).SSC_API_BASE_URL || 
+                       (typeof process !== 'undefined' && process.env?.SSC_API_BASE_URL) || 
+                       'http://localhost:8080';
+  const SSC_API_ENDPOINT = `${SSC_BASE_URL}/api/llm/chat`;
+  const SSC_ABORT_ENDPOINT = `${SSC_BASE_URL}/api/llm/abort`;
+  
+  console.log(`[SSC LLMService] 配置API端点: ${SSC_API_ENDPOINT}`);
+  
   return {
-    send(type: string, payload: any, callback: (msg: any) => void) {
+    async send(type: string, payload: any, callback: (msg: any) => void) {
       if (type !== 'message/llm/chat') {
         console.warn('SSC LLMService adapter: 仅支持 message/llm/chat');
         return;
       }
       
-      // TODO: 实现 SSC HTTP 通信逻辑
-      console.warn('SSC LLMService adapter 尚未实现');
-      callback({ type: 'error', error: 'SSC adapter not implemented' });
+      try {
+        console.log(`[SSC LLMService] 发送请求到: ${SSC_API_ENDPOINT}`);
+        console.log(`[SSC LLMService] 请求参数:`, payload);
+        
+        // 使用fetch进行HTTP请求
+        const response = await fetch(SSC_API_ENDPOINT, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'text/event-stream', // SSE格式
+          },
+          body: JSON.stringify({
+            chatId: payload.chatId,
+            messages: payload.messages,
+            model: payload.model,
+            temperature: payload.temperature,
+            tools: payload.tools,
+            parallelToolCalls: payload.parallelToolCalls,
+            // 注意：SSC模式下不传递apiKey，由后端管理
+          }),
+          signal: payload.signal, // 支持中断
+        });
+        
+        if (!response.ok) {
+          throw new Error(`SSC API请求失败: ${response.status} ${response.statusText}`);
+        }
+        
+        if (!response.body) {
+          throw new Error('SSC API响应没有body');
+        }
+        
+        console.log(`[SSC LLMService] 开始处理SSE流`);
+        
+        // 处理SSE流
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            
+            const chunk = decoder.decode(value, { stream: true });
+            const lines = chunk.split('\n');
+            
+            for (const line of lines) {
+              if (line.startsWith('data: ')) {
+                const data = line.slice(6).trim();
+                if (data === '[DONE]') {
+                  console.log(`[SSC LLMService] 流结束`);
+                  continue;
+                }
+                
+                try {
+                  const event = JSON.parse(data);
+                  console.log(`[SSC LLMService] 收到事件:`, event.type);
+                  callback(event);
+                } catch (e) {
+                  console.warn(`[SSC LLMService] 解析SSE数据失败:`, data, e);
+                }
+              }
+            }
+          }
+        } finally {
+          reader.releaseLock();
+        }
+      } catch (error) {
+        console.error(`[SSC LLMService] 请求失败:`, error);
+        callback({ 
+          type: 'error', 
+          error: error instanceof Error ? error.message : String(error) 
+        });
+      }
     },
     
-    abort(type: string, payload: any, callback: (msg: any) => void) {
-      callback({ type: 'abort', ...payload });
+    async abort(type: string, payload: any, callback: (msg: any) => void) {
+      try {
+        console.log(`[SSC LLMService] 发送中断请求到: ${SSC_ABORT_ENDPOINT}`);
+        
+        const response = await fetch(SSC_ABORT_ENDPOINT, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            chatId: payload.chatId,
+          }),
+        });
+        
+        if (response.ok) {
+          console.log(`[SSC LLMService] 中断请求成功`);
+          callback({ type: 'abort', ...payload });
+        } else {
+          console.warn(`[SSC LLMService] 中断请求失败: ${response.status}`);
+          callback({ type: 'error', error: `中断请求失败: ${response.status}` });
+        }
+      } catch (error) {
+        console.error(`[SSC LLMService] 中断请求异常:`, error);
+        callback({ type: 'error', error: String(error) });
+      }
     }
   };
 }

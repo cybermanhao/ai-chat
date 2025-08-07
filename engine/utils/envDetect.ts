@@ -1,8 +1,18 @@
 // 环境检测工具，供 glue 层/中间件统一引用
+// 修改时间: 2025-08-06 - 添加了新的注释
 
 export type RuntimeMode = 'electron' | 'web-with-nodeserver' | 'web' | 'ssc';
 
+// 构建时模式注入点 - 打包SDK时会被替换为'ssc'
+const BUILD_MODE: RuntimeMode | null = null;
+
 export function detectRuntimeMode(): RuntimeMode {
+  // 如果构建时指定了模式，直接返回（SDK构建时会注入'ssc'）
+  if (BUILD_MODE) {
+    return BUILD_MODE;
+  }
+  
+  // 运行时检测逻辑
   if (typeof window !== 'undefined' && (window as any).electronAPI) {
     return 'electron';
   }

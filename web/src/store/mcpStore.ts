@@ -14,6 +14,14 @@ class MCPClientManager {
     return this.services.get(serverId);
   }
 
+  getFirstAvailableService(): MCPClient | undefined {
+    return this.services.values().next().value;
+  }
+
+  getFirstAvailableServerId(): string | undefined {
+    return this.services.keys().next().value;
+  }
+
   createService(serverId: string, url: string): MCPClient {
     // 如果已存在，先清理
     const existing = this.services.get(serverId);
@@ -193,7 +201,7 @@ export const reconnectServers = createAsyncThunk(
 export const callTool = createAsyncThunk(
   'mcp/callTool',
   async ({ serverId, toolName, args }: { serverId: string; toolName: string; args: Record<string, any> }, { rejectWithValue, getState }) => {
-    try {
+    return new Promise<{ serverId: string; toolName: string; args: Record<string, any>; result: any }>((resolve, reject) => {
       console.log(`[MCPStore] 调用工具 ${toolName} on server ${serverId}, 参数:`, args);
       
       // 获取服务器名称
@@ -201,40 +209,44 @@ export const callTool = createAsyncThunk(
       const server = state.mcp.servers.find(s => s.id === serverId);
       const serverName = server?.name || serverId;
       
-      const mcpClient = mcpClientManager.getService(serverId);
-      if (!mcpClient) {
-        throw new Error(`服务器 ${serverId} 未连接`);
-      }
+      // 使用MessageBridge统一接口
+      messageBridge.send('message/mcp/call-tool', { serverId, toolName, args });
       
-      const result = await mcpClient.callTool(toolName, args);
+      const onToolResult = (payload: any) => {
+        if (payload.serverId === serverId && payload.toolName === toolName) {
+          messageBridge.off('toolresult', onToolResult);
+          messageBridge.off('error', onError);
+          
+          console.log(`[MCPStore] 工具 ${toolName} 调用成功:`, payload.result);
+          
+          // 显示工具调用成功消息
+          mcpNotificationService.showToolCallSuccess(toolName, serverName);
+          
+          resolve({ serverId, toolName, args, result: payload.result });
+        }
+      };
       
-      if (result.error) {
-        throw new Error(result.error);
-      }
+      const onError = (payload: any) => {
+        if (payload.serverId === serverId && payload.toolName === toolName) {
+          messageBridge.off('toolresult', onToolResult);
+          messageBridge.off('error', onError);
+          
+          console.error(`[MCPStore] 工具 ${toolName} 调用失败:`, payload.error);
+          
+          // 显示工具调用失败消息
+          mcpNotificationService.showToolCallFailed(
+            toolName, 
+            serverName, 
+            payload.error || '工具调用失败'
+          );
+          
+          reject(rejectWithValue(payload.error || '工具调用失败'));
+        }
+      };
       
-      console.log(`[MCPStore] 工具 ${toolName} 调用成功:`, result.data);
-      
-      // 显示工具调用成功消息
-      mcpNotificationService.showToolCallSuccess(toolName, serverName);
-      
-      return { serverId, toolName, args, result: result.data };
-    } catch (error) {
-      console.error(`[MCPStore] 工具 ${toolName} 调用失败:`, error);
-      
-      // 获取服务器名称用于错误消息
-      const state = getState() as { mcp: MCPState };
-      const server = state.mcp.servers.find(s => s.id === serverId);
-      const serverName = server?.name || serverId;
-      
-      // 显示工具调用失败消息
-      mcpNotificationService.showToolCallFailed(
-        toolName, 
-        serverName, 
-        error instanceof Error ? error.message : '工具调用失败'
-      );
-      
-      return rejectWithValue(error instanceof Error ? error.message : '工具调用失败');
-    }
+      messageBridge.on('toolresult', onToolResult);
+      messageBridge.on('error', onError);
+    });
   }
 );
 
@@ -369,9 +381,9 @@ const mcpSlice = createSlice({
         if (server) {
           server.isConnected = true;
           server.loading = false;
-          server.tools = tools;
-            server.error = undefined;
-          }
+          server.tools = Array.isArray(tools) ? tools : [];
+          server.error = undefined;
+        }
         }
       })
       .addCase(connectServer.rejected, (state, action) => {

@@ -14,7 +14,7 @@ export async function testMessageBridge() {
     // 测试 1: 创建实例
     console.log('\n🧪 测试 1: 创建 MessageBridge 实例');
     const messageBridge = createMessageBridge('web', {
-      mcpClient: null,
+      mcpClient: undefined,
       llmService: llmService,
     });
     console.log('✅ MessageBridge 实例创建成功');
@@ -60,7 +60,7 @@ export async function testMessageBridge() {
         model: 'test-model',
         temperature: 0.7
       },
-      mcpClient: null
+      mcpClient: undefined
     });
     
     console.log('✅ TaskLoop 实例创建成功');

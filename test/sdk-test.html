@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TaskLoop SDK Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .messages { border: 1px solid #ddd; height: 400px; overflow-y: auto; padding: 10px; margin: 10px 0; }
+        .message { margin: 5px 0; padding: 5px; border-radius: 5px; }
+        .message.user { background: #e3f2fd; }
+        .message.assistant { background: #f3e5f5; }
+        .message.tool { background: #e8f5e8; }
+        .input-area { display: flex; gap: 10px; }
+        .input-area input { flex: 1; padding: 5px; }
+        .input-area button { padding: 5px 15px; }
+        .status { padding: 5px; margin: 5px 0; border-radius: 3px; }
+        .status.connecting { background: #fff3cd; }
+        .status.generating { background: #d4edda; }
+        .status.error { background: #f8d7da; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>TaskLoop SDK 测试</h1>
+        
+        <div>
+            <label>SSC API 地址: </label>
+            <input type="text" id="apiUrl" value="http://localhost:8080" style="width: 300px;">
+        </div>
+        
+        <div style="margin: 10px 0;">
+            <label>模型: </label>
+            <select id="model">
+                <option value="deepseek-chat">DeepSeek Chat</option>
+                <option value="gpt-4">GPT-4</option>
+                <option value="qwen-turbo">Qwen Turbo</option>
+            </select>
+        </div>
+
+        <div id="status" class="status">就绪</div>
+        
+        <div id="messages" class="messages"></div>
+        
+        <div class="input-area">
+            <input type="text" id="userInput" placeholder="输入消息..." onkeypress="if(event.key==='Enter') sendMessage()">
+            <button onclick="sendMessage()">发送</button>
+            <button onclick="abortTask()">中断</button>
+            <button onclick="clearMessages()">清空</button>
+        </div>
+
+        <div style="margin-top: 20px;">
+            <h3>事件日志</h3>
+            <div id="eventLog" style="font-family: monospace; font-size: 12px; max-height: 200px; overflow-y: auto; border: 1px solid #ddd; padding: 10px;"></div>
+        </div>
+    </div>
+
+    <script type="module">
+        // 模拟TaskLoop SDK - 在实际使用中会从npm包导入
+        // import { createTaskLoop } from '@your-org/taskloop-sdk';
+        
+        let taskLoop = null;
+        let unsubscribe = null;
+
+        // 模拟的createTaskLoop函数 - 实际会使用真实的SDK
+        function createMockTaskLoop(options) {
+            console.log('创建TaskLoop实例:', options);
+            
+            const listeners = [];
+            
+            return {
+                subscribe(callback) {
+                    listeners.push(callback);
+                    return () => {
+                        const index = listeners.indexOf(callback);
+                        if (index > -1) listeners.splice(index, 1);
+                    };
+                },
+                
+                async start(input) {
+                    console.log('开始处理:', input);
+                    
+                    // 模拟用户消息
+                    listeners.forEach(cb => cb({
+                        type: 'add',
+                        message: {
+                            id: `user-${Date.now()}`,
+                            role: 'user',
+                            content: input,
+                            timestamp: Date.now()
+                        }
+                    }));
+                    
+                    // 模拟状态变化
+                    listeners.forEach(cb => cb({
+                        type: 'status',
+                        status: 'connecting'
+                    }));
+                    
+                    // 模拟助手消息占位
+                    const assistantId = `assistant-${Date.now()}`;
+                    listeners.forEach(cb => cb({
+                        type: 'add',
+                        message: {
+                            id: assistantId,
+                            role: 'assistant',
+                            content: '',
+                            timestamp: Date.now()
+                        }
+                    }));
+                    
+                    // 模拟SSC API调用
+                    try {
+                        const response = await fetch(`${options.config.sscApiBaseUrl}/api/llm/chat`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Accept': 'text/event-stream'
+                            },
+                            body: JSON.stringify({
+                                chatId: options.chatId,
+                                messages: [
+                                    { role: 'system', content: '' },
+                                    { role: 'user', content: input }
+                                ],
+                                model: options.config.model,
+                                temperature: options.config.temperature || 0.7,
+                                tools: options.config.tools || [],
+                                parallelToolCalls: options.config.parallelToolCalls || true
+                            })
+                        });
+                        
+                        if (!response.ok) {
+                            throw new Error(`API请求失败: ${response.status}`);
+                        }
+                        
+                        // 这里应该处理SSE流，但为了测试简化处理
+                        const result = await response.json();
+                        
+                        listeners.forEach(cb => cb({
+                            type: 'update',
+                            message: {
+                                id: assistantId,
+                                content: result.content || '这是模拟的SSC响应',
+                            }
+                        }));
+                        
+                        listeners.forEach(cb => cb({
+                            type: 'done'
+                        }));
+                        
+                    } catch (error) {
+                        console.error('SSC API错误:', error);
+                        listeners.forEach(cb => cb({
+                            type: 'error',
+                            error: error.message
+                        }));
+                    }
+                },
+                
+                abortTask() {
+                    listeners.forEach(cb => cb({
+                        type: 'status',
+                        status: 'aborted'
+                    }));
+                }
+            };
+        }
+
+        function initializeTaskLoop() {
+            const apiUrl = document.getElementById('apiUrl').value;
+            const model = document.getElementById('model').value;
+            
+            if (unsubscribe) {
+                unsubscribe();
+            }
+            
+            taskLoop = createMockTaskLoop({
+                chatId: `test-chat-${Date.now()}`,
+                config: {
+                    model: model,
+                    temperature: 0.7,
+                    sscApiBaseUrl: apiUrl,
+                    parallelToolCalls: true
+                }
+            });
+            
+            unsubscribe = taskLoop.subscribe((event) => {
+                handleTaskLoopEvent(event);
+            });
+            
+            updateStatus('TaskLoop 已初始化');
+        }
+
+        function handleTaskLoopEvent(event) {
+            logEvent(event);
+            
+            switch (event.type) {
+                case 'add':
+                    addMessage(event.message);
+                    break;
+                case 'update':
+                    updateMessage(event.message);
+                    break;
+                case 'status':
+                    updateStatus(`状态: ${event.status}`);
+                    break;
+                case 'toolcall':
+                    logEvent(`工具调用: ${event.toolCall.function.name}`);
+                    break;
+                case 'toolresult':
+                    logEvent(`工具结果: ${event.result}`);
+                    break;
+                case 'done':
+                    updateStatus('完成');
+                    break;
+                case 'error':
+                    updateStatus(`错误: ${event.error}`, 'error');
+                    break;
+            }
+        }
+
+        function addMessage(message) {
+            const messagesDiv = document.getElementById('messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${message.role}`;
+            messageDiv.id = message.id;
+            messageDiv.innerHTML = `<strong>${message.role}:</strong> ${message.content}`;
+            messagesDiv.appendChild(messageDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        function updateMessage(messageUpdate) {
+            const messageDiv = document.getElementById(messageUpdate.id);
+            if (messageDiv) {
+                const role = messageDiv.className.split(' ')[1];
+                messageDiv.innerHTML = `<strong>${role}:</strong> ${messageUpdate.content}`;
+            }
+        }
+
+        function updateStatus(text, type = 'info') {
+            const statusDiv = document.getElementById('status');
+            statusDiv.textContent = text;
+            statusDiv.className = `status ${type}`;
+        }
+
+        function logEvent(event) {
+            const eventLog = document.getElementById('eventLog');
+            const logEntry = document.createElement('div');
+            logEntry.textContent = `[${new Date().toLocaleTimeString()}] ${typeof event === 'string' ? event : JSON.stringify(event)}`;
+            eventLog.appendChild(logEntry);
+            eventLog.scrollTop = eventLog.scrollHeight;
+        }
+
+        window.sendMessage = function() {
+            const input = document.getElementById('userInput');
+            const message = input.value.trim();
+            
+            if (!message) return;
+            
+            if (!taskLoop) {
+                initializeTaskLoop();
+            }
+            
+            taskLoop.start(message);
+            input.value = '';
+        };
+
+        window.abortTask = function() {
+            if (taskLoop) {
+                taskLoop.abortTask();
+            }
+        };
+
+        window.clearMessages = function() {
+            document.getElementById('messages').innerHTML = '';
+            document.getElementById('eventLog').innerHTML = '';
+            updateStatus('已清空');
+        };
+
+        // 页面加载完成后初始化
+        window.addEventListener('load', () => {
+            updateStatus('页面已加载，请输入消息开始测试');
+        });
+    </script>
+</body>
+</html>

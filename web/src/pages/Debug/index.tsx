@@ -330,7 +330,7 @@ const Debug: React.FC = () => {
                     
                     // 创建实例
                     const messageBridge = createMessageBridge('web', {
-                      mcpClient: null,
+                      mcpClient: undefined,
                       llmService: llmService,
                     });
                     
@@ -378,7 +378,7 @@ const Debug: React.FC = () => {
                         model: 'test-model',
                         temperature: 0.7
                       },
-                      mcpClient: null
+                      mcpClient: undefined
                     });
                     
                     console.log('✅ TaskLoop 实例创建成功');
@@ -447,7 +447,7 @@ const Debug: React.FC = () => {
                         temperature: 0.7,
                         maxTokens: 100
                       },
-                      mcpClient: null
+                      mcpClient: undefined
                     });
                     
                     console.log('✅ TaskLoop 实例创建成功，开始真实 LLM 调用');

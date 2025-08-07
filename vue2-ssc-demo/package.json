@@ -1,0 +1,18 @@
+{
+  "name": "vue2-ssc-demo",
+  "version": "1.0.0",
+  "description": "Vue2 demo project for TaskLoop SSC SDK verification",
+  "main": "index.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "serve": "vite preview"
+  },
+  "dependencies": {
+    "vue": "^2.7.16"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue2": "^2.3.1",
+    "vite": "^4.5.2"
+  }
+}

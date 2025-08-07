@@ -127,3 +127,5 @@ aidocs/
 mcp-server.log
 web-server.log
 *.pid
+
+vue2-ssc-demo/src/lib

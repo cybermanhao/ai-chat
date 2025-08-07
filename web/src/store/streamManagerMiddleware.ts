@@ -229,13 +229,46 @@ const taskLoopMiddleware: Middleware = (storeAPI: any) => next => async action =
           storeAPI.dispatch(setMessageCardStatus({ chatId, status: event.cardStatus }));
         }
       } else if (event.type === 'update') {
-        // 直接更新现有的 assistant 消息（占位符已经在前面创建）
-        storeAPI.dispatch(patchLastAssistantMessage({ chatId, patch: event.message }));
-        // 状态转换：从 connecting -> thinking/generating
+        // 处理增量内容更新（优先使用delta，性能优化）
+        const patch: any = { role: event.message.role };
+        
+        // 每次都获取最新状态，确保累加基于最新的消息内容
+        const getCurrentMessage = () => {
+          const currentState = storeAPI.getState();
+          const messages = currentState.chat.chatData[chatId]?.messages || [];
+          return messages[messages.length - 1];
+        };
+        
+        // 处理增量内容更新（只支持增量模式）
+        if (event.message.content_delta !== undefined) {
+          const msg = getCurrentMessage();
+          if (msg && msg.role === 'assistant') {
+            patch.content = (msg.content || '') + event.message.content_delta;
+          } else {
+            patch.content = event.message.content_delta;
+          }
+        }
+        
+        // 处理增量推理内容更新（只支持增量模式）
+        if (event.message.reasoning_delta !== undefined) {
+          const msg = getCurrentMessage();
+          if (msg && msg.role === 'assistant') {
+            patch.reasoning_content = (msg.reasoning_content || '') + event.message.reasoning_delta;
+          } else {
+            patch.reasoning_content = event.message.reasoning_delta;
+          }
+        }
+        
+        // 工具调用直接使用完整数据，不需要增量处理
+        if (event.message.tool_calls !== undefined) {
+          patch.tool_calls = event.message.tool_calls;
+        }
+        
+        storeAPI.dispatch(patchLastAssistantMessage({ chatId, patch }));
+      } else if (event.type === 'status') {
+        // 独立处理状态变化事件
         if (event.cardStatus) {
           storeAPI.dispatch(setMessageCardStatus({ chatId, status: event.cardStatus }));
-        } else {
-          storeAPI.dispatch(setMessageCardStatus({ chatId, status: 'generating' }));
         }
       } else if (event.type === 'toolcall') {
         // 处理工具调用事件
@@ -283,9 +316,24 @@ const taskLoopMiddleware: Middleware = (storeAPI: any) => next => async action =
           console.log('[StreamManagerMiddleware] 更新工具调用状态:', { chatId, toolCallId, updates });
         }
       } else if (event.type === 'done') {
-        // 流完成时，停止生成状态并重置 MessageCard 状态
+        // done事件表示LLM流完成，但不需要添加新消息（增量更新已经处理了内容）
+        // 只需要确保最终的tool_calls被正确设置到现有消息中
+        console.log('[StreamManagerMiddleware] Done事件内容:', event);
+        
+        // 如果done事件包含tool_calls，需要更新现有助手消息的tool_calls
+        if (event.tool_calls && event.tool_calls.length > 0) {
+          console.log('[StreamManagerMiddleware] Done事件包含tool_calls，更新现有助手消息');
+          storeAPI.dispatch(patchLastAssistantMessage({ 
+            chatId, 
+            patch: { tool_calls: event.tool_calls }
+          }));
+        }
+        
+        // 流完成时，停止生成状态，但不重置MessageCard状态
+        // cardStatus将由TaskLoop根据后续是否有工具调用来管理
         storeAPI.dispatch(setIsGenerating({ chatId, value: false }));
-        storeAPI.dispatch(setMessageCardStatus({ chatId, status: 'stable' }));
+        // 注释掉立即重置cardStatus，让TaskLoop管理完整的生命周期
+        // storeAPI.dispatch(setMessageCardStatus({ chatId, status: 'stable' }));
         // 注释掉差分更新缓存清理
         // lastAssistantMessageMap.delete(chatId);
         // 注释掉性能统计输出
