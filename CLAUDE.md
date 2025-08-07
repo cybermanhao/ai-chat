@@ -46,7 +46,7 @@ This is a multi-platform AI chat application with MCP (Model Context Protocol) i
   - Zustand for state management
   - Ant Design UI components
   - Built with Vite, supports hot reload
-- **`ssc-server/`** - SSC (Server-Side Computing) backend server
+- **`ssc-server/`** - SSC (server-side-clientputing) backend server
   - Express-based HTTP/SSE API server
   - LLM proxy service with multiple provider support
   - MCP tool calling proxy
@@ -113,7 +113,7 @@ The `engine/stream/task-loop.ts` manages the complete lifecycle of chat message 
 
 When working with this codebase, pay special attention to the TaskLoop and MessageBridge patterns as they are central to the application's architecture and handle the complex multi-turn conversation and tool calling logic.
 
-## SSC (Server-Side Computing) Mode
+## SSC (server-side-clientputing) Mode
 
 The SSC architecture enables deployment of AI capabilities as a backend service:
 

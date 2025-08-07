@@ -1,6 +1,6 @@
 # ZZ AI Chat
 
-一个现代化的 AI 聊天应用，支持多端部署和SSC（Server-Side Computing）架构，基于TaskLoop引擎和MCP协议，提供灵活的AI对话和工具调用能力。
+一个现代化的 AI 聊天应用，支持多端部署和SSC（server-side-clientputing）架构，基于TaskLoop引擎和MCP协议，提供灵活的AI对话和工具调用能力。
 
 本项目支持SSC模式客户端SDK，详见下文。
 
@@ -141,7 +141,7 @@ TaskLoop是客户端消息流控制的核心引擎，负责：
 
 ### SSC架构
 
-SSC (Server-Side Computing) 模式将AI计算能力部署到服务端：
+SSC (server-side-clientputing) 模式将AI计算能力部署到服务端：
 
 ```
 客户端SDK --HTTP/SSE--> SSC服务器 --API--> LLM提供商
@@ -247,7 +247,7 @@ Apache License 2.0
 
 ## 简介
 
-TaskLoop SDK（SSC模式）是专为 Server-Side Computing 场景设计的 LLM 聊天/任务流客户端开发包。无需 API Key，所有模型推理和工具调用均由后端 SSC 服务统一管理，前端只需专注于业务集成和事件处理。
+TaskLoop SDK（SSC模式）是专为 server-side-clientputing 场景设计的 LLM 聊天/任务流客户端开发包。无需 API Key，所有模型推理和工具调用均由后端 SSC 服务统一管理，前端只需专注于业务集成和事件处理。
 
 ---
 

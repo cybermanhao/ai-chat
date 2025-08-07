@@ -224,7 +224,7 @@ export * from './sdk-entry';
   // 创建README文件
   const readmeContent = `# TaskLoop SDK
 
-TaskLoop SDK for SSC (Server-Side Computing) mode.
+TaskLoop SDK for SSC (server-side-clientputing) mode.
 
 ## 安装
 

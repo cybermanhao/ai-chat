@@ -1,6 +1,6 @@
 # TaskLoop SSC-SDK 使用指南
 
-TaskLoop SDK提供了完整的AI聊天解决方案，支持SSC (Server-Side Computing) 模式部署。
+TaskLoop SDK提供了完整的AI聊天解决方案，支持SSC (server-side-clientputing) 模式部署。
 
 ## SSC模式架构
 
