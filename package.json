@@ -13,7 +13,11 @@
     "generate:avatars": "node --experimental-specifier-resolution=node --no-warnings scripts/generate-avatars.js",
     "dev:web": "pnpm run generate:avatars && vite --config web/vite.config.ts",
     "build:web": "pnpm run generate:avatars && tsc -b web && vite build --config web/vite.config.ts --host 0.0.0.0",
+    "build:web-ssc": "BUILD_MODE=ssc pnpm run build:web",
     "build:engine": "pnpm tsc -b engine",
+    "build:engine:web": "node scripts/build-with-mode-injection.js web engine/dist",
+    "build:engine:ssc": "node scripts/build-with-mode-injection.js ssc dist/engine-ssc",
+    "build:engine:electron": "node scripts/build-with-mode-injection.js electron dist/engine-electron",
     "build:sdk": "node scripts/build-sdk.js",
     "test:mock-ssc": "node test/mock-ssc-server.js",
     "dev:ssc-server": "cd ssc-server && npm run dev",
@@ -26,7 +30,8 @@
     "dev:electron": "cross-env NODE_ENV=development npx electron electron/main.js",
     "build:electron": "electron-builder --config electron-builder.json",
     "start:electron": "electron electron/main.js",
-    "dev:all": "concurrently \"pnpm run dev:web\" \"pnpm run dev:electron\""
+    "dev:all": "concurrently \"pnpm run dev:web\" \"pnpm run dev:electron\"",
+    "build:all": "pnpm run build:web && pnpm run build:ssc-server && pnpm run build:sdk && pnpm run build:electron"
   },
   "author": "",
   "license": "ISC",

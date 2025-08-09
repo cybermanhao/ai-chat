@@ -3,7 +3,8 @@ import type { PayloadAction } from '@reduxjs/toolkit';
 import type { Tool } from '@engine/service/mcpClient';
 import { MCPClient } from '@engine/service/mcpClient';
 import { mcpNotificationService } from '@/services/mcpNotificationService';
-import { messageBridge } from '@engine/service/messageBridgeInstance';
+// V1 to V2 Migration: 使用新的 MessageBridgeV2 和 runtimeContext 系统
+import { messageBridge } from '@engine/service/messageBridgeFactoryV2';
 import { llmService } from '@engine/service/llmService';
 
 // MCP服务实例管理器

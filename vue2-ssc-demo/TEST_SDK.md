@@ -2,7 +2,11 @@
 
 TaskLoop SDK提供了完整的AI聊天解决方案，支持SSC (server-side-clientputing) 模式部署。
 
-## SSC模式架构
+本文档面向前端开发者，提供详细的SDK集成指南、事件处理机制和最佳实践。
+
+## 架构概览
+
+### SSC模式架构
 
 ```
 前端应用                SSC服务器              AI服务
@@ -88,6 +92,89 @@ const taskLoop = createTaskLoop({
 })
 ```
 
+### 配置选项详解
+
+#### 基础配置参数
+
+```typescript
+interface TaskLoopConfig {
+  // 必需配置
+  model: string                // 模型名称
+  sscApiBaseUrl: string        // SSC 服务器地址
+  
+  // LLM 参数配置
+  temperature?: number         // 采样温度 (0.0-2.0)，默认 0.7
+  maxTokens?: number           // 最大输出 token 数，默认模型限制
+  topP?: number                // 核采样参数 (0.0-1.0)，默认 0.9
+  frequencyPenalty?: number    // 频率惩罚 (-2.0-2.0)，默认 0
+  presencePenalty?: number     // 存在惩罚 (-2.0-2.0)，默认 0
+  
+  // 工具配置
+  tools?: Tool[]               // 可用工具列表
+  parallelToolCalls?: boolean  // 是否允许并行工具调用，默认 false
+  toolChoice?: 'auto' | 'none' | { type: 'function', function: { name: string } }
+  
+  // 流式配置  
+  stream?: boolean             // 是否启用流式响应，默认 true
+  
+  // 超时配置
+  timeout?: number             // 请求超时时间（毫秒），默认 60000
+  
+  // 高级配置
+  systemPrompt?: string        // 系统提示词
+  contextWindow?: number       // 上下文窗口大小
+  
+  // 其他模型特定参数
+  [key: string]: any
+}
+```
+
+#### 支持的模型列表
+
+| 提供商 | 模型名称 | 描述 |
+|---------|---------|----------|
+| DeepSeek | `deepseek-chat` | 通用聊天模型 |
+| DeepSeek | `deepseek-coder` | 代码生成模型 |
+| OpenAI | `gpt-4` | GPT-4 最新版本 |
+| OpenAI | `gpt-4-turbo` | GPT-4 Turbo 版本 |
+| OpenAI | `gpt-3.5-turbo` | GPT-3.5 Turbo 版本 |
+| Anthropic | `claude-3-opus` | Claude 3 Opus |
+| Anthropic | `claude-3-sonnet` | Claude 3 Sonnet |
+
+#### 配置示例
+
+```javascript
+// 基础配置
+const basicConfig = {
+  model: 'deepseek-chat',
+  temperature: 0.7,
+  sscApiBaseUrl: 'http://localhost:8080'
+}
+
+// 高级配置
+const advancedConfig = {
+  model: 'gpt-4',
+  temperature: 0.3,
+  maxTokens: 4000,
+  topP: 0.9,
+  frequencyPenalty: 0.5,
+  presencePenalty: 0.2,
+  systemPrompt: '你是一个专业的AI助手。',
+  parallelToolCalls: true,
+  timeout: 120000, // 2分钟超时
+  sscApiBaseUrl: 'https://api.example.com'
+}
+
+// 代码生成专用配置
+const codingConfig = {
+  model: 'deepseek-coder',
+  temperature: 0.1, // 低温度，更精准
+  maxTokens: 8000,
+  systemPrompt: '你是一个专业的程序员，请提供高质量的代码。',
+  sscApiBaseUrl: 'http://localhost:8080'
+}
+```
+
 ### 3. 事件订阅
 
 TaskLoop采用事件驱动架构，所有交互通过事件处理：
@@ -115,17 +202,74 @@ taskLoop.abortTask()
 
 TaskLoop通过事件流提供实时的对话状态和内容更新：
 
-### 核心事件类型
+## 事件系统详解
 
-| 事件类型 | 触发时机 | 主要用途 |
-|---------|---------|----------|
-| `add` | 新消息添加 | 显示消息气泡 |
-| `update` | 内容流式更新 | 实时显示生成内容 |
-| `status` | 状态变化 | 显示处理状态 |
-| `toolcall` | 工具调用开始 | 显示工具执行过程 |
-| `toolresult` | 工具执行完成 | 显示工具结果 |
-| `done` | 对话轮次完成 | 更新最终状态 |
-| `error` | 发生错误 | 错误处理和提示 |
+TaskLoop采用事件驱动架构，通过8种核心事件类型提供实时的对话状态和内容更新：
+
+```typescript
+// 核心事件类型定义
+export type TaskLoopEvent =
+  | { type: 'add'; message: EnrichedMessage; cardStatus?: string }
+  | { type: 'update'; message: IncrementalMessage; cardStatus?: string }
+  | { type: 'status'; status: string; cardStatus?: string }
+  | { type: 'toolcall'; toolCall: ToolCall; cardStatus?: string }
+  | { type: 'toolresult'; toolCallId: string; result: string; error?: string }
+  | { type: 'done'; taskId: string; result: any; cardStatus?: string }
+  | { type: 'error'; taskId: string; error: string; cardStatus?: string }
+  | { type: 'abort'; taskId: string; cardStatus?: string };
+```
+
+### 事件类型说明
+
+| 事件类型 | 触发时机 | 主要用途 | 数据结构 |
+|---------|---------|----------|----------|
+| `add` | 新消息添加 | 显示消息气泡 | `{ message: EnrichedMessage }` |
+| `update` | 内容流式更新 | 实时显示生成内容 | `{ message: { content_delta: string } }` |
+| `status` | 状态变化 | 显示处理状态 | `{ status: string }` |
+| `toolcall` | 工具调用开始 | 显示工具执行过程 | `{ toolCall: ToolCall }` |
+| `toolresult` | 工具执行完成 | 显示工具结果 | `{ toolCallId: string, result: string }` |
+| `done` | 对话轮次完成 | 更新最终状态 | `{ taskId: string, result: any }` |
+| `error` | 发生错误 | 错误处理和提示 | `{ taskId: string, error: string }` |
+| `abort` | 对话被中断 | 中断状态处理 | `{ taskId: string }` |
+
+### 事件流转流程
+
+一次完整对话的事件时序：
+
+```mermaid
+sequenceDiagram
+    participant User as 用户
+    participant UI as 前端界面  
+    participant SDK as TaskLoop SDK
+    participant Server as SSC服务器
+    
+    User->>UI: 输入消息
+    UI->>SDK: taskLoop.start(message)
+    SDK->>UI: emit('add') 用户消息
+    SDK->>UI: emit('status', 'connecting')
+    SDK->>Server: HTTP请求
+    Server->>SDK: SSE流式响应
+    SDK->>UI: emit('status', 'thinking')
+    SDK->>UI: emit('add') 助手回复占位符
+    loop 流式生成
+        Server->>SDK: 内容片段
+        SDK->>UI: emit('update') 内容增量
+    end
+    alt 工具调用
+        Server->>SDK: 工具调用指令
+        SDK->>UI: emit('toolcall') 工具调用事件
+        SDK->>UI: emit('status', 'tool_calling')
+        Server->>SDK: 工具结果
+        SDK->>UI: emit('toolresult') 工具结果
+        loop 新一轮生成
+            Server->>SDK: 新内容片段
+            SDK->>UI: emit('update') 内容增量
+        end
+    end
+    Server->>SDK: 生成完成
+    SDK->>UI: emit('done') 对话完成
+    SDK->>UI: emit('status', 'completed')
+```
 
 ### 事件处理示例
 
@@ -260,6 +404,148 @@ export default {
 }
 ```
 
+### Redux/Vuex 状态管理集成
+
+对于大型应用，推荐将 TaskLoop 事件与状态管理库集成：
+
+#### Redux 中间件集成
+
+```javascript
+// Redux 中间件中的事件处理
+const taskLoopMiddleware = (storeAPI) => (next) => async (action) => {
+  if (sendMessage.match(action)) {
+    const { chatId, input } = action.payload
+    const taskLoop = createTaskLoop({ 
+      chatId, 
+      config: { 
+        model: 'deepseek-chat',
+        sscApiBaseUrl: 'http://localhost:8080'
+      } 
+    })
+    
+    // 事件监听和 Redux action 映射
+    const unsubscribe = taskLoop.subscribe((event) => {
+      switch(event.type) {
+        case 'add':
+          storeAPI.dispatch(addMessage({ chatId, message: event.message }))
+          break
+        case 'update':
+          storeAPI.dispatch(patchLastAssistantMessage({ 
+            chatId, 
+            patch: event.message 
+          }))
+          break
+        case 'status':
+          storeAPI.dispatch(setMessageCardStatus({ 
+            chatId, 
+            status: event.cardStatus 
+          }))
+          break
+        case 'toolcall':
+          storeAPI.dispatch(setToolCallState({ 
+            chatId, 
+            toolCall: event.toolCall 
+          }))
+          break
+        case 'toolresult':
+          storeAPI.dispatch(updateToolCallState({ 
+            chatId,
+            toolCallId: event.toolCallId,
+            result: event.result
+          }))
+          break
+        case 'done':
+          storeAPI.dispatch(setIsGenerating({ chatId, value: false }))
+          storeAPI.dispatch(setMessageCardStatus({ chatId, status: 'stable' }))
+          unsubscribe() // 自动清理
+          break
+        case 'error':
+          storeAPI.dispatch(setError({ chatId, error: event.error }))
+          unsubscribe() // 自动清理
+          break
+      }
+    })
+    
+    await taskLoop.start(input)
+  }
+  return next(action)
+}
+```
+
+#### Vuex 集成
+
+```javascript
+// Vuex store 中的 TaskLoop 集成
+const chatModule = {
+  namespaced: true,
+  state: {
+    messages: {},
+    isGenerating: {},
+    taskLoops: new Map()
+  },
+  mutations: {
+    ADD_MESSAGE(state, { chatId, message }) {
+      if (!state.messages[chatId]) {
+        Vue.set(state.messages, chatId, [])
+      }
+      state.messages[chatId].push(message)
+    },
+    UPDATE_LAST_MESSAGE(state, { chatId, patch }) {
+      const messages = state.messages[chatId]
+      if (messages && messages.length > 0) {
+        const lastMessage = messages[messages.length - 1]
+        if (patch.content_delta) {
+          lastMessage.content += patch.content_delta
+        }
+      }
+    },
+    SET_GENERATING(state, { chatId, value }) {
+      Vue.set(state.isGenerating, chatId, value)
+    }
+  },
+  actions: {
+    async sendMessage({ commit, state }, { chatId, input }) {
+      const taskLoop = createTaskLoop({
+        chatId,
+        config: { 
+          model: 'deepseek-chat',
+          sscApiBaseUrl: 'http://localhost:8080'
+        }
+      })
+      
+      const unsubscribe = taskLoop.subscribe((event) => {
+        switch(event.type) {
+          case 'add':
+            commit('ADD_MESSAGE', { chatId, message: event.message })
+            break
+          case 'update':
+            commit('UPDATE_LAST_MESSAGE', { chatId, patch: event.message })
+            break
+          case 'done':
+            commit('SET_GENERATING', { chatId, value: false })
+            unsubscribe()
+            break
+        }
+      })
+      
+      // 保存 taskLoop 实例供中断使用
+      state.taskLoops.set(chatId, { taskLoop, unsubscribe })
+      
+      await taskLoop.start(input)
+    },
+    
+    abortMessage({ state }, { chatId }) {
+      const taskLoopInfo = state.taskLoops.get(chatId)
+      if (taskLoopInfo) {
+        taskLoopInfo.taskLoop.abortTask()
+        taskLoopInfo.unsubscribe()
+        state.taskLoops.delete(chatId)
+      }
+    }
+  }
+}
+```
+
 ### React集成
 
 ```javascript
@@ -339,6 +625,62 @@ class ChatApp {
 }
 ```
 
+## MessageBridge 高级API
+
+对于需要更细粒度控制的场景，SDK 提供了直接使用 MessageBridge 的高级 API：
+
+### MCP 服务管理
+
+```javascript
+import { messageBridge } from '@zz-ai-chat/taskloop-sdk'
+
+// 连接 MCP 服务
+messageBridge.connectMCP(serverId, url)
+messageBridge.on('done', payload => {
+  // 连接成功回调
+  console.log('MCP 服务连接成功:', payload)
+})
+messageBridge.on('error', payload => {
+  // 连接失败回调
+  console.error('MCP 服务连接失败:', payload)
+})
+
+// 断开 MCP 服务
+messageBridge.disconnectMCP(serverId)
+
+// 获取可用工具列表
+messageBridge.listMCPTools(serverId)
+
+// 直接调用 MCP 工具
+messageBridge.callMCPTool({
+  serverId: 'my-mcp-server',
+  toolName: 'get_weather',
+  arguments: { city: '北京' }
+})
+```
+
+### 事件监听和自定义处理
+
+```javascript
+// 监听所有 MessageBridge 事件
+messageBridge.on('toolcall', (payload) => {
+  console.log('工具调用:', payload)
+})
+
+messageBridge.on('toolresult', (payload) => {
+  console.log('工具结果:', payload)
+})
+
+messageBridge.on('status', (payload) => {
+  console.log('状态变更:', payload)
+})
+
+// 取消事件监听
+messageBridge.off('toolcall', handler)
+```
+
+> **说明**：MessageBridge 主要用于 TaskLoop 事件的统一处理。理论上，MCP 服务器的 connect/disconnect 操作并不属于 TaskLoop 的事件范畴，但为了统一前端的事件处理机制，也将其集成在 MessageBridge 中，便于开发者通过同一接口管理所有相关事件。
+
 ## 高级配置
 
 ### 1. 历史消息恢复
@@ -367,13 +709,38 @@ await taskLoop.start('那上海呢？')
 ### 3. 自定义配置
 
 ```javascript
-const taskLoop = createTaskLoop({
+// 禁用工具调用
+const noToolsConfig = createTaskLoop({
   config: {
     model: 'gpt-4',
     temperature: 0.3,
-    parallelToolCalls: false, // 禁用并行工具调用
-    tools: [], // 禁用工具调用
-    // 其他LLM参数...
+    parallelToolCalls: false,
+    toolChoice: 'none', // 禁用工具调用
+    sscApiBaseUrl: 'http://localhost:8080'
+  }
+})
+
+// 强制使用特定工具
+const specificToolConfig = createTaskLoop({
+  config: {
+    model: 'deepseek-chat',
+    toolChoice: {
+      type: 'function',
+      function: { name: 'get_weather' }
+    },
+    tools: [weatherTool],
+    sscApiBaseUrl: 'http://localhost:8080'
+  }
+})
+
+// 多语言支持配置
+const multiLangConfig = createTaskLoop({
+  config: {
+    model: 'claude-3-sonnet',
+    systemPrompt: 'You are a multilingual assistant. Respond in the same language as the user.',
+    temperature: 0.7,
+    contextWindow: 32000,
+    sscApiBaseUrl: 'http://localhost:8080'
   }
 })
 ```
@@ -457,42 +824,265 @@ ALLOWED_ORIGINS=https://your-domain.com
 | 环境检测失败 | 使用Web模式而非SSC | 确保`sscApiBaseUrl`配置 |
 | 连接超时 | 长时间无响应 | 检查网络和服务器状态 |
 
-## API参考
+## API 参考
 
 ### createTaskLoop(options)
 
+创建一个 TaskLoop 实例用于管理 AI 对话。
+
 ```typescript
+function createTaskLoop(options: TaskLoopOptions): TaskLoopInstance
+
 interface TaskLoopOptions {
-  chatId: string
-  history?: Message[]
-  config: {
-    model: string
-    temperature?: number
-    sscApiBaseUrl: string  // 必需
-    tools?: Tool[]
-    parallelToolCalls?: boolean
-    [key: string]: any
+  chatId: string                    // 会话唯一标识
+  history?: EnrichedMessage[]       // 历史消息列表
+  config: TaskLoopConfig           // 配置参数
+  mcpClient?: MCPClient            // MCP 客户端（可选）
+}
+
+interface TaskLoopConfig {
+  model: string                    // 模型名称（必需）
+  sscApiBaseUrl: string           // SSC 服务器地址（必需）
+  temperature?: number            // 采样温度 (0.0-2.0)
+  maxTokens?: number              // 最大 token 数
+  tools?: Tool[]                  // 工具列表
+  parallelToolCalls?: boolean     // 并行工具调用
+  systemPrompt?: string           // 系统提示词
+  timeout?: number                // 超时时间（ms）
+  [key: string]: any             // 其他参数
+}
+```
+
+### TaskLoop 实例方法
+
+#### `subscribe(callback: (event: TaskLoopEvent) => void): () => void`
+
+订阅 TaskLoop 事件。
+
+- **参数**: `callback` - 事件处理回调函数
+- **返回**: 取消订阅的函数
+
+```javascript
+const unsubscribe = taskLoop.subscribe((event) => {
+  console.log('Event:', event.type, event)
+})
+// 取消订阅
+unsubscribe()
+```
+
+#### `start(message: string): Promise<void>`
+
+开始一轮新的 AI 对话。
+
+- **参数**: `message` - 用户输入的消息
+- **返回**: Promise，对话开始后解析
+
+```javascript
+await taskLoop.start('你好，请介绍一下你自己')
+```
+
+#### `abortTask(): void`
+
+中断当前进行中的对话。
+
+```javascript
+taskLoop.abortTask()
+```
+
+### MessageBridge API
+
+用于更高级的 MCP 服务管理。
+
+#### `connectMCP(serverId: string, url: string): void`
+
+连接 MCP 服务。
+
+#### `disconnectMCP(serverId: string): void`
+
+断开 MCP 服务。
+
+#### `listMCPTools(serverId: string): void`
+
+获取 MCP 服务的工具列表。
+
+#### `callMCPTool(params: MCPToolCallParams): void`
+
+直接调用 MCP 工具。
+
+```typescript
+interface MCPToolCallParams {
+  serverId: string
+  toolName: string
+  arguments: Record<string, any>
+}
+```
+
+### 事件类型定义
+
+```typescript
+type TaskLoopEvent = 
+  | { type: 'add'; message: EnrichedMessage; cardStatus?: string }
+  | { type: 'update'; message: IncrementalMessage; cardStatus?: string }
+  | { type: 'status'; status: string; cardStatus?: string }
+  | { type: 'toolcall'; toolCall: ToolCall; cardStatus?: string }
+  | { type: 'toolresult'; toolCallId: string; result: string; error?: string }
+  | { type: 'done'; taskId: string; result: any; cardStatus?: string }
+  | { type: 'error'; taskId: string; error: string; cardStatus?: string }
+  | { type: 'abort'; taskId: string; cardStatus?: string }
+
+interface EnrichedMessage {
+  id: string
+  role: 'user' | 'assistant' | 'tool' | 'system'
+  content: string
+  timestamp: number
+  name?: string
+  tool_calls?: ToolCall[]
+  usage?: TokenUsage
+}
+
+interface IncrementalMessage {
+  content_delta?: string          // 内容增量
+  reasoning_delta?: string        // 思维过程增量
+  tool_calls?: ToolCall[]         // 工具调用
+}
+
+interface ToolCall {
+  id: string
+  type: 'function'
+  function: {
+    name: string
+    arguments: string
   }
 }
 ```
 
-### 实例方法
+### 错误处理
 
-- `subscribe(callback)`: 订阅事件，返回取消订阅函数
-- `start(message)`: 开始对话
-- `abortTask()`: 中断当前对话
+SDK 会通过 `error` 事件报告错误：
 
-### 事件格式
-
-```typescript
-type Event = 
-  | { type: 'add', message: Message }
-  | { type: 'update', message: { content_delta: string } }
-  | { type: 'status', status: string, cardStatus: string }
-  | { type: 'toolcall', toolCall: ToolCall }
-  | { type: 'toolresult', result: string, error?: string }
-  | { type: 'done', role: string, content: string }
-  | { type: 'error', error: string }
+```javascript
+taskLoop.subscribe((event) => {
+  if (event.type === 'error') {
+    console.error('TaskLoop Error:', event.error)
+    // 处理错误逻辑
+  }
+})
 ```
 
-通过这个指南，你可以在任何前端框架中集成TaskLoop SDK，构建功能完整的AI聊天应用。
+常见错误类型：
+- `NETWORK_ERROR`: 网络连接错误
+- `TIMEOUT_ERROR`: 请求超时
+- `AUTH_ERROR`: 认证失败
+- `RATE_LIMIT_ERROR`: 请求频率限制
+- `SERVER_ERROR`: 服务端错误
+- `TOOL_ERROR`: 工具调用错误
+
+## 最佳实践
+
+### 1. 内存管理
+
+```javascript
+// 组件销毁时清理资源
+class ChatComponent {
+  constructor() {
+    this.unsubscribes = new Map()
+  }
+  
+  createChat(chatId) {
+    const taskLoop = createTaskLoop({ chatId, config: {...} })
+    const unsubscribe = taskLoop.subscribe(this.handleEvent)
+    this.unsubscribes.set(chatId, unsubscribe)
+  }
+  
+  removeChat(chatId) {
+    const unsubscribe = this.unsubscribes.get(chatId)
+    if (unsubscribe) {
+      unsubscribe()
+      this.unsubscribes.delete(chatId)
+    }
+  }
+  
+  destroy() {
+    // 清理所有订阅
+    this.unsubscribes.forEach(unsubscribe => unsubscribe())
+    this.unsubscribes.clear()
+  }
+}
+```
+
+### 2. 错误重试策略
+
+```javascript
+class RetryableTaskLoop {
+  constructor(options, maxRetries = 3) {
+    this.options = options
+    this.maxRetries = maxRetries
+    this.retryCount = 0
+  }
+  
+  async start(message) {
+    try {
+      const taskLoop = createTaskLoop(this.options)
+      taskLoop.subscribe((event) => {
+        if (event.type === 'error' && this.retryCount < this.maxRetries) {
+          this.retryCount++
+          setTimeout(() => this.start(message), 1000 * this.retryCount)
+        }
+      })
+      await taskLoop.start(message)
+      this.retryCount = 0 // 成功后重置计数器
+    } catch (error) {
+      if (this.retryCount < this.maxRetries) {
+        this.retryCount++
+        setTimeout(() => this.start(message), 1000 * this.retryCount)
+      } else {
+        throw error
+      }
+    }
+  }
+}
+```
+
+### 3. 性能优化
+
+- **防抖动**: 在用户输入时使用防抖动函数
+- **虚拟列表**: 对于大量消息使用虚拟滚动
+- **懒加载**: 只在需要时创建 TaskLoop 实例
+- **清理历史**: 定期清理过旧的消息历史
+
+### 4. 安全考虑
+
+- **输入验证**: 对用户输入进行验证和清理
+- **内容过滤**: 对 AI 生成的内容进行适当过滤
+- **频率限制**: 实施客户端频率限制防止滥用
+- **数据加密**: 敏感数据在传输和存储时加密
+
+### 5. 调试和监控
+
+```javascript
+// 开发环境调试
+if (process.env.NODE_ENV === 'development') {
+  taskLoop.subscribe((event) => {
+    console.group(`[TaskLoop] ${event.type}`)
+    console.log('Event data:', event)
+    console.log('Timestamp:', new Date().toISOString())
+    console.groupEnd()
+  })
+}
+
+// 生产环境监控
+taskLoop.subscribe((event) => {
+  if (event.type === 'error') {
+    // 发送错误报告到监控系统
+    analytics.track('taskloop_error', {
+      error: event.error,
+      chatId: event.taskId,
+      timestamp: Date.now()
+    })
+  }
+})
+```
+
+---
+
+通过这个指南，你可以在任何前端框架中集成 TaskLoop SDK，构建功能完整、性能优异的 AI 聊天应用。如有问题，请参考故障排查部分或联系技术支持。

@@ -5,15 +5,15 @@ export async function testMessageBridge() {
   console.log('=== MessageBridge 浏览器测试开始 ===');
   
   try {
-    // 动态导入模块
-    const { createMessageBridge } = await import('@engine/service/messageBridgeInstance');
+    // 动态导入模块 - V1 to V2 Migration: 使用新的 MessageBridgeV2 系统
+    const { createMessageBridge } = await import('@engine/service/messageBridgeFactoryV2');
     const { llmService } = await import('@engine/service/llmService');
     
     console.log('✅ 模块导入成功');
     
-    // 测试 1: 创建实例
-    console.log('\n🧪 测试 1: 创建 MessageBridge 实例');
-    const messageBridge = createMessageBridge('web', {
+    // 测试 1: 创建实例 - V2 自动检测环境，无需手动指定
+    console.log('\n🧪 测试 1: 创建 MessageBridge V2 实例');
+    const messageBridge = createMessageBridge({
       mcpClient: undefined,
       llmService: llmService,
     });

@@ -1,8 +1,39 @@
+/**
+ * ================================================================================
+ * 注意：此文件已被废弃，迁移到 MessageBridgeV2 系统
+ * ================================================================================
+ * 
+ * 迁移说明：
+ * - V1 系统：messageBridgeInstance.ts → MessageBridge (旧)
+ * - V2 系统：messageBridgeFactoryV2.ts → MessageBridgeV2 (新)
+ * 
+ * 已完成的迁移文件：
+ * - web/src/store/mcpStore.ts
+ * - web/src/debug-messagebridge.ts  
+ * - web/src/pages/Debug/index.tsx
+ * - web/src/services/messageBridgeInstance.ts
+ * - web/src/test-messagebridge.js
+ * 
+ * V2 系统优势：
+ * - 使用新的 runtimeContext 统一环境检测
+ * - 自动检测环境，无需手动指定
+ * - 与 TaskLoop 系统保持一致
+ * 
+ * 迁移时间：2025-01-09
+ * ================================================================================
+ */
+
+// 错误提示：引导用户使用新的 V2 系统
+console.warn(
+  '⚠️ messageBridgeInstance.ts 已废弃！请使用 messageBridgeFactoryV2.ts (MessageBridgeV2)'
+);
+
+// 保持原有实现以确保兼容性，但不推荐继续使用
 import { MessageBridge, type MessageBridgeOptions } from './messagebridge';
 import { llmService } from './llmService';
 import { detectRuntimeMode } from '../utils/envDetect';
 
-// 创建 MessageBridge 实例的工厂函数
+// 创建 MessageBridge 实例的工厂函数 (已废弃，请使用 V2)
 export function createMessageBridge(envOrOptions?: string | MessageBridgeOptions, options?: any): MessageBridge {
   let bridgeOptions: MessageBridgeOptions;
   
@@ -251,4 +282,4 @@ export const messageBridge = createMessageBridge({
   env: 'web',
   mcpClient: null,
   llmService: null,
-}); 
+});
