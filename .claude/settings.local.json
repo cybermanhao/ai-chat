@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node:*)",
+      "Bash(move:*)",
+      "Bash(mv:*)",
+      "Bash(pnpm run dev:web:*)",
+      "Bash(pnpm run build:engine:*)",
+      "Bash(rm:*)",
+      "Bash(pnpm run dev:*)"
+    ],
+    "deny": []
+  }
+}

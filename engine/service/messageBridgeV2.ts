@@ -178,7 +178,13 @@ export class MessageBridgeV2 {
       await this.connectLocalMCP(serverId, url);
     } else {
       // 代理模式下，连接由服务端管理
-      this.emit('done', { serverId, tools: [] });
+      const proxyType = getMCPProxyType();
+      if (proxyType === 'ipc') {
+        await this.connectMCPViaIPC(serverId, url);
+      } else {
+        // HTTP代理模式，连接由服务端管理  
+        this.emit('done', { serverId, tools: [] });
+      }
     }
   }
 
@@ -190,7 +196,13 @@ export class MessageBridgeV2 {
       await this.disconnectLocalMCP(serverId);
     } else {
       // 代理模式下，断开由服务端管理
-      this.emit('done', { serverId });
+      const proxyType = getMCPProxyType();
+      if (proxyType === 'ipc') {
+        await this.disconnectMCPViaIPC(serverId);
+      } else {
+        // HTTP代理模式，断开由服务端管理
+        this.emit('done', { serverId });
+      }
     }
   }
 
@@ -341,8 +353,89 @@ export class MessageBridgeV2 {
 
   // IPC代理MCP调用实现  
   private async callMCPViaIPC(payload: any) {
-    // TODO: 实现Electron IPC MCP调用
-    throw new Error('IPC MCP调用尚未实现');
+    const { serverId, toolName, args, callId } = payload;
+    const electronAPI = this.context.config.electronAPI;
+    
+    if (!electronAPI || !electronAPI.send) {
+      throw new Error('Electron API不可用');
+    }
+    
+    console.log('[MessageBridge] 通过IPC调用MCP工具:', { serverId, toolName, callId });
+    
+    // 通过IPC发送MCP调用请求
+    electronAPI.send('mcp:call-tool', {
+      serverId,
+      toolName, 
+      args,
+      callId
+    });
+    
+    // 监听IPC响应
+    if (electronAPI.on) {
+      const cleanup = electronAPI.on(`mcp:tool-result:${callId}`, (result: any) => {
+        cleanup(); // 清理监听器
+        this.handleMCPResult(serverId, toolName, args, callId, result);
+      });
+      
+      const cleanupError = electronAPI.on(`mcp:tool-error:${callId}`, (error: any) => {
+        cleanupError(); // 清理监听器
+        this.emit('error', { serverId, toolName, callId, error: error.message || String(error) });
+      });
+    }
+  }
+
+  // IPC代理MCP连接实现
+  private async connectMCPViaIPC(serverId: string, url: string) {
+    const electronAPI = this.context.config.electronAPI;
+    
+    if (!electronAPI || !electronAPI.send) {
+      throw new Error('Electron API不可用');
+    }
+    
+    console.log('[MessageBridge] 通过IPC连接MCP服务器:', { serverId, url });
+    this.emit('status', { serverId, status: 'connecting' });
+    
+    // 通过IPC发送连接请求
+    electronAPI.send('mcp:connect', { serverId, url });
+    
+    // 监听连接响应
+    if (electronAPI.on) {
+      const cleanup = electronAPI.on(`mcp:connect-result:${serverId}`, (result: any) => {
+        cleanup(); // 清理监听器
+        if (result.error) {
+          this.emit('error', { serverId, error: result.error });
+        } else {
+          this.emit('done', { serverId, tools: result.tools || [] });
+        }
+      });
+    }
+  }
+
+  // IPC代理MCP断开实现
+  private async disconnectMCPViaIPC(serverId: string) {
+    const electronAPI = this.context.config.electronAPI;
+    
+    if (!electronAPI || !electronAPI.send) {
+      throw new Error('Electron API不可用');
+    }
+    
+    console.log('[MessageBridge] 通过IPC断开MCP服务器:', { serverId });
+    this.emit('status', { serverId, status: 'disconnecting' });
+    
+    // 通过IPC发送断开请求
+    electronAPI.send('mcp:disconnect', { serverId });
+    
+    // 监听断开响应
+    if (electronAPI.on) {
+      const cleanup = electronAPI.on(`mcp:disconnect-result:${serverId}`, (result: any) => {
+        cleanup(); // 清理监听器
+        if (result.error) {
+          this.emit('error', { serverId, error: result.error });
+        } else {
+          this.emit('done', { serverId });
+        }
+      });
+    }
   }
 
   // 本地MCP连接实现

@@ -133,16 +133,15 @@ export const SDK_BUILD_TIME = '${new Date().toISOString()}';
   fs.writeFileSync(sdkEntryPath, sdkEntryContent);
   log('SDK入口文件已创建');
 
-  // 2. 执行TypeScript构建（ES模块格式）
-  log('🔨 执行TypeScript构建（ES模块）...');
+  // 2. 使用构建时注入方式构建SSC模式
+  log('🔨 执行SSC模式构建（BUILD_MODE注入）...');
   try {
-    execSync('npx tsc --project engine/tsconfig.json --module ESNext --target ES2020', { 
-      stdio: 'inherit',
-      cwd: path.join(__dirname, '..')
-    });
-    log('TypeScript构建完成（ES模块格式）');
+    // 导入构建函数
+    const { buildWithModeInjection } = await import('./build-with-mode-injection.js');
+    const tempEngineDir = buildWithModeInjection('ssc', BUILD_CONFIG.engineDistDir);
+    log('SSC模式构建完成（BUILD_MODE已注入）');
   } catch (error) {
-    throw new Error(`TypeScript构建失败: ${error.message}`);
+    throw new Error(`SSC模式构建失败: ${error.message}`);
   }
 
   // 3. 创建SDK包结构

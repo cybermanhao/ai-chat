@@ -38,8 +38,8 @@ export interface RuntimeConfig {
   buildMode?: RuntimeMode | null;
 }
 
-// 构建时模式注入点
-const BUILD_MODE: RuntimeMode | null = 'ssc';
+// 构建时模式注入点 - 打包SDK时会被替换为'ssc'
+const BUILD_MODE: RuntimeMode | null = null;
 
 class RuntimeContextManager {
   private _context: RuntimeContext | null = null;

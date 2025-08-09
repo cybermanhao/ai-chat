@@ -93,6 +93,56 @@ contextBridge.exposeInMainWorld('electronAPI', {
         cleanupStream(streamId);
       }
     };
+  },
+
+  // MCP相关方法
+  mcp: {
+    // 连接MCP服务器
+    connect: (serverId, url) => {
+      ipcRenderer.send('mcp:connect', { serverId, url });
+    },
+    
+    // 断开MCP服务器
+    disconnect: (serverId) => {
+      ipcRenderer.send('mcp:disconnect', { serverId });
+    },
+    
+    // 调用MCP工具
+    callTool: (serverId, toolName, args, callId) => {
+      ipcRenderer.send('mcp:call-tool', { serverId, toolName, args, callId });
+    },
+    
+    // 监听连接结果
+    onConnectResult: (serverId, callback) => {
+      const channel = `mcp:connect-result:${serverId}`;
+      const listener = (event, result) => callback(result);
+      ipcRenderer.on(channel, listener);
+      return () => ipcRenderer.removeListener(channel, listener);
+    },
+    
+    // 监听断开结果
+    onDisconnectResult: (serverId, callback) => {
+      const channel = `mcp:disconnect-result:${serverId}`;
+      const listener = (event, result) => callback(result);
+      ipcRenderer.on(channel, listener);
+      return () => ipcRenderer.removeListener(channel, listener);
+    },
+    
+    // 监听工具调用结果
+    onToolResult: (callId, callback) => {
+      const channel = `mcp:tool-result:${callId}`;
+      const listener = (event, result) => callback(result);
+      ipcRenderer.on(channel, listener);
+      return () => ipcRenderer.removeListener(channel, listener);
+    },
+    
+    // 监听工具调用错误
+    onToolError: (callId, callback) => {
+      const channel = `mcp:tool-error:${callId}`;
+      const listener = (event, error) => callback(error);
+      ipcRenderer.on(channel, listener);
+      return () => ipcRenderer.removeListener(channel, listener);
+    }
   }
 });
 

@@ -1,35 +1,34 @@
-// 环境检测工具，供 glue 层/中间件统一引用
+/**
+ * ================================================================================
+ * 注意：此文件已被废弃，迁移到 runtimeContext 系统
+ * ================================================================================
+ * 
+ * 迁移说明：
+ * - 旧系统：envDetect.ts (V1)
+ * - 新系统：runtimeContext.ts (V2)
+ * 
+ * 请使用新的 runtimeContext 系统：
+ * - import { getRuntimeMode } from '../utils/runtimeContext'
+ * 
+ * 迁移时间：2025-01-09
+ * ================================================================================
+ */
 
-export function detectRuntimeMode(): 'electron' | 'web-with-nodeserver' | 'web' | 'ssc' {
-  if (typeof window !== 'undefined' && (window as any).electronAPI) {
-    return 'electron';
-  }
-  if (typeof window !== 'undefined' && (window as any).NODE_SERVER_API) {
-    return 'web-with-nodeserver';
-  }
-  if (typeof process !== 'undefined' && process.env.SSC_MODE === 'true') {
-    return 'ssc';
-  }
-  return 'web';
-}
+// 错误提示：引导用户使用新的 runtimeContext 系统
+console.warn(
+  '⚠️ engine/stream/envDetect.ts 已废弃！请使用 runtimeContext.ts 系统'
+);
 
-export const isElectron = detectRuntimeMode() === 'electron';
-export const isNodeServer = detectRuntimeMode() === 'web-with-nodeserver';
-export const isWeb = detectRuntimeMode() === 'web';
-export const isSSC = detectRuntimeMode() === 'ssc';
+// 为了兼容性，重新导出 runtimeContext 的功能
+export { getRuntimeMode as detectRuntimeMode } from '../utils/runtimeContext';
+export { isElectronMain as isElectron } from '../utils/runtimeContext';
+export { isWeb } from '../utils/runtimeContext';
+export { isSSC } from '../utils/runtimeContext';
+export type { RuntimeMode } from '../utils/runtimeContext';
 
-export type RuntimeMode = 'electron' | 'web-with-nodeserver' | 'web' | 'ssc';
-
+// 废弃的旧函数，保留以防破坏现有代码
 export function getEnvInfo() {
-  return {
-    mode: detectRuntimeMode(),
-    isElectron,
-    isNodeServer,
-    isWeb,
-    isSSC,
-    platform: typeof process !== 'undefined' ? process.platform : undefined,
-    nodeVersion: typeof process !== 'undefined' ? process.version : undefined,
-    userAgent: typeof window !== 'undefined' ? window.navigator.userAgent : undefined,
-    env: typeof process !== 'undefined' ? process.env : undefined,
-  };
+  console.warn('⚠️ getEnvInfo() 已废弃，请使用 runtimeContext.getDebugInfo()');
+  const { getDebugInfo } = require('../utils/runtimeContext');
+  return getDebugInfo();
 }

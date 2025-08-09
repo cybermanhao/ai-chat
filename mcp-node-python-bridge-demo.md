@@ -45,7 +45,7 @@ if __name__ == "__main__":
 `mcp-node/simple-mcp-server.js`
 
 ```js
-import { defineTool, createMcpServer } from './dist/index.js';
+import { defineTool, createMcpServer } from '../mcp-node/dist/index.js';
 import WebSocket from 'ws';
 
 // 简单的 ws 客户端封装
@@ -98,7 +98,7 @@ const pyAddTool = defineTool({
 
 createMcpServer({
   tools: [pyAddTool],
-  port: 8000
+  port: 3001
 });
 ```
 

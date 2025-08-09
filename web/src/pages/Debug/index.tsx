@@ -323,13 +323,14 @@ const Debug: React.FC = () => {
                   console.log('=== MessageBridge 测试开始 ===');
                   
                   try {
-                    const { createMessageBridge } = await import('@engine/service/messageBridgeInstance');
+                    // V1 to V2 Migration: 使用新的 MessageBridgeV2 系统
+                    const { createMessageBridge } = await import('@engine/service/messageBridgeFactoryV2');
                     const { llmService } = await import('@engine/service/llmService');
                     
                     console.log('✅ 模块导入成功');
                     
-                    // 创建实例
-                    const messageBridge = createMessageBridge('web', {
+                    // 创建实例 - V2 自动检测环境
+                    const messageBridge = createMessageBridge({
                       mcpClient: undefined,
                       llmService: llmService,
                     });
