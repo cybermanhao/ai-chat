@@ -1,5 +1,5 @@
 // 类型检查工具 - 验证 Redux store 类型安全性
-// @ts-ignore
+// 类型检查工具
 import type { RootState } from '@/store';
 import type { ChatSetting, EnrichedMessage, ChatData } from '@engine/types/chat';
 

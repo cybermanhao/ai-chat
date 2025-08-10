@@ -7,7 +7,7 @@
 // XML 解析和渲染相关的工具函数
 
 // 解析 XML 标签的属性
-// @ts-ignore
+// XML解析工具函数
 function parseAttributes(attrString: string): Record<string, string> {
   const attrs: Record<string, string> = {};
   const regex = /(\w+)="([^"]*)"/g;

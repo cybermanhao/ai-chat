@@ -7,6 +7,7 @@ import type { ChatSetting } from '@engine/types/chat';
 import { sendMessage, stopGeneration, addMessage, setIsGenerating, setError, patchLastAssistantMessage, setMessageCardStatus, setToolCallState, updateToolCallState } from './chatSlice';
 import { TaskLoop } from '@engine/stream/task-loop';
 import { llms } from '@engine/utils/llms';
+import { ModelAdapterManager, type UnifiedLLMParams } from '@engine/adapters';
 // import { createStreamingPatch } from './utils/messageDiff'; // 注释掉差分更新逻辑
 import { generateUserMessageId } from '@engine/utils/messageIdGenerator';
 import { selectAvailableTools, mcpClientManager } from './mcpStore';
@@ -129,22 +130,26 @@ const taskLoopMiddleware: Middleware = (storeAPI: any) => next => async action =
     const state = storeAPI.getState() as RootState;
     const availableMCPTools = selectAvailableTools(state);
     
-    // 将 MCP 工具转换为 OpenAI tools 格式
-    const openAITools = availableMCPTools.map(mcpTool => ({
-      type: "function" as const,
-      function: {
-        name: mcpTool.name,
-        description: mcpTool.description,
-        parameters: mcpTool.inputSchema || {
-          type: "object",
-          properties: {},
-          required: []
-        }
-      }
-    }));
+    // 构建统一的LLM参数
+    const unifiedParams: UnifiedLLMParams = {
+      llmConfig: params.activeLLMConfig,
+      model: params.chatConfig?.userModel || params.llmConfig.userModel || params.activeLLMConfig?.userModel || params.activeLLMConfig?.models?.[0],
+      messages: buildLLMMessagesWithSystemPrompt({
+        messages: params.messages,
+        chatConfig: params.chatConfig
+      }),
+      tools: availableMCPTools,
+      temperature: params.chatConfig?.temperature || 0.6,
+      maxTokens: (params.chatConfig?.contextLength || 4) * 1000,
+      parallelToolCalls: params.chatConfig?.parallelToolCalls ?? true,
+    };
+    
+    // 使用模型适配器管理器转换工具
+    const adaptedTools = ModelAdapterManager.convertTools(unifiedParams);
     
     console.log('[TaskLoop] 发现可用的 MCP 工具:', availableMCPTools.length, '个');
-    console.log('[TaskLoop] 转换为 OpenAI 格式的工具:', openAITools.length, '个');
+    console.log('[TaskLoop] 转换后的适配工具:', adaptedTools.length, '个');
+    console.log('[TaskLoop] 检测到的适配器类型:', ModelAdapterManager.detectAdapterType(params.activeLLMConfig, unifiedParams.model));
     
     // 设置生成状态（消息创建由TaskLoop管理）
     storeAPI.dispatch(setIsGenerating({ chatId, value: true }));
@@ -152,23 +157,16 @@ const taskLoopMiddleware: Middleware = (storeAPI: any) => next => async action =
     // 多实例 TaskLoop
     let taskLoop = taskLoopMap.get(chatId);
     
-    // 构建带系统提示词的消息历史
-    const messagesWithSystemPrompt = buildLLMMessagesWithSystemPrompt({
-      messages: params.messages,
-      chatConfig: params.chatConfig
-    });
-    
     // 构建完整的 LLM 配置，包含 API Key 和 baseURL
     const llmConfig = {
       ...params.activeLLMConfig,
       apiKey: params.currentApiKey,
       baseURL: params.activeLLMConfig?.baseUrl,
-      // 优先使用聊天设置中的模型，然后是全局设置，最后是默认模型
-      model: params.chatConfig?.userModel || params.llmConfig.userModel || params.activeLLMConfig?.userModel || params.activeLLMConfig?.models?.[0],
-      temperature: params.chatConfig?.temperature || 0.6,
-      maxTokens: (params.chatConfig?.contextLength || 4) * 1000, // contextLength 1-20 对应 maxTokens 1000-20000
-      tools: openAITools, // 使用转换后的 MCP 工具而不是 chatConfig.enableTools
-      parallelToolCalls: params.chatConfig?.parallelToolCalls ?? true,
+      model: unifiedParams.model,
+      temperature: unifiedParams.temperature,
+      maxTokens: unifiedParams.maxTokens,
+      tools: adaptedTools, // 使用适配后的工具
+      parallelToolCalls: unifiedParams.parallelToolCalls,
     };
     
     // 生成助手消息ID，用于TaskLoop内部消息管理
@@ -190,7 +188,7 @@ const taskLoopMiddleware: Middleware = (storeAPI: any) => next => async action =
     console.log('[TaskLoop] 系统提示词:', params.chatConfig?.systemPrompt || '无');
     console.log('[TaskLoop] parallelToolCalls配置:', params.chatConfig?.parallelToolCalls);
     console.log('[TaskLoop] 最终llmConfig.parallelToolCalls:', llmConfig.parallelToolCalls);
-    console.log('[TaskLoop] 消息历史长度 (含系统提示词):', messagesWithSystemPrompt.length);
+    console.log('[TaskLoop] 消息历史长度 (含系统提示词):', unifiedParams.messages.length);
     
     // 获取活跃的 MCP 服务
     const currentState = storeAPI.getState();
@@ -204,7 +202,7 @@ const taskLoopMiddleware: Middleware = (storeAPI: any) => next => async action =
     
     taskLoop = new TaskLoop({
       chatId,
-      history: JSON.parse(JSON.stringify(messagesWithSystemPrompt)), // 使用包含系统提示词的消息历史
+      history: JSON.parse(JSON.stringify(unifiedParams.messages)), // 使用适配后的消息历史
       config: llmConfig, // 传入完整的 LLM 配置而不是 chatConfig
       mcpClient, // 注入 MCP 服务
     });
@@ -323,9 +321,15 @@ const taskLoopMiddleware: Middleware = (storeAPI: any) => next => async action =
         // 如果done事件包含tool_calls，需要更新现有助手消息的tool_calls
         if (event.tool_calls && event.tool_calls.length > 0) {
           console.log('[StreamManagerMiddleware] Done事件包含tool_calls，更新现有助手消息');
+          // 转换工具调用格式以匹配ChatCompletionMessageToolCall
+          const formattedToolCalls = event.tool_calls.map(tc => ({
+            id: tc.id || 'unknown',
+            type: 'function' as const,
+            function: tc.function
+          }));
           storeAPI.dispatch(patchLastAssistantMessage({ 
             chatId, 
-            patch: { tool_calls: event.tool_calls }
+            patch: { tool_calls: formattedToolCalls }
           }));
         }
         

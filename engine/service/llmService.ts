@@ -2,15 +2,10 @@
 // 多端同构 LLMService 纯逻辑实现
 import { OpenAI } from 'openai';
 import type {
-  ChatCompletionCreateParams,
-  ChatCompletionMessageParam
+  ChatCompletionCreateParams
 } from 'openai/resources/chat/completions';
-import type { ChatMessage } from '../types/chat';
-import type { ModelConfig } from '../types/model';
-import type { Stream } from 'openai/streaming';
-import type { ExtendedChatCompletionChunk } from '../types/openai-extended';
-import type { LLMConfig } from '../types/llm';
 import { handleResponseStream } from '../stream/streamHandler';
+import { ModelAdapterManager, type UnifiedLLMParams, type UnifiedLLMResponse } from '../adapters';
 
 export let currentStream: AsyncIterable<any> | null = null;
 
@@ -20,7 +15,7 @@ export type OcrService = (imageData: any) => Promise<string>;
 export type ImageService = (imageData: any) => Promise<any>;
 
 export async function streamLLMChat({
-  chatId,
+  // chatId, // 未使用
   baseURL,
   apiKey,
   model,
@@ -28,7 +23,7 @@ export async function streamLLMChat({
   temperature,
   tools = [],
   parallelToolCalls = true,
-  proxyServer = '',
+  // proxyServer = '', // 未使用
   onChunk,
   onDone,
   onError,
@@ -40,7 +35,7 @@ export async function streamLLMChat({
   signal,
   assistantMessageId, // 新增：传入固定的 assistant 消 Messages ID
 }: {
-  chatId?: string; // 可选，便于跟踪会话
+  // chatId?: string; // 未使用的参数
   baseURL: string;
   apiKey: string;
   model: string;
@@ -48,7 +43,7 @@ export async function streamLLMChat({
   temperature?: number;
   tools?: any[];
   parallelToolCalls?: boolean;
-  proxyServer?: string;
+  // proxyServer?: string; // 未使用
   onChunk?: (chunk: any) => void;
   onDone?: (result: any) => void;
   onError?: (err: any) => void;
@@ -91,44 +86,25 @@ export async function streamLLMChat({
   console.log('[streamLLMChat] seriableTools:', seriableTools ? `${seriableTools.length} 个工具` : 'undefined');
   console.log('[streamLLMChat] seriableParallelToolCalls:', seriableParallelToolCalls);
 
-  // 清理消息格式，确保只包含 API 需要的字段
-  const cleanMessages = messages
-    .filter(msg => {
-      // 基本验证：必须有 role
-      if (!msg || !msg.role) return false;
-      
-      // tool 消息必须有 tool_call_id，content 可以为空字符串
-      if (msg.role === 'tool') {
-        return !!(msg as any).tool_call_id;
-      }
-      
-      // 其他消息必须有 content
-      return msg.content !== undefined;
-    })
-    .map(msg => {
-      const cleanMsg: any = {
-        role: msg.role,
-        content: msg.content || '', // 确保 content 不为 undefined
-      };
-
-      // 保留其他必要的 OpenAI 字段
-      if (msg.name) cleanMsg.name = msg.name;
-
-      // 只有当 tool_calls 存在且非空时才包含
-      if (msg.tool_calls && Array.isArray(msg.tool_calls) && msg.tool_calls.length > 0) {
-        cleanMsg.tool_calls = msg.tool_calls;
-        // console.log('[llmService] 包含 tool_calls:', msg.tool_calls.length, '个');
-      } else if (msg.tool_calls) {
-        // console.log('[llmService] 跳过空的 tool_calls 数组, 长度:', Array.isArray(msg.tool_calls) ? msg.tool_calls.length : '非数组');
-      }
-
-      // 特别重要：保留 tool_call_id 用于工具响应消息
-      if ((msg as any).tool_call_id) {
-        cleanMsg.tool_call_id = (msg as any).tool_call_id;
-      }
-
-      return cleanMsg;
-    });
+  // 构建统一参数并使用适配器管理器清理消息
+  const unifiedParams: Partial<UnifiedLLMParams> = {
+    llmConfig: { 
+      id: baseURL.includes('deepseek') ? 'deepseek' : 'openai',
+      provider: baseURL.includes('deepseek') ? 'deepseek' : 'openai',
+      baseUrl: baseURL 
+    } as any, // 临时构建，实际使用中应传入完整配置
+    model,
+    messages: messages as any,
+    temperature,
+    tools: tools as any,
+    parallelToolCalls
+  };
+  
+  console.log('[llmService] 构建的临时llmConfig:', unifiedParams.llmConfig);
+  console.log('[llmService] 检测到的适配器类型:', ModelAdapterManager.detectAdapterType(unifiedParams.llmConfig!, model));
+  
+  // 使用模型适配器管理器清理消息格式
+  const cleanMessages = ModelAdapterManager.cleanMessages(messages, unifiedParams.llmConfig!);
 
   // Debug logs can be enabled for debugging (currently commented out for performance)
   console.log('[llmService] 原始 messages:', messages);
@@ -218,7 +194,7 @@ export async function streamLLMChat({
 
   const requestParams: ChatCompletionCreateParams = {
     model,
-    messages: cleanMessages,
+    messages: cleanMessages as any,
     temperature,
     stream: true,
     ...(seriableTools && { tools: seriableTools }),

@@ -1,5 +1,5 @@
 //此文件废弃
-//@ts-ignore
+// 此文件已废弃
 
 
 import type { ChatInfo, ChatMessage, ChatData, EnrichedMessage } from '@/types/chat'
