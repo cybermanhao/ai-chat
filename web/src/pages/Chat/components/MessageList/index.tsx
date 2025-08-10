@@ -47,7 +47,10 @@ const MessageList = React.forwardRef<HTMLDivElement, MessageListProps>(
         if (msg.role === 'assistant' || msg.role === 'tool') {
           buffer.push(msg);
         } else {
-          if (buffer.length) groups.push(buffer), buffer = [];
+          if (buffer.length) {
+            groups.push(buffer);
+            buffer = [];
+          }
           groups.push([msg]);
         }
       }

@@ -19,6 +19,13 @@ export const router = createBrowserRouter([
           return { Component: Chat };
         },
       },
+      {
+        path: 'adapter-test',
+        lazy: async () => {
+          const AdapterTest = await import('./pages/AdapterTest');
+          return { Component: AdapterTest.default };
+        },
+      },
     ],
   },
 ])

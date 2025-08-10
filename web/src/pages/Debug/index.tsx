@@ -453,7 +453,7 @@ const Debug: React.FC = () => {
                     
                     console.log('✅ TaskLoop 实例创建成功，开始真实 LLM 调用');
                     
-                    let eventLog: string[] = [];
+                    const eventLog: string[] = [];
                     let responseContent = '';
                     
                     const unsubscribe = taskLoop.subscribe((event: any) => {

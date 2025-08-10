@@ -3,7 +3,7 @@
 // 本文件保留redux slice类型定义，但注释掉reducer和action导出
 // 如需恢复插件功能，请取消相关注释并完善插件系统实现
 // =======================================
-// @ts-ignore 
+// 插件系统已禁用 
 
 import { createSlice } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';

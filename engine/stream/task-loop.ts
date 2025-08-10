@@ -22,9 +22,9 @@
 // 设计目标：最大化业务逻辑复用，彻底解耦 glue/adapter 层，支持 Web/Electron/SSC 多端。
 //
 // 详细事件流机制、工具链自动化、异常处理等见相关文档和注释。
-import { streamLLMChat } from '../service/llmService';
+// import { streamLLMChat } from '../service/llmService'; // 未使用
 import type { EnrichedMessage, IMessageCardStatus } from '../types/chat';
-import type { ToolCall, EnhancedChunk } from './streamHandler';
+import type { ToolCall } from './streamHandler';
 import { generateUserMessageId } from '../utils/messageIdGenerator';
 import { MCPClient } from '../service/mcpClient';
 import { MessageBridgeV2, type MessageBridgeOptions } from '../service/messageBridgeV2';
@@ -47,7 +47,7 @@ export type TaskLoopEvent =
   | { type: 'toolresult'; toolCallId: string; result: string; error?: string; cardStatus?: IMessageCardStatus }
   | { type: 'status'; taskId: string; status: string; cardStatus?: IMessageCardStatus }
   | { type: 'error'; taskId: string; error: string; cardStatus?: IMessageCardStatus }
-  | { type: 'done'; taskId: string; result: any; cardStatus?: IMessageCardStatus };
+  | { type: 'done'; taskId: string; result: any; tool_calls?: ToolCall[]; cardStatus?: IMessageCardStatus };
 
 // 统一事件流范式，移除 TaskLoopCallbacks，所有订阅均通过 subscribe/emit 事件流实现
 // export interface TaskLoopCallbacks { ... } // 已废弃

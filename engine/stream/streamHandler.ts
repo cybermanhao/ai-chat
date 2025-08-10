@@ -1,4 +1,4 @@
-import type { ExtendedChatCompletionChunk } from '../types/openai-extended';
+// import type { ExtendedChatCompletionChunk } from '../types/openai-extended'; // 未使用
 import type { OpenAI } from 'openai';
 import type { ChatCompletionMessageToolCall } from 'openai/resources/chat/completions';
 

@@ -1,5 +1,4 @@
-// @ts-ignore
-import type { ClientNoticeMessage } from '@/types/chat';
+import type { EnrichedMessage } from '@/types/chat';
 
 // 错误代码常量
 export const ErrorCode = {
@@ -65,9 +64,8 @@ export function handleLLMError(error: unknown): ClientNoticeMessage {
     content: message,
     role: 'client-notice',
     noticeType: type,
-    status: 'error',
     ...(code ? { errorCode: code } : {})
-  };
+  } as EnrichedMessage;
 }
 
 // 移除本地 errorHandler.ts，已迁移到 engine/utils/errorHandler.ts

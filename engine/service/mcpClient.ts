@@ -1,7 +1,7 @@
 // engine/service/mcpClient.ts
 // MCP 协议层服务，适用于 Node/Electron 等支持进程的环境
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import type { Tool, ListToolsResult } from "@modelcontextprotocol/sdk/types.js";
+import type { Tool } from "@modelcontextprotocol/sdk/types.js";
 
 // 导出 Tool 类型供其他模块使用
 export type { Tool } from "@modelcontextprotocol/sdk/types.js";
